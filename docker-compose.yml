@@ -5,7 +5,7 @@ services:
       - "5432:5432"
     environment:
       - POSTGRES_USER=sam
-      - POSTGRES_PASSWORD=password123
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=jobradar
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
