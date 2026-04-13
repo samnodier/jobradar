@@ -1,5 +1,6 @@
 # Learnings
 
+## Day 1
 1. Explain the difference between these three branches. Specifically, why would a senior engineer be upset if you committed a broken API fetcher directly to main?
 2. Explain why we use feature branches instead of everyone pushing to main. Mention "stability" and "isolation."
 3. The difference between git branch -m (rename) and git checkout -b (create and switch).
@@ -11,6 +12,8 @@
 9. The difference between a Docker Image (the blueprint) and a Container (the running instance).
 10. What happens to Docker data if you don't use a volume.
 11. The difference between a "Host" port and a "Container" port.
+
+## Day 2
 12. Explain the difference between an Image and a Container in your own words (the Class vs. Instance analogy is great).
 13. Explain why your Go code uses localhost as the host even though the DB is in Docker (Port Mapping).
 14. What the -d flag does in docker compose up.
@@ -23,3 +26,9 @@
 21. The difference between %v and %w.
 22. Why we return nil instead of an empty struct when an error occurs.
 23. The command to run a Go program located in a sub-folder.
+
+## Day 3
+24. What is a UNIQUE constraint and how does it help with Idempotency?
+25. Why we use TIMESTAMP WITH TIME ZONE instead of just a local timestamp.
+26. The difference between a Primary Key (for the DB) and an External ID (from the API).
+26. What is a Makefile and why is it used in Go projects to manage tasks like migrations and builds?
