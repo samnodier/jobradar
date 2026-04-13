@@ -1,11 +1,22 @@
 package database
 
-import "database/sql"
+import (
+	"database/sql"
+	_ "github.com/jackc/pgx/v5/stdlib"
+)
 
 type Client struct {
-	db *sql.DB
+	Db *sql.DB
 }
 
-func Connect(dsn string) (Client, error) {
-
+func NewClient(dbURL string) (*Client, error) {
+	db, err := sql.Open("pgx", dbURL)
+	if err != nil {
+		return nil, err
+	}
+	db.Ping()
+	client := Client{
+		Db: db,
+	}
+	return &client, nil
 }
