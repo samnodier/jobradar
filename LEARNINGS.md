@@ -17,4 +17,9 @@
 15. Explain the purpose of the internal/ directory in Go and how it helps with encapsulation.
 16. Explain why sql.Open doesn't mean you are actually connected yet.
 17. What is a "Driver" in the context of Go's database/sql?
-18. Why we used sslmode=disable in our connection string (Hint: it's for local development).
+18. Explain what go mod tidy does and why it's good practice.
+19. Why we use a capital letter for Client and NewClient (Exporting).
+20. Explain why sql.Open needs a driver to be imported with a _.Why we used sslmode=disable in our connection string (Hint: it's for local development).
+21. The difference between %v and %w.
+22. Why we return nil instead of an empty struct when an error occurs.
+23. The command to run a Go program located in a sub-folder.
