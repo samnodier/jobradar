@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -8,6 +9,10 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/samnodier/jobradar/internal/database"
 )
+
+type apiConfig struct {
+	db *database.Queries
+}
 
 func main() {
 	fmt.Println("jobradar starting...")
@@ -20,5 +25,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to create a db client: %v", err)
 	}
-	defer dbClient.Db.Close()
+	cfg := &apiConfig{
+		db: dbClient.Queries,
+	}
+
+	ctx := context.Background()
+	cfg.scrapeRemoteOK(ctx)
+	fmt.Println("Done!")
 }

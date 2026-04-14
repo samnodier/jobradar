@@ -32,3 +32,12 @@
 25. Why we use TIMESTAMP WITH TIME ZONE instead of just a local timestamp.
 26. The difference between a Primary Key (for the DB) and an External ID (from the API).
 26. What is a Makefile and why is it used in Go projects to manage tasks like migrations and builds?
+
+## Day 4
+27. Explain the difference between json.Unmarshal (using a byte slice) and json.NewDecoder (using a stream).
+28. Why do we need to check res.StatusCode before trying to decode the body? (What happens if the API sends a 404?)
+29. What is an HTML Entity (like &amp;) and why do we need to decode it?
+30. What does ON CONFLICT DO NOTHING do in a Postgres INSERT statement?
+31. Why is it a bad idea to let your fetcher package talk directly to your database package? (Hint: Think about "Dependency Cycles").
+32. What is Type Safety in the context of a database?
+33. Why does SQLC need access to your Goose migration files to work?

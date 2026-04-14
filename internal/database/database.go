@@ -6,7 +6,8 @@ import (
 )
 
 type Client struct {
-	Db *sql.DB
+	Db      *sql.DB
+	Queries *Queries
 }
 
 func NewClient(dbURL string) (*Client, error) {
@@ -16,7 +17,8 @@ func NewClient(dbURL string) (*Client, error) {
 	}
 	db.Ping()
 	client := Client{
-		Db: db,
+		Db:      db,
+		Queries: New(db),
 	}
 	return &client, nil
 }

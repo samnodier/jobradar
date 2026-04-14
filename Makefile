@@ -14,6 +14,10 @@ down:
 
 # run 'make migrate-up'
 migrate-up:
-	goose -dir sql postgres "${DB_URL}" up
+	goose -dir sql/schema postgres "${DB_URL}" up
+migrate-down:
+	goose -dir sql/schema postgres "${DB_URL}" down
 
+sqlc:
+	sqlc generate
 # end
