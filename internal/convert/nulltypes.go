@@ -2,6 +2,7 @@ package convert
 
 import (
 	"database/sql"
+	"time"
 )
 
 func ToNullInt32(val int) sql.NullInt32 {
@@ -35,4 +36,16 @@ func ToNullBool(val *bool) sql.NullBool {
 		}
 	}
 	return sql.NullBool{Bool: *val, Valid: true}
+}
+
+func ToNullTime(val time.Time) sql.NullTime {
+	if val.IsZero() {
+		return sql.NullTime{
+			Valid: false,
+		}
+	}
+	return sql.NullTime{
+		Time:  val,
+		Valid: true,
+	}
 }

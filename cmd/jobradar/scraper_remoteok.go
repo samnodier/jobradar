@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"log"
+	"time"
 
 	"github.com/samnodier/jobradar/internal/convert"
 	"github.com/samnodier/jobradar/internal/database"
@@ -11,12 +14,23 @@ import (
 )
 
 func (cfg *apiConfig) scrapeRemoteOK(ctx context.Context) {
+	log.Println("Starting RemoteOK scrape...")
+
 	url := "https://remoteok.com/api"
 	jobs, err := fetcher.FetchRemoteOKJobs(url)
 	if err != nil {
+		cfg.db.UpdateServiceHealth(ctx, database.UpdateServiceHealthParams{
+			ServiceName:     "remoteok",
+			LastSuccessAt:   convert.ToNullTime(time.Time{}),
+			Status:          "failing",
+			LastError:       convert.ToNullString(err.Error()),
+			JobCountLastRun: convert.ToNullInt32(0),
+		})
 		log.Printf("error fetching the jobs form remoteok: %v", err)
 		return
 	}
+
+	count := 0
 
 	remote := true
 	for _, rJob := range jobs {
@@ -40,11 +54,21 @@ func (cfg *apiConfig) scrapeRemoteOK(ctx context.Context) {
 			LogoUrl:     convert.ToNullString(rJob.Logo),
 		})
 		if err != nil {
-			if err.Error() == "sql: no rows in result set" {
+			if errors.Is(err, sql.ErrNoRows) {
 				continue
 			}
 			log.Printf("could not save job %s: %v", rJob.ID, err)
+		} else {
+			count++
 		}
 	}
 	log.Printf("RemoteOK scraping finished!")
+
+	cfg.db.UpdateServiceHealth(ctx, database.UpdateServiceHealthParams{
+		ServiceName:     "remoteok",
+		LastSuccessAt:   convert.ToNullTime(time.Now()),
+		Status:          "healthy",
+		LastError: convert.ToNullString(""),
+		JobCountLastRun: convert.ToNullInt32(count),
+	})
 }

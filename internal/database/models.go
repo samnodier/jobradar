@@ -6,6 +6,7 @@ package database
 
 import (
 	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -32,4 +33,15 @@ type Job struct {
 	CreatedAt       sql.NullTime   `json:"created_at"`
 	UpdatedAt       sql.NullTime   `json:"updated_at"`
 	LogoUrl         sql.NullString `json:"logo_url"`
+}
+
+type ServiceHealth struct {
+	ID              uuid.UUID      `json:"id"`
+	ServiceName     string         `json:"service_name"`
+	LastRunAt       time.Time      `json:"last_run_at"`
+	LastSuccessAt   sql.NullTime   `json:"last_success_at"`
+	Status          string         `json:"status"`
+	LastError       sql.NullString `json:"last_error"`
+	JobCountLastRun sql.NullInt32  `json:"job_count_last_run"`
+	UpdatedAt       sql.NullTime   `json:"updated_at"`
 }
