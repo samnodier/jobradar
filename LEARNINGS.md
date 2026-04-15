@@ -41,3 +41,16 @@
 31. Why is it a bad idea to let your fetcher package talk directly to your database package? (Hint: Think about "Dependency Cycles").
 32. What is Type Safety in the context of a database?
 33. Why does SQLC need access to your Goose migration files to work?
+
+## Day 5
+34. What is a Router and why do we use one instead of just if/else statements?
+35. What is Middleware in the context of a web server?
+36. Why do we use json.NewEncoder(w).Encode() instead of fmt.Fprintf(w, ...)?
+37. Why do we use a respondWithJSON helper instead of encoding JSON inside every handler?
+38. Why is r.Context() passed to the database query instead of context.Background()? (Hint: Think about what happens if the user closes their browser tab while the query is running).
+39. Goroutine: A way to run a function in the background without blocking the rest of the program.
+40. Ticker: A tool to trigger events at regular time intervals.
+41. Blocking: When a line of code (like <-ticker.C) makes the program wait before moving to the next line.
+42. What is CORS and why does it exist? (Security against malicious websites).
+43. Why do we use chi.URLParam instead of reading from the query string for IDs?
+44. What is the difference between LIKE and ILIKE in Postgres?

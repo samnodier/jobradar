@@ -7,3 +7,17 @@ INSERT INTO jobs (
 )
 ON CONFLICT (external_id, source) DO NOTHING
 RETURNING *;
+
+-- name: GetJobs :many
+SELECT * FROM jobs
+ORDER BY created_at DESC;
+
+-- name: GetJobByID :one
+SELECT * FROM jobs WHERE id = $1;
+
+-- name: SearchJobs :many
+SELECT * FROM jobs
+WHERE
+    (title ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
+    AND ($2::TEXT IS NULL OR $2 = ANY(skills))
+ORDER BY created_at DESC;

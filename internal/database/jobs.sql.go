@@ -9,6 +9,7 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/google/uuid"
 	"github.com/lib/pq"
 )
 
@@ -80,4 +81,145 @@ func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, erro
 		&i.LogoUrl,
 	)
 	return i, err
+}
+
+const getJobByID = `-- name: GetJobByID :one
+SELECT id, external_id, source, title, company, description, url, salary_min, salary_max, currency, location, is_remote, status, employment_type, experience_level, skills, posted_at, expires_at, created_at, updated_at, logo_url FROM jobs WHERE id = $1
+`
+
+func (q *Queries) GetJobByID(ctx context.Context, id uuid.UUID) (Job, error) {
+	row := q.db.QueryRowContext(ctx, getJobByID, id)
+	var i Job
+	err := row.Scan(
+		&i.ID,
+		&i.ExternalID,
+		&i.Source,
+		&i.Title,
+		&i.Company,
+		&i.Description,
+		&i.Url,
+		&i.SalaryMin,
+		&i.SalaryMax,
+		&i.Currency,
+		&i.Location,
+		&i.IsRemote,
+		&i.Status,
+		&i.EmploymentType,
+		&i.ExperienceLevel,
+		pq.Array(&i.Skills),
+		&i.PostedAt,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LogoUrl,
+	)
+	return i, err
+}
+
+const getJobs = `-- name: GetJobs :many
+SELECT id, external_id, source, title, company, description, url, salary_min, salary_max, currency, location, is_remote, status, employment_type, experience_level, skills, posted_at, expires_at, created_at, updated_at, logo_url FROM jobs
+ORDER BY created_at DESC
+`
+
+func (q *Queries) GetJobs(ctx context.Context) ([]Job, error) {
+	rows, err := q.db.QueryContext(ctx, getJobs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Job
+	for rows.Next() {
+		var i Job
+		if err := rows.Scan(
+			&i.ID,
+			&i.ExternalID,
+			&i.Source,
+			&i.Title,
+			&i.Company,
+			&i.Description,
+			&i.Url,
+			&i.SalaryMin,
+			&i.SalaryMax,
+			&i.Currency,
+			&i.Location,
+			&i.IsRemote,
+			&i.Status,
+			&i.EmploymentType,
+			&i.ExperienceLevel,
+			pq.Array(&i.Skills),
+			&i.PostedAt,
+			&i.ExpiresAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.LogoUrl,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const searchJobs = `-- name: SearchJobs :many
+SELECT id, external_id, source, title, company, description, url, salary_min, salary_max, currency, location, is_remote, status, employment_type, experience_level, skills, posted_at, expires_at, created_at, updated_at, logo_url FROM jobs
+WHERE
+    (title ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
+    AND ($2::TEXT IS NULL OR $2 = ANY(skills))
+ORDER BY created_at DESC
+`
+
+type SearchJobsParams struct {
+	Column1 sql.NullString `json:"column_1"`
+	Column2 string         `json:"column_2"`
+}
+
+func (q *Queries) SearchJobs(ctx context.Context, arg SearchJobsParams) ([]Job, error) {
+	rows, err := q.db.QueryContext(ctx, searchJobs, arg.Column1, arg.Column2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Job
+	for rows.Next() {
+		var i Job
+		if err := rows.Scan(
+			&i.ID,
+			&i.ExternalID,
+			&i.Source,
+			&i.Title,
+			&i.Company,
+			&i.Description,
+			&i.Url,
+			&i.SalaryMin,
+			&i.SalaryMax,
+			&i.Currency,
+			&i.Location,
+			&i.IsRemote,
+			&i.Status,
+			&i.EmploymentType,
+			&i.ExperienceLevel,
+			pq.Array(&i.Skills),
+			&i.PostedAt,
+			&i.ExpiresAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.LogoUrl,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
