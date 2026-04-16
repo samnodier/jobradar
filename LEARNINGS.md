@@ -54,3 +54,22 @@
 42. What is CORS and why does it exist? (Security against malicious websites).
 43. Why do we use chi.URLParam instead of reading from the query string for IDs?
 44. What is the difference between LIKE and ILIKE in Postgres?
+
+## Day 6
+45. The difference between Authentication (Who are you?) and Authorization (What are you allowed to do?).
+46. The concept of Delegated Identity (using Google/GitHub to handle the "Who are you?" part).
+47. JWT Rule: Never put sensitive data (like passwords or secrets) inside a JWT payload because it is readable by anyone who has the token. It is only used to verify integrity, not to hide data.
+48. `access_token` and `refresh_token` should be encrypted at rest in production. That's the right call to make when you have the core system working.
+49. Git Stash: How to move uncommitted work between branches.
+50. Orphaned Rows: Why Foreign Keys with ON DELETE CASCADE are necessary in normalized schemas.
+51. The Blacklist Tradeoff: Balancing the speed of JWTs with the security of instant revocation.
+52. `CITEXT` is a Postgres extension that makes text comparisons case-insensitive. Important for emails because `Sam@gmail.com` and `sam@gmail.com` should be treated as the same user. 
+53. the `state` parameter prevents CSRF attacks (Cross Site Request Forgery), not XSS. Here's the idea: your app generates a random string, sends it to GitHub, and when GitHub redirects back you verify the same string came back. This prevents a malicious site from tricking your server into thinking it initiated the login.
+54. Request the minimum OAuth scopes needed; for GitHub profile plus email access, read:user and user:email are usually more appropriate than the broader user scope.”
+55. Redis is good for temporary onboarding/session state because it supports TTL and shared access across instances, but permanent account truth belongs in Postgres.
+56. Authentication systems often contain multiple independent state artifacts: OAuth state, onboarding session, email verification token, and application session; confusing them leads to bad design.
+57. For sensitive changes like updating an email address, the new email should be verified before it replaces the currently trusted account email.
+58. The OAuth callback URL is just the route in my app that receives the provider redirect after authorization; it is not special by itself, but it must exactly match what is registered with the provider.
+59. golang.org/x/oauth2 handles OAuth client flow in Go: AuthCodeURL builds the provider redirect URL and Exchange swaps the callback code for a token.
+60. OAuth state can be stored in a cookie for simple implementations, but production systems typically combine client-side storage (cookie) with server-side storage (e.g., Redis) to ensure one-time use, prevent replay attacks, and support distributed systems.
+61. `Secure: true` on cookies means they only travel over HTTPS; always make this configurable or environment-aware so local development still works."
