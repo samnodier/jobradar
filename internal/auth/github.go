@@ -19,7 +19,6 @@ type GitHubUser struct {
 	Name      string `json:"name"`
 	Email     string `json:"email"`
 	AvatarURL string `json:"avatar_url"`
-	HTMLURL   string `json:"html_url"`
 }
 
 type GitHubEmail struct {
