@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS user_accounts (
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE (provider, provider_id),
     UNIQUE (provider, user_id)
-)
+);
 
 -- +goose Down
 DROP TABLE IF EXISTS user_accounts;

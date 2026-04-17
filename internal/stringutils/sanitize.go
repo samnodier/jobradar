@@ -1,9 +1,11 @@
 package stringutils
 
 import (
+	"fmt"
 	"html"
 	"regexp"
 	"strings"
+	"time"
 )
 
 var (
@@ -19,4 +21,13 @@ func Sanitize(input string) string {
 	str = controlChars.ReplaceAllString(str, " ")
 	str = whitespace.ReplaceAllString(str, " ")
 	return strings.TrimSpace(str)
+}
+
+func GenerateUsername(email string) string {
+	if email != "" {
+		parts := strings.Split(email, "@")
+		return parts[0]
+	}
+
+	return fmt.Sprintf("user_%d", time.Now().Unix())
 }

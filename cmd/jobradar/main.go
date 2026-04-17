@@ -47,6 +47,20 @@ func main() {
 		MaxAge:           300,
 	}))
 
+	onboardingTTL := 10 * time.Minute
+	if val := os.Getenv("ONBOARDING_TTL"); val != "" {
+		onboardingTTL, err = time.ParseDuration(val)
+		if err != nil {
+			log.Fatalf("Invalid ONBOARDING_TTL format: %v", err)
+		}
+	}
+	sessionTTL := 168 * time.Hour
+	if val := os.Getenv("SESSION_TTL"); val != "" {
+		sessionTTL, err = time.ParseDuration(val)
+		if err != nil {
+			log.Fatalf("Invalid SESSION_TTL format: %v", err)
+		}
+	}
 	authCfg := auth.AuthConfig{
 		GitHub: auth.GitHubOAuthConfig{
 			ClientID:     os.Getenv("GITHUB_CLIENT_ID"),
@@ -54,7 +68,8 @@ func main() {
 			RedirectURL:  os.Getenv("GITHUB_REDIRECT_URL"),
 		},
 		AppBaseURL:    os.Getenv("APP_BASE_URL"),
-		OnboardingTTL: 10 * time.Minute,
+		OnboardingTTL: onboardingTTL,
+		SessionTTL:    sessionTTL,
 		IsProduction:  os.Getenv("APP_ENV") == "production",
 	}
 
@@ -62,15 +77,22 @@ func main() {
 		Addr: os.Getenv("REDIS_ADDR"),
 	})
 
-	authHandler, err := auth.NewHandler(authCfg, rdb)
+	authHandler, err := auth.NewHandler(authCfg, rdb, dbClient.Queries, dbClient.Pool)
 	if err != nil {
 		log.Fatalf("failed to create auth handler: %v", err)
 	}
 
 	// Define routes
-	router.Get("/api/health", cfg.handlerHealth)
-	router.Get("/api/jobs", cfg.handlerJobsGet)
-	router.Get("/api/jobs/{jobID}", cfg.handlerJobGetByID)
+	router.Route("/api", func(r chi.Router) {
+		r.Get("/health", cfg.handlerHealth)
+
+		r.Group(func(r chi.Router) {
+			r.Use(authHandler.RequireAuth)
+			r.Get("/jobs", cfg.handlerJobsGet)
+			r.Get("/jobs/{jobID}", cfg.handlerJobGetByID)
+		})
+	})
+
 	router.Mount("/auth", authHandler.Routes())
 
 	// Start the server

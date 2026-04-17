@@ -1,24 +1,32 @@
 package database
 
 import (
-	"database/sql"
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"context"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Client struct {
-	Db      *sql.DB
+	Pool    *pgxpool.Pool
 	Queries *Queries
 }
 
 func NewClient(dbURL string) (*Client, error) {
-	db, err := sql.Open("pgx", dbURL)
+	pool, err := pgxpool.New(context.Background(), dbURL)
 	if err != nil {
 		return nil, err
 	}
-	db.Ping()
-	client := Client{
-		Db:      db,
-		Queries: New(db),
+	// db.Ping()
+	// client := Client{
+	// 	Db:      db,
+	// 	Queries: New(db),
+	// }
+	if err := pool.Ping(context.Background()); err != nil {
+		return nil, err
 	}
-	return &client, nil
+
+	return &Client{
+		Pool:    pool,
+		Queries: New(pool),
+	}, nil
 }

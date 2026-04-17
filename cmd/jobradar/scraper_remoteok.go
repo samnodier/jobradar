@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"log"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/samnodier/jobradar/internal/convert"
 	"github.com/samnodier/jobradar/internal/database"
 	"github.com/samnodier/jobradar/internal/fetcher"
@@ -21,7 +21,7 @@ func (cfg *apiConfig) scrapeRemoteOK(ctx context.Context) {
 	if err != nil {
 		cfg.db.UpdateServiceHealth(ctx, database.UpdateServiceHealthParams{
 			ServiceName:     "remoteok",
-			LastSuccessAt:   convert.ToNullTime(time.Time{}),
+			LastSuccessAt:   time.Time{},
 			Status:          "failing",
 			LastError:       convert.ToNullString(err.Error()),
 			JobCountLastRun: convert.ToNullInt32(0),
@@ -49,12 +49,13 @@ func (cfg *apiConfig) scrapeRemoteOK(ctx context.Context) {
 			SalaryMax:   convert.ToNullInt32(rJob.SalaryMax),
 			Currency:    convert.ToNullString(""),
 			Location:    convert.ToNullString(rJob.Location),
-			IsRemote:    convert.ToNullBool(&remote),
+			IsRemote:    &remote,
 			Skills:      rJob.Tags,
 			LogoUrl:     convert.ToNullString(rJob.Logo),
 		})
 		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 				continue
 			}
 			log.Printf("could not save job %s: %v", rJob.ID, err)
@@ -66,9 +67,9 @@ func (cfg *apiConfig) scrapeRemoteOK(ctx context.Context) {
 
 	cfg.db.UpdateServiceHealth(ctx, database.UpdateServiceHealthParams{
 		ServiceName:     "remoteok",
-		LastSuccessAt:   convert.ToNullTime(time.Now()),
+		LastSuccessAt:   time.Now(),
 		Status:          "healthy",
-		LastError: convert.ToNullString(""),
+		LastError:       convert.ToNullString(""),
 		JobCountLastRun: convert.ToNullInt32(count),
 	})
 }

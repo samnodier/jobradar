@@ -12,6 +12,9 @@ up:
 down:
 	docker compose down
 
+run:
+	go run ./cmd/jobradar/...
+
 # run 'make migrate-up'
 migrate-up:
 	goose -dir sql/schema postgres "${DB_URL}" up
@@ -20,4 +23,6 @@ migrate-down:
 
 sqlc:
 	sqlc generate
+
+.PHONY: up down migrate-up migrate-down sqlc
 # end

@@ -74,3 +74,4 @@
 60. OAuth state can be stored in a cookie for simple implementations, but production systems typically combine client-side storage (cookie) with server-side storage (e.g., Redis) to ensure one-time use, prevent replay attacks, and support distributed systems.
 61. `Secure: true` on cookies means they only travel over HTTPS; always make this configurable or environment-aware so local development still works."
 62. Namespace Redis keys consistently by feature prefix so related keys are easy to identify, scan, and manage together — e.g. `auth:pending_signup:` not just `pending:`
+63. Use strconv.FormatInt(id, 10) to convert int64 to string when passing numeric IDs as text to a database query.
