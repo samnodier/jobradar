@@ -2,14 +2,15 @@ package auth
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/redis/go-redis/v9"
+	"github.com/samnodier/jobradar/internal/database"
 	"github.com/samnodier/jobradar/internal/httpx"
 )
 
@@ -28,17 +29,11 @@ type GitHubEmail struct {
 	Visibility string `json:"visibility"`
 }
 
-func generateRandomState() string {
-	b := make([]byte, 32)
-	rand.Read(b)
-	return base64.URLEncoding.EncodeToString(b)
-}
-
 func (h *Handler) handleGitHubLogin(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Generate the CSRF state
-	state := generateRandomState()
+	state := generateRandomToken()
 
 	// Store state in Redis
 	err := h.rdb.Set(
@@ -135,7 +130,47 @@ func (h *Handler) handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = user // TODO: Store pending signup
+	providerID := strconv.FormatInt(user.ID, 10)
+	dbUser, err := h.db.GetUserByProviderIdentity(ctx, database.GetUserByProviderIdentityParams{
+		Provider:   "github",
+		ProviderID: providerID,
+	})
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		// real DB error
+		httpx.RespondError(w, http.StatusInternalServerError, "database error")
+		return
+	}
+
+	if err == nil {
+		// Returning user - redirect to app
+
+		sessionID, err := h.createSession(ctx, dbUser.ID, user.Email)
+		if err != nil {
+			redirectWithError(w, r, "/login", "session_create_failed")
+			return
+		}
+
+		h.setSessionCookie(w, sessionID)
+
+		http.Redirect(w, r, h.cfg.AppBaseURL, http.StatusFound)
+		return
+	}
+
+	// New user - store pending sign up
+	pendingToken := generateRandomToken()
+	signup := PendingSignup{
+		GitHubID:  user.ID,
+		Login:     user.Login,
+		Name:      user.Name,
+		Email:     user.Email,
+		AvatarURL: user.AvatarURL,
+	}
+	if err := h.savePendingSignup(ctx, pendingToken, signup); err != nil {
+		httpx.RespondError(w, http.StatusInternalServerError, "failed to store pending signup")
+		return
+	}
+
+	http.Redirect(w, r, h.cfg.AppBaseURL+"/auth/onboarding?token="+pendingToken, http.StatusFound)
 }
 
 func (h *Handler) fetchGitHubUser(ctx context.Context, accessToken string) (*GitHubUser, error) {

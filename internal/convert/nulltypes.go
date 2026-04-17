@@ -1,51 +1,27 @@
 package convert
 
 import (
-	"database/sql"
 	"time"
 )
 
-func ToNullInt32(val int) sql.NullInt32 {
+func ToNullInt32(val int) *int32 {
 	if val == 0 {
-		return sql.NullInt32{
-			Valid: false,
-		}
+		return nil
 	}
-	return sql.NullInt32{
-		Int32: int32(val),
-		Valid: true,
-	}
+	v := int32(val)
+	return &v
 }
 
-func ToNullString(val string) sql.NullString {
-	if val == "" {
-		return sql.NullString{
-			Valid: false,
-		}
+func ToNullString(s string) *string {
+	if s == "" {
+		return nil
 	}
-	return sql.NullString{
-		String: val,
-		Valid:  true,
-	}
+	return &s
 }
 
-func ToNullBool(val *bool) sql.NullBool {
-	if val == nil {
-		return sql.NullBool{
-			Valid: false,
-		}
-	}
-	return sql.NullBool{Bool: *val, Valid: true}
-}
-
-func ToNullTime(val time.Time) sql.NullTime {
+func ToNullTime(val time.Time) *time.Time {
 	if val.IsZero() {
-		return sql.NullTime{
-			Valid: false,
-		}
+		return nil
 	}
-	return sql.NullTime{
-		Time:  val,
-		Valid: true,
-	}
+	return &val
 }

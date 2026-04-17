@@ -17,6 +17,7 @@ type AuthConfig struct {
 	GitHub        GitHubOAuthConfig
 	AppBaseURL    string
 	OnboardingTTL time.Duration
+	SessionTTL    time.Duration
 	IsProduction  bool
 }
 

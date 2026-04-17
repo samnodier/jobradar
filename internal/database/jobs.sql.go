@@ -7,10 +7,8 @@ package database
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/google/uuid"
-	"github.com/lib/pq"
 )
 
 const createJob = `-- name: CreateJob :one
@@ -25,23 +23,23 @@ RETURNING id, external_id, source, title, company, description, url, salary_min,
 `
 
 type CreateJobParams struct {
-	ExternalID  string         `json:"external_id"`
-	Source      string         `json:"source"`
-	Title       string         `json:"title"`
-	Company     string         `json:"company"`
-	Description sql.NullString `json:"description"`
-	Url         string         `json:"url"`
-	SalaryMin   sql.NullInt32  `json:"salary_min"`
-	SalaryMax   sql.NullInt32  `json:"salary_max"`
-	Currency    sql.NullString `json:"currency"`
-	Location    sql.NullString `json:"location"`
-	IsRemote    sql.NullBool   `json:"is_remote"`
-	Skills      []string       `json:"skills"`
-	LogoUrl     sql.NullString `json:"logo_url"`
+	ExternalID  string   `json:"external_id"`
+	Source      string   `json:"source"`
+	Title       string   `json:"title"`
+	Company     string   `json:"company"`
+	Description *string  `json:"description"`
+	Url         string   `json:"url"`
+	SalaryMin   *int32   `json:"salary_min"`
+	SalaryMax   *int32   `json:"salary_max"`
+	Currency    *string  `json:"currency"`
+	Location    *string  `json:"location"`
+	IsRemote    *bool    `json:"is_remote"`
+	Skills      []string `json:"skills"`
+	LogoUrl     *string  `json:"logo_url"`
 }
 
 func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, error) {
-	row := q.db.QueryRowContext(ctx, createJob,
+	row := q.db.QueryRow(ctx, createJob,
 		arg.ExternalID,
 		arg.Source,
 		arg.Title,
@@ -53,7 +51,7 @@ func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, erro
 		arg.Currency,
 		arg.Location,
 		arg.IsRemote,
-		pq.Array(arg.Skills),
+		arg.Skills,
 		arg.LogoUrl,
 	)
 	var i Job
@@ -73,7 +71,7 @@ func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, erro
 		&i.Status,
 		&i.EmploymentType,
 		&i.ExperienceLevel,
-		pq.Array(&i.Skills),
+		&i.Skills,
 		&i.PostedAt,
 		&i.ExpiresAt,
 		&i.CreatedAt,
@@ -88,7 +86,7 @@ SELECT id, external_id, source, title, company, description, url, salary_min, sa
 `
 
 func (q *Queries) GetJobByID(ctx context.Context, id uuid.UUID) (Job, error) {
-	row := q.db.QueryRowContext(ctx, getJobByID, id)
+	row := q.db.QueryRow(ctx, getJobByID, id)
 	var i Job
 	err := row.Scan(
 		&i.ID,
@@ -106,7 +104,7 @@ func (q *Queries) GetJobByID(ctx context.Context, id uuid.UUID) (Job, error) {
 		&i.Status,
 		&i.EmploymentType,
 		&i.ExperienceLevel,
-		pq.Array(&i.Skills),
+		&i.Skills,
 		&i.PostedAt,
 		&i.ExpiresAt,
 		&i.CreatedAt,
@@ -122,7 +120,7 @@ ORDER BY created_at DESC
 `
 
 func (q *Queries) GetJobs(ctx context.Context) ([]Job, error) {
-	rows, err := q.db.QueryContext(ctx, getJobs)
+	rows, err := q.db.Query(ctx, getJobs)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +144,7 @@ func (q *Queries) GetJobs(ctx context.Context) ([]Job, error) {
 			&i.Status,
 			&i.EmploymentType,
 			&i.ExperienceLevel,
-			pq.Array(&i.Skills),
+			&i.Skills,
 			&i.PostedAt,
 			&i.ExpiresAt,
 			&i.CreatedAt,
@@ -156,9 +154,6 @@ func (q *Queries) GetJobs(ctx context.Context) ([]Job, error) {
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -175,12 +170,12 @@ ORDER BY created_at DESC
 `
 
 type SearchJobsParams struct {
-	Column1 sql.NullString `json:"column_1"`
-	Column2 string         `json:"column_2"`
+	Column1 *string `json:"column_1"`
+	Column2 string  `json:"column_2"`
 }
 
 func (q *Queries) SearchJobs(ctx context.Context, arg SearchJobsParams) ([]Job, error) {
-	rows, err := q.db.QueryContext(ctx, searchJobs, arg.Column1, arg.Column2)
+	rows, err := q.db.Query(ctx, searchJobs, arg.Column1, arg.Column2)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +199,7 @@ func (q *Queries) SearchJobs(ctx context.Context, arg SearchJobsParams) ([]Job, 
 			&i.Status,
 			&i.EmploymentType,
 			&i.ExperienceLevel,
-			pq.Array(&i.Skills),
+			&i.Skills,
 			&i.PostedAt,
 			&i.ExpiresAt,
 			&i.CreatedAt,
@@ -214,9 +209,6 @@ func (q *Queries) SearchJobs(ctx context.Context, arg SearchJobsParams) ([]Job, 
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

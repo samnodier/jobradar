@@ -6,11 +6,12 @@ import (
 )
 
 type PendingSignup struct {
-	GitHubID  int64  `json:"github_id"`
-	Login     string `json:"login"`
-	Name      string `json:"name"`
-	Email     string `json:"email"`
-	AvatarURL string `json:"avatar_url"`
+	GitHubID    int64  `json:"github_id"`
+	Login       string `json:"login"`
+	Name        string `json:"name"`
+	Email       string `json:"email"`
+	AvatarURL   string `json:"avatar_url"`
+	AccessToken string `json:"access_token"`
 }
 
 func (h *Handler) savePendingSignup(ctx context.Context, token string, signup PendingSignup) error {
