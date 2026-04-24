@@ -1,13 +1,10 @@
 <script setup lang="ts"></script>
 
-
+async function test () { const res = await fetch('/api/jobs'); console.log(await res.json()); }
 
 <template>
-  <h1>You did it!</h1>
-  <p>
-    Visit <a href="https://vuejs.org/" target="_blank" rel="noopener">vuejs.org</a> to read the
-    documentation
-  </p>
+  <h1>Jobradar</h1>
+  <button @click="test">Test API</button>
 </template>
 
 <style scoped></style>
