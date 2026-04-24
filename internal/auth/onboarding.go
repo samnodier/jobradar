@@ -10,6 +10,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/samnodier/jobradar/internal/convert"
 	"github.com/samnodier/jobradar/internal/database"
+	"github.com/samnodier/jobradar/internal/dbx"
 	"github.com/samnodier/jobradar/internal/httpx"
 	"github.com/samnodier/jobradar/internal/stringutils"
 )
@@ -37,11 +38,12 @@ func (h *Handler) handleOnboardingGet(w http.ResponseWriter, r *http.Request) {
 
 	// Parse request body
 	httpx.RespondJSON(w, http.StatusOK, map[string]any{
-		"github_id":  pending.GitHubID,
-		"name":       pending.Name,
-		"email":      pending.Email,
-		"login":      pending.Login,
-		"avatar_url": pending.AvatarURL,
+		"github_id":          pending.GitHubID,
+		"name":               pending.Name,
+		"email":              pending.Email,
+		"suggested_username": stringutils.GenerateUsername(pending.Email),
+		"login":              pending.Login,
+		"avatar_url":         pending.AvatarURL,
 	})
 }
 
@@ -68,8 +70,9 @@ func (h *Handler) handleOnboardingComplete(w http.ResponseWriter, r *http.Reques
 
 	// Parse request body
 	type request struct {
-		Name  string `json:"name"`
-		Email string `json:"email"`
+		Name     string `json:"name"`
+		Email    string `json:"email"`
+		Username string `json:"username"`
 	}
 	var req request
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -77,7 +80,7 @@ func (h *Handler) handleOnboardingComplete(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if req.Email == "" || req.Name == "" {
+	if req.Email == "" || req.Name == "" || req.Username == "" {
 		redirectWithError(w, r, "/login", "invalid_request")
 		return
 	}
@@ -91,16 +94,26 @@ func (h *Handler) handleOnboardingComplete(w http.ResponseWriter, r *http.Reques
 
 	qtx := h.db.WithTx(tx)
 
-	// Create the local user
-	username := stringutils.GenerateUsername(req.Email)
+	// Pre-validate the username
+	if !stringutils.IsValidUsername(req.Username) {
+		httpx.RespondError(w, http.StatusBadRequest, "Username must be 3-20 characters and alphanumeric")
+		return
+	}
 
+	// Attempt to create the local user
 	user, err := qtx.CreateUser(ctx, database.CreateUserParams{
 		Email:     req.Email,
-		Username:  convert.ToNullString(username),
+		Username:  convert.ToNullString(req.Username),
 		Name:      convert.ToNullString(req.Name),
 		AvatarUrl: convert.ToNullString(pending.AvatarURL),
 	})
 	if err != nil {
+		// Duplicate Error
+		if dbx.IsUniqueViolation(err) {
+			httpx.RespondError(w, http.StatusConflict, "That username is already taken")
+			return
+		}
+
 		redirectWithError(w, r, "/login", "create_user_failed")
 		return
 	}
