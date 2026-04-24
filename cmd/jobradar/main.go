@@ -91,7 +91,7 @@ func main() {
 		r.Group(func(r chi.Router) {
 			r.Use(authHandler.RequireAuth)
 
-			r.Get("/users/me", authHandler.HandlerUserGet)
+			// r.Get("/users/me", authHandler.HandlerUserGet)
 		})
 	})
 

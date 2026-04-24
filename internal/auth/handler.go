@@ -53,7 +53,11 @@ func NewHandler(cfg AuthConfig, rdb *redis.Client, db *database.Queries, pool *p
 func (h *Handler) Routes() http.Handler {
 	r := chi.NewRouter()
 
-	r.Get("/users/me", h.HandlerUserGet)
+	r.Group(func(r chi.Router) {
+		r.Use(h.RequireAuth)
+		r.Get("/users/me", h.HandlerUserGet)
+	})
+
 	r.Get("/github/login", h.handleGitHubLogin)
 	r.Get("/github/callback", h.handleGitHubCallback)
 	r.Get("/onboarding", h.handleOnboardingGet)
