@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5"
 	"github.com/samnodier/jobradar/internal/convert"
 	"github.com/samnodier/jobradar/internal/database"
 	"github.com/samnodier/jobradar/internal/fetcher"
@@ -21,7 +21,7 @@ func (cfg *apiConfig) scrapeRemoteOK(ctx context.Context) {
 	if err != nil {
 		cfg.db.UpdateServiceHealth(ctx, database.UpdateServiceHealthParams{
 			ServiceName:     "remoteok",
-			LastSuccessAt:   time.Time{},
+			LastSuccessAt:   convert.ToNullTime(time.Time{}),
 			Status:          "failing",
 			LastError:       convert.ToNullString(err.Error()),
 			JobCountLastRun: convert.ToNullInt32(0),
@@ -54,8 +54,7 @@ func (cfg *apiConfig) scrapeRemoteOK(ctx context.Context) {
 			LogoUrl:     convert.ToNullString(rJob.Logo),
 		})
 		if err != nil {
-			var pgErr *pgconn.PgError
-			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			if errors.Is(err, pgx.ErrNoRows) {
 				continue
 			}
 			log.Printf("could not save job %s: %v", rJob.ID, err)
@@ -67,7 +66,7 @@ func (cfg *apiConfig) scrapeRemoteOK(ctx context.Context) {
 
 	cfg.db.UpdateServiceHealth(ctx, database.UpdateServiceHealthParams{
 		ServiceName:     "remoteok",
-		LastSuccessAt:   time.Now(),
+		LastSuccessAt:   convert.ToNullTime(time.Now()),
 		Status:          "healthy",
 		LastError:       convert.ToNullString(""),
 		JobCountLastRun: convert.ToNullInt32(count),

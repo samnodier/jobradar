@@ -86,10 +86,12 @@ func main() {
 	router.Route("/api", func(r chi.Router) {
 		r.Get("/health", cfg.handlerHealth)
 
+		r.Get("/jobs", cfg.handlerJobsGet)
+		r.Get("/jobs/{jobID}", cfg.handlerJobGetByID)
 		r.Group(func(r chi.Router) {
 			r.Use(authHandler.RequireAuth)
-			r.Get("/jobs", cfg.handlerJobsGet)
-			r.Get("/jobs/{jobID}", cfg.handlerJobGetByID)
+
+			r.Get("/users/me", authHandler.HandlerUserGet)
 		})
 	})
 

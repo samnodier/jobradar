@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -11,6 +12,7 @@ import (
 func (cfg *apiConfig) handlerJobsGet(w http.ResponseWriter, r *http.Request) {
 	jobs, err := cfg.db.GetJobs(r.Context())
 	if err != nil {
+		log.Printf("Error fetching jobs: %v", err)
 		httpx.RespondError(w, http.StatusInternalServerError, "Couldn't fetch jobs")
 		return
 	}
