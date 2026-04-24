@@ -39,3 +39,7 @@ postgres_data/
 
 # Go Test
 *.out
+
+# Cookies
+*.cookies
+cookies.txt

@@ -6,6 +6,9 @@ INSERT INTO users (
 )
 RETURNING *;
 
+-- name: GetUserByID :one
+SELECT * FROM users WHERE id = $1 LIMIT 1;
+
 -- name: GetUserByProviderIdentity :one
 SELECT u.* FROM users u
 JOIN user_accounts ua ON ua.user_id = u.id

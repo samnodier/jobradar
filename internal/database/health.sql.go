@@ -30,11 +30,11 @@ RETURNING id, service_name, last_run_at, last_success_at, status, last_error, jo
 `
 
 type UpdateServiceHealthParams struct {
-	ServiceName     string    `json:"service_name"`
-	LastSuccessAt   time.Time `json:"last_success_at"`
-	Status          string    `json:"status"`
-	LastError       *string   `json:"last_error"`
-	JobCountLastRun *int32    `json:"job_count_last_run"`
+	ServiceName     string     `json:"service_name"`
+	LastSuccessAt   *time.Time `json:"last_success_at"`
+	Status          string     `json:"status"`
+	LastError       *string    `json:"last_error"`
+	JobCountLastRun *int32     `json:"job_count_last_run"`
 }
 
 func (q *Queries) UpdateServiceHealth(ctx context.Context, arg UpdateServiceHealthParams) (ServiceHealth, error) {
