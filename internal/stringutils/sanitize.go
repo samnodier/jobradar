@@ -31,3 +31,9 @@ func GenerateUsername(email string) string {
 
 	return fmt.Sprintf("user_%d", time.Now().Unix())
 }
+
+func IsValidUsername(username string) bool {
+	// Check for alphanumeric and underscores only
+	re := regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
+	return len(username) >= 3 && len(username) <= 20 && re.MatchString(username)
+}
