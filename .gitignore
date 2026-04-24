@@ -43,3 +43,7 @@ postgres_data/
 # Cookies
 *.cookies
 cookies.txt
+
+# Node dependencies
+node_modules/
+frontend/node_modules/
