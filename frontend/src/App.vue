@@ -36,13 +36,13 @@ async function logout() {
         <RouterLink to="/jobs">Jobs</RouterLink>
       </nav>
 
-      <div class="action-group">
-        <div v-if="authStore.user">
+      <div >
+        <div class="action-group" v-if="authStore.user">
           <RouterLink to="/profile" class="user-chip">
             <img v-if="authStore.user.avatar_url" :src="authStore.user.avatar_url" alt="User avatar" class="avatar" />
             <span class="user-name">{{ authStore.user.name }}</span>
           </RouterLink>
-          <button class="button button-ghost" @click="logout">Logout</button>
+          <button class="button button-secondary" @click="logout">Logout</button>
         </div>
         <div v-else="!authStore.user">
           <RouterLink class="button button-primary" to="/login">Login</RouterLink>
@@ -50,7 +50,7 @@ async function logout() {
       </div>
     </header>
 
-    <main class="content-shell">
+    <main>
       <div v-if="authStore.loading" class="status-banner">Loading auth state…</div>
       <div v-else-if="authStore.error" class="status-banner status-error">Error: {{ authStore.error }}</div>
       <RouterView v-else />
@@ -63,9 +63,12 @@ async function logout() {
   color-scheme: light;
   --font-base: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
   --surface: #ffffff;
+  --bg-secondary: #0000000a;
   --text: #000000;
   --muted: #6b7280;
   --accent: #2E5BFF;
+  --accent-soft: #2E5BFF0A;
+  --border: 1px solid rgba(94, 106, 210, 0.18);
   --shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
 }
 
@@ -154,6 +157,7 @@ a {
 }
 
 .button {
+  font-family: var(--font-base);
   border: 1px solid transparent;
   padding: 0.5rem 1.4rem;
   font-weight: 600;
@@ -166,10 +170,10 @@ a {
   color: white;
 }
 
-.button-ghost {
-  background: #f8fafc;
+.button-secondary {
+  background: var(--accent-soft);
   color: var(--text);
-  border-color: var(--border);
+  border: var(--border);
 }
 
 .button:hover {
@@ -199,16 +203,6 @@ a {
 .user-name {
   font-weight: 600;
   color: var(--text);
-}
-
-.content-shell {
-  flex: 1;
-  width: min(1200px, 100%);
-  margin: 2rem auto;
-  padding: 0 2rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
 }
 
 .status-banner {

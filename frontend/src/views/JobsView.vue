@@ -25,9 +25,14 @@ watch(
 
 watch(activeFilter, (value) => {
   if (value === 'all') {
-    router.replace({ query: {} }).catch(() => {})
+    router.replace({ query: {} }).catch(() => { })
   } else {
-    router.replace({ query: { filter: value } }).catch(() => {})
+    router.replace({
+      query: {
+        filter: value === 'all' ? undefined : value,
+        q: route.query.q, 
+      } 
+    }).catch(() => { })
   }
 })
 
@@ -63,8 +68,8 @@ const selectedJob = computed(() => {
   return jobs.value.find((job) => job.id === selectedJobId.value) ?? null
 })
 
-const searchQuery = computed(() => 
-   String(route.query.search || '').toLowerCase()
+const searchQuery = computed(() =>
+  String(route.query.search || '').toLowerCase()
 )
 
 
@@ -135,18 +140,12 @@ onMounted(fetchJobs)
       <section class="jobs-body">
         <div class="jobs-list-panel">
           <div class="jobs-filter-bar">
-            <button
-              :class="['filter-pill', { active: activeFilter === 'all' }]"
-              @click="activeFilter = 'all'"
-            >All</button>
-            <button
-              :class="['filter-pill', { active: activeFilter === 'saved' }]"
-              @click="activeFilter = 'saved'"
-            >Saved</button>
-            <button
-              :class="['filter-pill', { active: activeFilter === 'applied' }]"
-              @click="activeFilter = 'applied'"
-            >Applied</button>
+            <button :class="['filter-pill', { active: activeFilter === 'all' }]"
+              @click="activeFilter = 'all'">All</button>
+            <button :class="['filter-pill', { active: activeFilter === 'saved' }]"
+              @click="activeFilter = 'saved'">Saved</button>
+            <button :class="['filter-pill', { active: activeFilter === 'applied' }]"
+              @click="activeFilter = 'applied'">Applied</button>
           </div>
 
           <div class="job-list-scroll">
@@ -158,13 +157,8 @@ onMounted(fetchJobs)
               <div v-for="(group, label) in groupedJobs" :key="label" class="job-group">
                 <div class="group-label">{{ label }}</div>
                 <div>
-                  <JobRow
-                    v-for="job in group"
-                    :key="job.id"
-                    :job="job"
-                    :selected="job.id === selectedJobId"
-                    @click="selectedJobId = job.id"
-                  />
+                  <JobRow v-for="job in group" :key="job.id" :job="job" :selected="job.id === selectedJobId"
+                    @click="selectedJobId = job.id" />
                 </div>
               </div>
             </div>
@@ -172,11 +166,7 @@ onMounted(fetchJobs)
         </div>
 
         <div class="jobs-detail-panel">
-          <JobDetail
-            v-if="selectedJob"
-            :job="selectedJob"
-            @close="selectedJobId = null"
-          />
+          <JobDetail v-if="selectedJob" :job="selectedJob" @close="selectedJobId = null" />
           <div v-else class="status-card">Select a job to preview.</div>
         </div>
       </section>
@@ -186,9 +176,12 @@ onMounted(fetchJobs)
 
 <style scoped>
 .jobs-shell {
+  width: min(1200px, 100%);
+  margin: 0 auto;
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
   min-height: calc(100vh - 96px);
+  gap: 1.5rem;
 }
 
 .jobs-main {
