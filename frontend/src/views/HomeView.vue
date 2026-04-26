@@ -15,10 +15,11 @@
         JobRadar scrapes the best remote job boards and surfaces roles matched to your profile — no noise, just signal.
       </p>
 
-      <div class="hero-actions">
+      <div class="search-bar">
+        <svg xmlns="http://www.w3.org/2000/svg" height="15px" viewBox="0 -960 960 960" width="15px" fill="#e3e3e3"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>
         <input v-model="searchTerm" @keyup.enter="goToJobs" type="text" placeholder="Search by title, company, or skill"
           class="search-input" />
-        <button @click="goToJobs" class="button button-primary">Browse jobs</button>
+        <button @click="goToJobs" class="button search-button button-primary">Browse jobs</button>
       </div>
 
       <div class="hero-tags">
@@ -31,6 +32,7 @@
   </section>
 
   <section class="stats-sec">
+    <div class="stats-sub-sec">
     <div class="stats-row">
       <div class="stat-card">
         <div class="stat-label">Jobs tracked</div>
@@ -100,6 +102,7 @@
         </div>
       </div>
     </div>
+  </div>
   </section>
 
 </template>
@@ -227,19 +230,16 @@ onMounted(async () => {
 
 <style scoped>
 .home-hero {
-  display: flex;
-  justify-content: center;
-  gap: 2rem;
-  align-items: center;
-  padding: 2.5rem 0;
+  text-align:center;
+  border-bottom: var(--border);
+  padding: 2.5rem 2rem;
+  margin: 0 auto;
 }
 
 .hero-copy {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  max-width: 42rem;
+  max-width: 40rem;
+  margin: 0 auto;
+
   text-align: center;
 }
 
@@ -249,11 +249,8 @@ onMounted(async () => {
   gap: 0.65rem;
   padding: 0.6rem 1rem;
   background: rgba(94, 106, 210, 0.12);
-  color: #5e6ad2;
-  font-size: 0.82rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+  color: var(--accent);
+  font-size: 0.8rem;
   margin-bottom: 1.25rem;
 }
 
@@ -282,17 +279,39 @@ h1 span {
   line-height: 1.75;
 }
 
-.hero-actions {
+.search-bar {
   display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
+  align-items: center;
+  max-width: 520px;
+  margin: 0 auto;
+  border: var(--border);
+  padding: 0 0 0 0.6rem;
+  height: 44px;
+  gap: .5rem;
 }
+
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  height: 100%;
+  padding: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.search-button {
+  height: 100%;
+}
+
 
 .hero-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
   margin-top: 1.75rem;
+      display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .hero-tag {
@@ -309,7 +328,6 @@ h1 span {
 .hero-card {
   background: #fff;
   padding: 1.75rem;
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
 }
 
 .hero-card-header {
@@ -346,19 +364,34 @@ h1 span {
 .stats-sec {
   display: flex;
   flex-direction: column;
-  margin-top: 2.5rem;
+  background: var(--bg-secondary);
+  margin: 0 auto;
+  padding: 0 2rem;
+  gap: 1.5rem;
 }
 
-.stats-row {
+.stats-sub-sec {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
+  margin-top: 2.5rem;
+  width: min(1200px, 100%);
+  margin: 2rem auto;
+  padding: 0 2rem;
+  gap: 1.5rem;
+}
+
+
+.stats-row {
+  display: grid;
   width: 100%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
 }
 
 .stat-card {
   background: #fff;
   padding: 1.4rem 1.5rem;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+  border: var(--border);
 }
 
 .stat-label {
@@ -418,7 +451,6 @@ h1 span {
 .recommend-card {
   background: #fff;
   padding: 1.3rem;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.05);
   display: grid;
   gap: 1rem;
 }
@@ -490,7 +522,6 @@ h1 span {
 
 .jobs-table {
   background: #fff;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.05);
   overflow: hidden;
 }
 
