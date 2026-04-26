@@ -35,3 +35,14 @@ func (cfg *apiConfig) handlerJobGetByID(w http.ResponseWriter, r *http.Request) 
 
 	httpx.RespondJSON(w, http.StatusOK, job)
 }
+
+func (cfg *apiConfig) handlerJobStatsGet(w http.ResponseWriter, r *http.Request) {
+	stats, err := cfg.db.GetJobStats(r.Context())
+	if err != nil {
+		log.Printf("Error fetching job stats: %v", err)
+		httpx.RespondError(w, http.StatusInternalServerError, "Couldn't fetch job stats")
+		return
+	}
+
+	httpx.RespondJSON(w, http.StatusOK, stats)
+}

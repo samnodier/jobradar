@@ -87,6 +87,7 @@ func main() {
 		r.Get("/health", cfg.handlerHealth)
 
 		r.Get("/jobs", cfg.handlerJobsGet)
+		r.Get("/jobs/stats", cfg.handlerJobStatsGet)
 		r.Get("/jobs/{jobID}", cfg.handlerJobGetByID)
 		r.Group(func(r chi.Router) {
 			r.Use(authHandler.RequireAuth)

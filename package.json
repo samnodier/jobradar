@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "vue-router": "^5.0.6"
+  },
+  "devDependencies": {
+    "eslint-formatter-compact": "^9.0.1"
+  }
+}

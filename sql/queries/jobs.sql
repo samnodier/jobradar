@@ -15,6 +15,13 @@ ORDER BY created_at DESC;
 -- name: GetJobByID :one
 SELECT * FROM jobs WHERE id = $1;
 
+-- name: GetJobStats :one
+SELECT
+  COUNT(*) AS total_jobs,
+  COUNT(*) FILTER (WHERE created_at >= date_trunc('day', NOW())) AS new_jobs_today,
+  MAX(created_at) AS latest_scrape_at
+FROM jobs;
+
 -- name: SearchJobs :many
 SELECT * FROM jobs
 WHERE
