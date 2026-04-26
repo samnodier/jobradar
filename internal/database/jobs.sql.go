@@ -114,6 +114,27 @@ func (q *Queries) GetJobByID(ctx context.Context, id uuid.UUID) (Job, error) {
 	return i, err
 }
 
+const getJobStats = `-- name: GetJobStats :one
+SELECT
+  COUNT(*) AS total_jobs,
+  COUNT(*) FILTER (WHERE created_at >= date_trunc('day', NOW())) AS new_jobs_today,
+  MAX(created_at) AS latest_scrape_at
+FROM jobs
+`
+
+type GetJobStatsRow struct {
+	TotalJobs      int64       `json:"total_jobs"`
+	NewJobsToday   int64       `json:"new_jobs_today"`
+	LatestScrapeAt interface{} `json:"latest_scrape_at"`
+}
+
+func (q *Queries) GetJobStats(ctx context.Context) (GetJobStatsRow, error) {
+	row := q.db.QueryRow(ctx, getJobStats)
+	var i GetJobStatsRow
+	err := row.Scan(&i.TotalJobs, &i.NewJobsToday, &i.LatestScrapeAt)
+	return i, err
+}
+
 const getJobs = `-- name: GetJobs :many
 SELECT id, external_id, source, title, company, description, url, salary_min, salary_max, currency, location, is_remote, status, employment_type, experience_level, skills, posted_at, expires_at, created_at, updated_at, logo_url FROM jobs
 ORDER BY created_at DESC
