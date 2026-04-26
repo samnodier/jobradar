@@ -1,122 +1,108 @@
+<script setup lang="ts">
+import { routeLocationKey, RouterLink, useRoute } from 'vue-router'
+import IconGrid from '@/components/icons/IconGrid.vue'
+import { useAuthStore } from '@/stores/auth'
+import { AlertCircle, BarChart3, Bookmark, CheckCircle, User, Zap } from '@lucide/vue'
+import { computed } from 'vue'
+
+const authStore = useAuthStore()
+const route = useRoute()
+
+const isSavedActive = computed(() => {
+  return route.path === '/jobs' && route.query.filter === 'saved'
+})
+
+const isAppliedActive = computed(() => {
+  return route.path === '/jobs' && route.query.filter === 'applied'
+})
+</script>
+
 <template>
-  <aside class="sidebar">
-    <div class="logo">
-      <div class="logo-mark">
-        <svg viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="6.5" cy="6.5" r="5" stroke="white" stroke-width="1.5"/>
-          <circle cx="6.5" cy="6.5" r="2" fill="white"/>
-        </svg>
-      </div>
-      JobRadar
-    </div>
+  <aside class="sidebar-container">
 
-    <nav class="nav">
-      <RouterLink to="/jobs" class="nav-item" active-class="active">
-        <IconGrid class="nav-icon" />
-        All jobs
-      </RouterLink>
-      <RouterLink to="/jobs?filter=saved" class="nav-item" active-class="active">
-        <IconStar class="nav-icon" />
-        Saved
-      </RouterLink>
-      <RouterLink to="/jobs?filter=applied" class="nav-item" active-class="active">
-        <IconCheck class="nav-icon" />
-        Applied
-      </RouterLink>
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <h2 class="nav-section-title">Discover</h2>
+        <RouterLink to="/jobs" class="nav-item" active-class="active">
+          <Zap class="nav-icon" />
+          All jobs
+        </RouterLink>
+
+        <div class="nav-item nav-disabled">
+          <span class="source-dot remoteok" />
+          RemoteOK
+        </div>
+        <div class="nav-item nav-disabled">
+          <span class="source-dot adzuna" />
+          Adzuna
+        </div>
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-section-title">Account</div>
+        <RouterLink to="/dashboard" class="nav-item">
+          <IconGrid class="nav-icon" />
+          Dashboard
+        </RouterLink>
+        <RouterLink to="/profile" class="nav-item">
+          <User class="nav-icon" />
+          Profile
+        </RouterLink>
+        <RouterLink :to="{
+          path: '/jobs',
+          query: { filter: 'saved' }
+        }" class="nav-item" :class="{ active: isSavedActive }">
+          <Bookmark class="nav-icon" />
+          Saved
+        </RouterLink>
+        <RouterLink :to="{
+          path: '/jobs',
+          query: { filter: 'applied' }
+        }" class="nav-item" :class="{ active: isAppliedActive }">
+          <CheckCircle class="nav-icon" />
+          Applied
+        </RouterLink>
+      </div>
+
+      <div class="nav-section" v-if="authStore.user">
+        <h2 class="nav-section-title">Admin</h2>
+        <div>
+          <RouterLink to="/admin" class="nav-item">
+            <BarChart3 class="nav-icon" />
+            Dashboard
+          </RouterLink>
+
+          <RouterLink to="/status" class="nav-item">
+            <AlertCircle class="nav-icon" />
+            System status
+          </RouterLink>
+        </div>
+      </div>
     </nav>
-
-    <div class="nav-section-label">Sources</div>
-    <nav class="nav">
-      <div class="nav-item nav-disabled">
-        <span class="source-dot remoteok" />
-        RemoteOK
-      </div>
-      <div class="nav-item nav-disabled">
-        <span class="source-dot adzuna" />
-        Adzuna
-      </div>
-    </nav>
-
-    <div class="sidebar-footer">
-      <RouterLink to="/profile" class="nav-item" active-class="active">
-        <IconUser class="nav-icon" />
-        Profile
-      </RouterLink>
-    </div>
   </aside>
 </template>
 
-<script setup lang="ts">
-import { RouterLink } from 'vue-router'
-import IconGrid from '@/components/icons/IconGrid.vue'
-import IconStar from '@/components/icons/IconStar.vue'
-import IconCheck from '@/components/icons/IconCheck.vue'
-import IconUser from '@/components/icons/IconUser.vue'
-</script>
 
 <style scoped>
-.sidebar {
+.sidebar-container {
   width: 220px;
   min-width: 220px;
-  background: #fff;
-  border-right: 1px solid #e8e8e4;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   padding: 14px 0;
 }
 
-.logo {
-  padding: 0 14px 18px;
-  font-size: 14.5px;
-  font-weight: 500;
-  color: #1a1a1a;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.logo-mark {
-  width: 22px;
-  height: 22px;
-  background: #5e6ad2;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.logo-mark svg {
-  width: 13px;
-  height: 13px;
-}
-
-.nav {
+.sidebar-nav {
   padding: 0 8px;
 }
 
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 13.5px;
-  color: #666;
-  text-decoration: none;
-  transition: background 0.1s, color 0.1s;
-}
-
-.nav-item:hover {
-  background: #f5f5f3;
-  color: #1a1a1a;
-}
-
 .nav-item.active {
-  background: #f5f5f3;
-  color: #1a1a1a;
-  font-weight: 500;
+  background-color: var(--color-accent-lighter);
+  color: var(--color-accent);
+  font-weight: var(--font-weight-semibold);
+  border-left-color: var(--color-accent);
 }
 
 .nav-icon {
@@ -130,10 +116,17 @@ import IconUser from '@/components/icons/IconUser.vue'
   opacity: 1;
 }
 
-.nav-section-label {
-  font-size: 11px;
-  color: #bbb;
-  padding: 14px 16px 4px;
+.nav-section {
+  padding: var(--spacing-3);
+  border-top: 1px solid var(--color-border);
+  margin: var(--spacing-3) 0;
+}
+
+.nav-section-title {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--muted);
+  padding: 0 var(--spacing-4);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -145,17 +138,15 @@ import IconUser from '@/components/icons/IconUser.vue'
   flex-shrink: 0;
 }
 
-.source-dot.remoteok { background: #5e6ad2; }
-.source-dot.adzuna { background: #26c6a6; }
+.source-dot.remoteok {
+  background: #5e6ad2;
+}
+
+.source-dot.adzuna {
+  background: #26c6a6;
+}
 
 .nav-disabled {
   opacity: 0.7;
-}
-
-.sidebar-footer {
-  margin-top: auto;
-  padding: 0 8px;
-  border-top: 1px solid #f0f0ec;
-  padding-top: 8px;
 }
 </style>

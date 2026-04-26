@@ -16,7 +16,7 @@
       </p>
 
       <div class="search-bar">
-        <svg xmlns="http://www.w3.org/2000/svg" height="15px" viewBox="0 -960 960 960" width="15px" fill="#e3e3e3"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>
+        <Search class="search-icon" />
         <input v-model="searchTerm" @keyup.enter="goToJobs" type="text" placeholder="Search by title, company, or skill"
           class="search-input" />
         <button @click="goToJobs" class="button search-button button-primary">Browse jobs</button>
@@ -33,76 +33,77 @@
 
   <section class="stats-sec">
     <div class="stats-sub-sec">
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-label">Jobs tracked</div>
-        <div class="stat-value">{{ jobsTracked }}</div>
-        <div class="stat-sub">+{{ jobsToday }} today</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Sources</div>
-        <div class="stat-value">2</div>
-        <div class="stat-sub">RemoteOK · Adzuna</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Latest scrape</div>
-        <div class="stat-value">{{ latestScrape }}</div>
-        <div class="stat-sub">Fresh data from the feed</div>
-      </div>
-    </div>
-    <div v-if="authStore.user">
-      <div class="section-heading">
-        <div>
-          <p class="section-eyebrow">Matched to your skills</p>
-          <h2 class="section-title">Recommended for you</h2>
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Jobs tracked</div>
+          <div class="stat-value">{{ jobsTracked }}</div>
+          <div class="stat-sub">+{{ jobsToday }} today</div>
         </div>
-        <RouterLink to="/jobs" class="section-link">View all matches</RouterLink>
-      </div>
-
-      <div class="recommend-grid">
-        <article v-for="(job, index) in recommendedJobs" :key="job.id" class="recommend-card">
-          <div class="card-top">
-            <div class="company-badge">{{ job.company?.slice(0, 2).toUpperCase() }}</div>
-            <button class="icon-button">♡</button>
-          </div>
-          <div class="card-match">{{ 92 - index * 4 }}% match</div>
-          <h3 class="card-title">{{ job.title }}</h3>
-          <p class="card-company">{{ job.company }}</p>
-          <div class="card-meta">
-            <span class="meta-pill">{{ job.is_remote ? 'Remote' : job.location || 'On-site' }}</span>
-            <span class="meta-pill">{{ job.employment_type || 'Full time' }}</span>
-          </div>
-          <div class="card-footer">
-            <span class="card-salary">{{ formatSalary(job) }}</span>
-            <span class="card-time">{{ formatWhen(job) }}</span>
-          </div>
-        </article>
-      </div>
-    </div>
-
-    <div class="home-section">
-      <div class="section-heading">
-        <div>
-          <p class="section-eyebrow">Latest jobs</p>
+        <div class="stat-card">
+          <div class="stat-label">Sources</div>
+          <div class="stat-value">2</div>
+          <div class="stat-sub">RemoteOK · Adzuna</div>
         </div>
-        <RouterLink to="/jobs" class="section-link">View all jobs</RouterLink>
+        <div class="stat-card">
+          <div class="stat-label">Latest scrape</div>
+          <div class="stat-value">{{ latestScrape }}</div>
+          <div class="stat-sub">Fresh data from the feed</div>
+        </div>
       </div>
+      <div v-if="authStore.user">
+        <div class="section-heading">
+          <div>
+            <p class="section-eyebrow">Matched to your skills</p>
+            <h2 class="section-title">Recommended for you</h2>
+          </div>
+          <RouterLink to="/jobs" class="section-link">View all matches</RouterLink>
+        </div>
 
-      <div class="jobs-table">
-        <div v-for="job in latestJobs" :key="job.id" class="jobs-table-row">
-          <div class="position-cell">
-            <div class="status-dot" :class="statusClass(job)"></div>
-            <div>
-              <p class="job-title">{{ job.title }}</p>
+        <div class="recommend-grid">
+          <article v-for="(job, index) in recommendedJobs" :key="job.id" class="recommend-card">
+            <div class="card-top">
+              <h3 class="card-title">{{ job.title }}</h3>
+              <Heart class="icon-button" />
+
             </div>
+            <div class="card-match">{{ 92 - index * 4 }}% match</div>
+
+            <p class="card-company">{{ job.company }}</p>
+            <div class="card-meta">
+              <span class="meta-pill">{{ job.is_remote ? 'Remote' : job.location || 'On-site' }}</span>
+              <span class="meta-pill">{{ job.employment_type || 'Full time' }}</span>
+            </div>
+            <div class="card-footer">
+              <span class="card-salary">{{ formatSalary(job) }}</span>
+              <span class="card-time">{{ formatWhen(job) }}</span>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div class="home-section">
+        <div class="section-heading">
+          <div>
+            <p class="section-eyebrow">Latest jobs</p>
           </div>
-          <span class="company-cell">{{ job.company }}</span>
-          <span class="type-cell">{{ job.employment_type || 'Full time' }}</span>
-          <span class="when-cell">{{ formatWhen(job) }}</span>
+          <RouterLink to="/jobs" class="section-link">View all jobs</RouterLink>
+        </div>
+
+        <div class="jobs-table">
+          <div v-for="job in latestJobs" :key="job.id" class="jobs-table-row">
+            <div class="position-cell">
+              <div class="status-dot" :class="statusClass(job)"></div>
+              <div>
+                <p class="job-title">{{ job.title }}</p>
+              </div>
+            </div>
+            <span class="company-cell">{{ job.company }}</span>
+            <span class="type-cell">{{ job.employment_type || 'Full time' }}</span>
+            <span class="when-cell">{{ formatWhen(job) }}</span>
+          </div>
         </div>
       </div>
     </div>
-  </div>
   </section>
 
 </template>
@@ -111,6 +112,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { Heart, Search } from '@lucide/vue'
 
 type JobStats = {
   total_jobs: number
@@ -230,8 +232,8 @@ onMounted(async () => {
 
 <style scoped>
 .home-hero {
-  text-align:center;
-  border-bottom: var(--border);
+  text-align: center;
+  border-bottom: var(--color-border);
   padding: 2.5rem 2rem;
   margin: 0 auto;
 }
@@ -249,7 +251,7 @@ onMounted(async () => {
   gap: 0.65rem;
   padding: 0.6rem 1rem;
   background: rgba(94, 106, 210, 0.12);
-  color: var(--accent);
+  color: var(--color-accent);
   font-size: 0.8rem;
   margin-bottom: 1.25rem;
 }
@@ -257,7 +259,7 @@ onMounted(async () => {
 .hero-dot {
   width: 7px;
   height: 7px;
-  background: #5e6ad2;
+  background: var(--color-accent);
 }
 
 h1 {
@@ -268,39 +270,15 @@ h1 {
 }
 
 h1 span {
-  color: var(--accent);
+  color: var(--color-accent);
 }
 
 .hero-text {
   margin: 1.5rem 0 2rem;
   max-width: 42rem;
-  color: #475569;
+  color: var(--color-text);
   font-size: 1.05rem;
   line-height: 1.75;
-}
-
-.search-bar {
-  display: flex;
-  align-items: center;
-  max-width: 520px;
-  margin: 0 auto;
-  border: var(--border);
-  padding: 0 0 0 0.6rem;
-  height: 44px;
-  gap: .5rem;
-}
-
-.search-input {
-  flex: 1;
-  border: none;
-  outline: none;
-  height: 100%;
-  padding: 0.75rem;
-  font-size: 0.95rem;
-}
-
-.search-button {
-  height: 100%;
 }
 
 
@@ -309,9 +287,9 @@ h1 span {
   flex-wrap: wrap;
   gap: 0.75rem;
   margin-top: 1.75rem;
-      display: flex;
-    align-items: center;
-    justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .hero-tag {
@@ -320,8 +298,8 @@ h1 span {
   justify-content: center;
   padding: 0.3rem 1rem;
   background: #f8faff;
-  color: #475569;
-  border: 1px solid rgba(94, 106, 210, 0.18);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
   font-size: 0.9rem;
 }
 
@@ -333,7 +311,7 @@ h1 span {
 .hero-card-header {
   font-weight: 700;
   margin-bottom: 1rem;
-  color: #111827;
+  color: var(--color-text);
 }
 
 .hero-card ul {
@@ -347,7 +325,7 @@ h1 span {
 .hero-card li {
   position: relative;
   padding-left: 1.5rem;
-  color: #475569;
+  color: var(--color-text);
   font-size: 0.97rem;
 }
 
@@ -358,13 +336,13 @@ h1 span {
   height: 6px;
   left: 0;
   top: 0.55rem;
-  background: var(--accent);
+  background: var(--color-accent);
 }
 
 .stats-sec {
   display: flex;
   flex-direction: column;
-  background: var(--bg-secondary);
+  background: var(--color-bg-secondary);
   margin: 0 auto;
   padding: 0 2rem;
   gap: 1.5rem;
@@ -391,26 +369,26 @@ h1 span {
 .stat-card {
   background: #fff;
   padding: 1.4rem 1.5rem;
-  border: var(--border);
+  border: 1px solid var(--color-border);
 }
 
 .stat-label {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: #6b7280;
+  color: var(--color-accent);
   margin-bottom: 0.8rem;
 }
 
 .stat-value {
   font-size: 2rem;
   font-weight: 700;
-  color: #111827;
+  color: var(--color-text);
 }
 
 .stat-sub {
   margin-top: 0.65rem;
-  color: #6b7280;
+  color: var(--color-text);
   font-size: 0.92rem;
 }
 
@@ -427,17 +405,17 @@ h1 span {
   text-transform: uppercase;
   letter-spacing: 0.12em;
   font-size: 0.78rem;
-  color: #6b7280;
+  color: var(--color-text);
 }
 
 .section-title {
   margin: 0;
   font-size: 1.25rem;
-  color: #111827;
+  color: var(--color-text);
 }
 
 .section-link {
-  color: var(--accent);
+  color: var(--color-accent);
   font-size: 0.94rem;
   font-weight: 600;
 }
@@ -458,44 +436,43 @@ h1 span {
 .card-top {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: start;
   gap: 1rem;
 }
 
 .company-badge {
   width: 40px;
   height: 40px;
-  background: #eef2ff;
-  color: #374151;
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
   display: grid;
   place-items: center;
   font-weight: 700;
 }
 
 .icon-button {
-  width: 34px;
-  height: 34px;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  background: transparent;
-  color: #6b7280;
+  width: 25px;
+  height: 25px;
+  color: var(--color-text);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .card-match {
   font-size: 0.82rem;
-  color: #4f46e5;
+  color: var(--color-accent);
   font-weight: 700;
 }
 
 .card-title {
   margin: 0;
   font-size: 1rem;
-  color: #111827;
+  color: var(--color-text);
 }
 
 .card-company {
   margin: 0.35rem 0 0;
-  color: #6b7280;
+  color: var(--color-text);
   font-size: 0.92rem;
 }
 
@@ -506,23 +483,25 @@ h1 span {
 }
 
 .meta-pill {
-  padding: 0.55rem 0.75rem;
-  font-size: 0.78rem;
-  background: #f8faff;
-  color: #475569;
+  padding: var(--spacing-1) var(--spacing-2);
+  font-size: var(--text-xs);
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+  border: 1px solid var(--color-border)
 }
 
 .card-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: #6b7280;
-  font-size: 0.9rem;
+  color: var(--color-text);
+  font-size: var(--text-xs);
 }
 
 .jobs-table {
   background: #fff;
   overflow: hidden;
+  border: 1px solid var(--color-border);
 }
 
 .jobs-table-row {
@@ -534,16 +513,18 @@ h1 span {
 }
 
 .jobs-table-head {
-  background: #f8fafc;
-  color: #6b7280;
-  font-size: 0.82rem;
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+  font-size: var(--text-xs);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
 
 .jobs-table-row {
-  border-top: 1px solid #f0f0ec;
-  color: #111827;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-regular);
 }
 
 .position-cell {
@@ -561,14 +542,14 @@ h1 span {
 .job-subtitle {
   margin: 0.35rem 0 0;
   font-size: 0.86rem;
-  color: #6b7280;
+  color: var(--color-text);
 }
 
 .company-cell,
 .type-cell,
 .when-cell {
   font-size: 0.95rem;
-  color: #475569;
+  color: var(--color-text);
 }
 
 .status-dot {
