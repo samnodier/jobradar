@@ -50,7 +50,7 @@ async function logout() {
       </div>
     </header>
 
-    <main>
+    <main class="content-shell">
       <div v-if="authStore.loading" class="status-banner">Loading auth state…</div>
       <div v-else-if="authStore.error" class="status-banner status-error">Error: {{ authStore.error }}</div>
       <RouterView v-else />
@@ -59,18 +59,6 @@ async function logout() {
 </template>
 
 <style>
-:root {
-  color-scheme: light;
-  --font-base: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
-  --surface: #ffffff;
-  --bg-secondary: #0000000a;
-  --text: #000000;
-  --muted: #6b7280;
-  --accent: #2E5BFF;
-  --accent-soft: #2E5BFF0A;
-  --border: 1px solid rgba(94, 106, 210, 0.18);
-  --shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
-}
 
 html,
 body,
@@ -81,8 +69,8 @@ body,
 body {
   margin: 0;
   font-family: var(--font-base);
-  background: var(--surface);
-  color: var(--text);
+  background: var(--color-surface);
+  color: var(--color-text);
 }
 
 * {
@@ -95,10 +83,16 @@ a {
 }
 
 .app-shell {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--surface);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.content-shell {
+  flex: 1;
+  overflow-y: auto;
 }
 
 .topbar {
@@ -106,10 +100,16 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 1.5rem;
-  padding: 0.7rem 2rem;
+  padding: var(--spacing-1) var(--spacing-4);
   border-bottom: 1px solid rgba(148, 163, 184, 0.18);
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(16px);
+  flex-shrink: 0;
+
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: var(--color-surface);
 }
 
 .brand-shell {
@@ -119,10 +119,10 @@ a {
 }
 
 .brand-mark {
-  width: 44px;
-  height: 44px;
+  width: 30px;
+  height: 30px;
   border-radius: 100%;
-  background: var(--accent);
+  background: var(--color-accent);
   display: grid;
   place-items: center;
   color: white;
@@ -156,36 +156,11 @@ a {
   gap: 1rem;
 }
 
-.button {
-  font-family: var(--font-base);
-  border: 1px solid transparent;
-  padding: 0.5rem 1.4rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
-}
-
-.button-primary {
-  background: var(--accent);
-  color: white;
-}
-
-.button-secondary {
-  background: var(--accent-soft);
-  color: var(--text);
-  border: var(--border);
-}
-
-.button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 24px rgba(79, 70, 229, 0.12);
-}
-
 .user-chip {
   display: inline-flex;
   align-items: center;
   gap: 0.85rem;
-  padding: 1rem;
+  padding: var(--spacing-1) var(--spacing-2);
   background: rgba(255, 255, 255, 0.8);
 }
 

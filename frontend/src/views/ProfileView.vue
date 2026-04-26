@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppSidebar from '@/components/AppSidebar.vue'
 import { useAuthStore } from '@/stores/auth'
 import { RouterLink, useRouter } from 'vue-router'
 
@@ -12,52 +13,62 @@ async function handleLogout() {
 </script>
 
 <template>
-  <main class="profile-page">
-    <div v-if="authStore.loading" class="status-card">
-      <p>Loading profile…</p>
-    </div>
+  <div class="profile-container">
+    <AppSidebar />
 
-    <div v-else-if="!authStore.user" class="status-card">
-      <p class="status-title">You are not logged in.</p>
-      <RouterLink to="/login" class="button button-primary">Go to login</RouterLink>
-    </div>
 
-    <section v-else class="profile-card">
-      <div class="profile-header">
-        <div class="avatar-shell">
-          <img
-            v-if="authStore.user.avatar_url"
-            :src="authStore.user.avatar_url"
-            alt="Profile avatar"
-          />
-          <span v-else class="avatar-fallback">{{ authStore.user.username?.[0]?.toUpperCase() || 'U' }}</span>
-        </div>
-        <div>
-          <p class="eyebrow">Your profile</p>
-          <h1>{{ authStore.user.name || authStore.user.username }}</h1>
-          <p class="subtitle">@{{ authStore.user.username }}</p>
-        </div>
+    <main class="profile-page">
+      <div v-if="authStore.loading" class="status-card">
+        <p>Loading profile…</p>
       </div>
 
-      <div class="profile-details">
-        <div class="detail-row">
-          <span>Email</span>
-          <p>{{ authStore.user.email }}</p>
-        </div>
-        <div class="detail-row">
-          <span>Username</span>
-          <p>{{ authStore.user.username }}</p>
-        </div>
+      <div v-else-if="!authStore.user" class="status-card">
+        <p class="status-title">You are not logged in.</p>
+        <RouterLink to="/login" class="button button-primary">Go to login</RouterLink>
       </div>
 
-      <div class="profile-actions">
-        <button class="button button-ghost" @click="handleLogout">Logout</button>
-      </div>
-    </section>
-  </main>
+      <section v-else class="profile-card">
+        <div class="profile-header">
+          <div class="avatar-shell">
+            <img v-if="authStore.user.avatar_url" :src="authStore.user.avatar_url" alt="Profile avatar" />
+            <span v-else class="avatar-fallback">{{ authStore.user.username?.[0]?.toUpperCase() || 'U' }}</span>
+          </div>
+          <div>
+            <p class="eyebrow">Your profile</p>
+            <h1>{{ authStore.user.name || authStore.user.username }}</h1>
+            <p class="subtitle">@{{ authStore.user.username }}</p>
+          </div>
+        </div>
+
+        <div class="profile-details">
+          <div class="detail-row">
+            <span>Email</span>
+            <p>{{ authStore.user.email }}</p>
+          </div>
+          <div class="detail-row">
+            <span>Username</span>
+            <p>{{ authStore.user.username }}</p>
+          </div>
+        </div>
+
+        <div class="profile-actions">
+          <button class="button button-ghost" @click="handleLogout">Logout</button>
+        </div>
+      </section>
+    </main>
+  </div>
 </template>
 
 <style scoped>
+.profile-container {
+  width: min(1200px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  min-height: calc(100vh - 96px);
+  gap: 1.5rem;
+}
+
 .profile-page {
   max-width: 720px;
   margin: 2rem auto;
@@ -70,7 +81,6 @@ async function handleLogout() {
   border: 1px solid #e7ebf0;
   border-radius: 22px;
   padding: 28px;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
 }
 
 .status-card {

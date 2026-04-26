@@ -6,6 +6,7 @@ import JobRow from '@/components/JobRow.vue'
 import JobDetail from '@/components/JobDetail.vue'
 import type { Job } from '@/types/job'
 
+
 const route = useRoute()
 const router = useRouter()
 const jobs = ref<Job[]>([])
@@ -13,8 +14,16 @@ const loading = ref(false)
 const error = ref('')
 const selectedJobId = ref<string | null>(null)
 const sortDirection = ref<'newest' | 'oldest'>('newest')
-
+const searchTerm = ref<string>('')
 const activeFilter = ref<string>((route.query.filter as string) || 'all')
+
+const filters = [
+  { label: 'All', value: 'all' },
+  { label: 'Remote', value: 'remote' },
+  { label: 'Saved', value: 'saved' },
+  { label: 'Applied', value: 'applied' },
+  { label: 'Today', value: 'today' },
+]
 
 watch(
   () => route.query.filter,
@@ -30,20 +39,38 @@ watch(activeFilter, (value) => {
     router.replace({
       query: {
         filter: value === 'all' ? undefined : value,
-        q: route.query.q, 
-      } 
+        q: route.query.q,
+      }
     }).catch(() => { })
   }
 })
 
 const filteredJobs = computed(() => {
-  if (activeFilter.value === 'saved') {
-    return jobs.value.filter((job) => job.status === 'saved')
+  let result = [...jobs.value]
+
+  const q = searchTerm.value.trim().toLowerCase()
+
+  if (q) {
+    result = result.filter((job) => {
+      return (
+        job.title.toLowerCase().includes(q) ||
+        job.company.toLowerCase().includes(q) ||
+        job.skills?.some((skill) => skill.toLowerCase().includes(q))
+      )
+    })
   }
-  if (activeFilter.value === 'applied') {
-    return jobs.value.filter((job) => job.status === 'applied')
+  if (activeFilter.value === 'remote') return result.filter((job) => job.is_remote)
+  if (activeFilter.value === 'saved') return jobs.value.filter((job) => job.status === 'saved')
+  if (activeFilter.value === 'applied') return jobs.value.filter((job) => job.status === 'applied')
+  if (activeFilter.value === 'today') {
+    const today = new Date().toDateString()
+    result = result.filter((job) => {
+      const postedDate = new Date(job.posted_at ?? '').toDateString()
+      return postedDate === today
+    })
   }
-  return jobs.value
+
+  return result
 })
 
 const sortedJobs = computed(() => {
@@ -68,10 +95,10 @@ const selectedJob = computed(() => {
   return jobs.value.find((job) => job.id === selectedJobId.value) ?? null
 })
 
-const searchQuery = computed(() =>
-  String(route.query.search || '').toLowerCase()
-)
-
+const detailOpen = computed(() => !!selectedJob.value)
+function closeDetail() {
+  selectedJobId.value = null
+}
 
 
 function fetchJobs() {
@@ -123,65 +150,69 @@ onMounted(fetchJobs)
 
     <main class="jobs-main">
       <header class="jobs-topbar">
-        <div>
-          <p class="eyebrow">Talent board</p>
-          <h1>Job search with focus.</h1>
-          <p class="page-copy">Filter, sort, and preview roles in one clean workspace.</p>
+
+        <div class="search-bar">
+          <Search class="search-icon" />
+          <input v-model="searchTerm" type="text" placeholder="Search by title, company, or skill"
+            class="search-input" />
+          <span v-if="searchTerm" class="search-clear" @click="searchTerm = ''">✕</span>
+          <button class="button search-button button-primary">Search</button>
+
         </div>
 
         <div class="topbar-actions">
-          <button class="button button-secondary" @click="toggleSort">
-            Sort: {{ sortDirection === 'newest' ? 'Newest' : 'Oldest' }}
+          <div class="jobs-filter-bar">
+            <button v-for="f in filters" :key="f.value" :class="['filter-pill', { active: activeFilter === f.value }]"
+              @click="activeFilter = f.value">{{ f.label }}</button>
+          </div>
+          <button class="button-sort" @click="toggleSort">
+            <Sort />
+            {{ sortDirection == 'newest' ? 'Newest' : 'Oldest' }}
           </button>
-          <span class="total-count">{{ formatCount(filteredJobs.length) }}</span>
         </div>
       </header>
 
+      <div class="count-row">
+        <span class="count-label">{{ formatCount(filteredJobs.length) }}</span>
+        <span v-if="searchTerm" class="count-query">for "{{ searchTerm }}"</span>
+      </div>
+
       <section class="jobs-body">
-        <div class="jobs-list-panel">
-          <div class="jobs-filter-bar">
-            <button :class="['filter-pill', { active: activeFilter === 'all' }]"
-              @click="activeFilter = 'all'">All</button>
-            <button :class="['filter-pill', { active: activeFilter === 'saved' }]"
-              @click="activeFilter = 'saved'">Saved</button>
-            <button :class="['filter-pill', { active: activeFilter === 'applied' }]"
-              @click="activeFilter = 'applied'">Applied</button>
-          </div>
-
-          <div class="job-list-scroll">
-            <div v-if="loading" class="status-card">Loading jobs…</div>
-            <div v-else-if="error" class="status-card status-error">{{ error }}</div>
-            <div v-else-if="filteredJobs.length === 0" class="status-card">No jobs match this filter.</div>
-
-            <div v-else>
-              <div v-for="(group, label) in groupedJobs" :key="label" class="job-group">
-                <div class="group-label">{{ label }}</div>
-                <div>
-                  <JobRow v-for="job in group" :key="job.id" :job="job" :selected="job.id === selectedJobId"
-                    @click="selectedJobId = job.id" />
-                </div>
-              </div>
+        <div v-if="loading" class="status-card">Loading jobs…</div>
+        <div v-else-if="error" class="status-card status-error">{{ error }}</div>
+        <div v-else-if="filteredJobs.length === 0" class="status-card">No jobs match this filter.</div>
+        <div v-else class="job-list-scroll">
+            <div v-for="(group, label) in groupedJobs" :key="label" class="job-group">
+              <div class="group-label">{{ label }}</div>
+              <JobRow v-for="job in group" :key="job.id" :job="job" :selected="job.id === selectedJobId"
+                @click="selectedJobId = job.id" />
             </div>
-          </div>
-        </div>
-
-        <div class="jobs-detail-panel">
-          <JobDetail v-if="selectedJob" :job="selectedJob" @close="selectedJobId = null" />
-          <div v-else class="status-card">Select a job to preview.</div>
         </div>
       </section>
     </main>
+
+    <!-- Details panel - slides in from the right as overlay -->
+    <Teleport to="body">
+      <Transition name="detail-slide">
+        <div v-if="detailOpen" class="detail-overlay" @click.self="closeDetail">
+          <div class="detail-drawer">
+            <div class="detail-back" @click="closeDetail">
+              <ArrowLeft />
+              Back to jobs
+            </div>
+            <JobDetail v-if="selectedJob" :job="selectedJob" @close="closeDetail" />
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <style scoped>
 .jobs-shell {
-  width: min(1200px, 100%);
-  margin: 0 auto;
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
   min-height: calc(100vh - 96px);
-  gap: 1.5rem;
 }
 
 .jobs-main {
@@ -191,38 +222,21 @@ onMounted(fetchJobs)
   padding: 24px 28px;
 }
 
+/* Search */
+
 .jobs-topbar {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
+  flex-direction: column;
+  padding: var(--spacing-3);
+  min-width: 0;
+  gap: var(--spacing-2);
 }
 
-.eyebrow {
-  margin: 0 0 0.4rem;
-  text-transform: uppercase;
-  font-size: 0.78rem;
-  letter-spacing: 0.12em;
-  color: #64748b;
-}
-
-h1 {
-  margin: 0;
-  font-size: clamp(2rem, 2.6vw, 3rem);
-}
-
-.page-copy {
-  max-width: 560px;
-  color: #475569;
-  margin-top: 0.75rem;
-  line-height: 1.75;
-}
 
 .topbar-actions {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--spacing-2);
 }
 
 .total-count {
@@ -231,44 +245,61 @@ h1 {
 }
 
 .jobs-body {
-  display: grid;
-  grid-template-columns: 0.95fr 0.6fr;
-  gap: 1.25rem;
-  min-height: 0;
+  flex: 1;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
 }
 
-.jobs-list-panel {
-  display: flex;
-  flex-direction: column;
-  background: #fff;
-  border: 1px solid #e8e8e4;
-  border-radius: 28px;
-  overflow: hidden;
-  min-height: 0;
-}
+/* Filters */
 
 .jobs-filter-bar {
   display: flex;
-  gap: 0.75rem;
-  padding: 18px 20px;
-  border-bottom: 1px solid #f0f0ec;
-  background: #fafaf8;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+  flex: 1;
 }
 
 .filter-pill {
-  border: 1px solid transparent;
-  border-radius: 999px;
-  padding: 0.75rem 1rem;
-  background: #fff;
-  color: #475569;
+  border: 1px solid var(--color-border);
+  background: var(--bg);
+  color: var(--text);
   cursor: pointer;
   transition: all 0.12s;
+  height: 2rem;
+  padding: 0 var(--spacing-2);
+  font-size: var(--text-sm);
+
 }
 
 .filter-pill.active {
-  background: #eef2ff;
-  border-color: #c7d2fe;
-  color: #1d4ed8;
+  background: var(--accent-soft);
+  border-color: var(--color-text);
+  color: var(--accent);
+}
+
+/* Count */
+.count-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  font-size: var(--text-sm);
+
+}
+
+.count-label {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.count-query {
+  font-style: italic;
+  color: var(--muted);
+}
+
+.count-query {
+  font-style: italic;
+  color: var(--muted);
 }
 
 .job-list-scroll {
@@ -284,20 +315,53 @@ h1 {
 .group-label {
   margin-bottom: 10px;
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
 
-.jobs-detail-panel {
-  min-height: 0;
+/* Detail Overlay */
+
+.detail-overlay {
+  position: fixed;
+  inset: 0;
+  top: 53px;
+  z-index: 100;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.detail-drawer {
+  width: min(560px, 100%);
+  height: 100%;
+  background: var(--surface);
+  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+/* hide on desktop, show on mobile */
+.detail-back {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--muted);
+  cursor: pointer;
+  height: 0;
+  padding: 0;
+  overflow: hidden;
+  visibility: hidden;
+  flex-shrink: 0;
+  font-size: var(--text-sm);
 }
 
 .status-card {
   margin: 18px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 22px;
+  background: var(--color-bg-primary);
+  border: var(--color-border);
   padding: 1.5rem;
 }
 
@@ -306,47 +370,36 @@ h1 {
   background: #fef2f2;
   color: #b91c1c;
 }
-
-.button-secondary {
-  border: 1px solid #d1d5db;
-  background: #fff;
-  color: #111827;
-  border-radius: 999px;
-  padding: 0.9rem 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.button-secondary:hover {
-  background: #f8fafc;
-}
-
-@media (max-width: 1060px) {
+/* Mobile */
+@media (max-width: 768px) {
   .jobs-shell {
     grid-template-columns: 1fr;
   }
 
-  .jobs-body {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 720px) {
   .jobs-main {
-    padding: 18px 16px;
+    padding: var(--spacing-4);
   }
 
-  .jobs-topbar {
-    flex-direction: column;
-    align-items: stretch;
+  .detail-drawer {
+    width: 100%;
   }
 
-  .jobs-filter-bar {
-    flex-wrap: wrap;
+  .detail-back {
+    visibility: visible;
+    height: auto;
+    padding: var(--spacing-3);
+    overflow: visible;
   }
 
   .job-list-scroll {
     max-height: calc(100vh - 320px);
   }
+}
+
+@media (max-width: 480px) {
+.filter-pill {
+  font-size: var(--text-xs);
+  padding: 0 var(--spacing-1);
+}
 }
 </style>
