@@ -16,13 +16,8 @@
       </p>
 
       <div class="hero-actions">
-        <input
-          v-model="searchTerm"
-          @keyup.enter="goToJobs"
-          type="text"
-          placeholder="Search by title, company, or skill"
-          class="search-input"
-        />
+        <input v-model="searchTerm" @keyup.enter="goToJobs" type="text" placeholder="Search by title, company, or skill"
+          class="search-input" />
         <button @click="goToJobs" class="button button-primary">Browse jobs</button>
       </div>
 
@@ -35,84 +30,78 @@
     </div>
   </section>
 
-  <section class="stats-row">
-    <div class="stat-card">
-      <div class="stat-label">Jobs tracked</div>
-      <div class="stat-value">{{ jobsTracked }}</div>
-      <div class="stat-sub">+{{ jobsToday }} today</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Sources</div>
-      <div class="stat-value">2</div>
-      <div class="stat-sub">RemoteOK · Adzuna</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Latest scrape</div>
-      <div class="stat-value">{{ latestScrape }}</div>
-      <div class="stat-sub">Fresh data from the feed</div>
-    </div>
-  </section>
-
-  <section v-if="authStore.user" class="home-section">
-    <div class="section-heading">
-      <div>
-        <p class="section-eyebrow">Matched to your skills</p>
-        <h2 class="section-title">Recommended for you</h2>
+  <section class="stats-sec">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Jobs tracked</div>
+        <div class="stat-value">{{ jobsTracked }}</div>
+        <div class="stat-sub">+{{ jobsToday }} today</div>
       </div>
-      <RouterLink to="/jobs" class="section-link">View all matches</RouterLink>
-    </div>
-
-    <div class="recommend-grid">
-      <article v-for="(job, index) in recommendedJobs" :key="job.id" class="recommend-card">
-        <div class="card-top">
-          <div class="company-badge">{{ job.company?.slice(0, 2).toUpperCase() }}</div>
-          <button class="icon-button">♡</button>
-        </div>
-        <div class="card-match">{{ 92 - index * 4 }}% match</div>
-        <h3 class="card-title">{{ job.title }}</h3>
-        <p class="card-company">{{ job.company }}</p>
-        <div class="card-meta">
-          <span class="meta-pill">{{ job.is_remote ? 'Remote' : job.location || 'On-site' }}</span>
-          <span class="meta-pill">{{ job.employment_type || 'Full time' }}</span>
-        </div>
-        <div class="card-footer">
-          <span class="card-salary">{{ formatSalary(job) }}</span>
-          <span class="card-time">{{ formatWhen(job) }}</span>
-        </div>
-      </article>
-    </div>
-  </section>
-
-  <section class="home-section">
-    <div class="section-heading">
-      <div>
-        <p class="section-eyebrow">Latest jobs</p>
-        <h2 class="section-title">Recently added</h2>
+      <div class="stat-card">
+        <div class="stat-label">Sources</div>
+        <div class="stat-value">2</div>
+        <div class="stat-sub">RemoteOK · Adzuna</div>
       </div>
-      <RouterLink to="/jobs" class="section-link">View all jobs</RouterLink>
-    </div>
-
-    <div class="jobs-table">
-      <div class="jobs-table-head">
-        <span>Position</span>
-        <span>Company</span>
-        <span>Type</span>
-        <span>When</span>
+      <div class="stat-card">
+        <div class="stat-label">Latest scrape</div>
+        <div class="stat-value">{{ latestScrape }}</div>
+        <div class="stat-sub">Fresh data from the feed</div>
       </div>
-      <div v-for="job in latestJobs" :key="job.id" class="jobs-table-row">
-        <div class="position-cell">
-          <div class="status-dot" :class="statusClass(job)"></div>
-          <div>
-            <p class="job-title">{{ job.title }}</p>
-            <p class="job-subtitle">{{ job.location || 'Remote' }}</p>
+    </div>
+    <div v-if="authStore.user">
+      <div class="section-heading">
+        <div>
+          <p class="section-eyebrow">Matched to your skills</p>
+          <h2 class="section-title">Recommended for you</h2>
+        </div>
+        <RouterLink to="/jobs" class="section-link">View all matches</RouterLink>
+      </div>
+
+      <div class="recommend-grid">
+        <article v-for="(job, index) in recommendedJobs" :key="job.id" class="recommend-card">
+          <div class="card-top">
+            <div class="company-badge">{{ job.company?.slice(0, 2).toUpperCase() }}</div>
+            <button class="icon-button">♡</button>
           </div>
+          <div class="card-match">{{ 92 - index * 4 }}% match</div>
+          <h3 class="card-title">{{ job.title }}</h3>
+          <p class="card-company">{{ job.company }}</p>
+          <div class="card-meta">
+            <span class="meta-pill">{{ job.is_remote ? 'Remote' : job.location || 'On-site' }}</span>
+            <span class="meta-pill">{{ job.employment_type || 'Full time' }}</span>
+          </div>
+          <div class="card-footer">
+            <span class="card-salary">{{ formatSalary(job) }}</span>
+            <span class="card-time">{{ formatWhen(job) }}</span>
+          </div>
+        </article>
+      </div>
+    </div>
+
+    <div class="home-section">
+      <div class="section-heading">
+        <div>
+          <p class="section-eyebrow">Latest jobs</p>
         </div>
-        <span class="company-cell">{{ job.company }}</span>
-        <span class="type-cell">{{ job.employment_type || 'Full time' }}</span>
-        <span class="when-cell">{{ formatWhen(job) }}</span>
+        <RouterLink to="/jobs" class="section-link">View all jobs</RouterLink>
+      </div>
+
+      <div class="jobs-table">
+        <div v-for="job in latestJobs" :key="job.id" class="jobs-table-row">
+          <div class="position-cell">
+            <div class="status-dot" :class="statusClass(job)"></div>
+            <div>
+              <p class="job-title">{{ job.title }}</p>
+            </div>
+          </div>
+          <span class="company-cell">{{ job.company }}</span>
+          <span class="type-cell">{{ job.employment_type || 'Full time' }}</span>
+          <span class="when-cell">{{ formatWhen(job) }}</span>
+        </div>
       </div>
     </div>
   </section>
+
 </template>
 
 <script setup lang="ts">
@@ -278,6 +267,7 @@ h1 {
   margin: 0;
   font-size: clamp(2.8rem, 4vw, 3.8rem);
   line-height: 1.05;
+  font-family: Newsreader, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
 }
 
 h1 span {
@@ -309,7 +299,7 @@ h1 span {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.7rem 1rem;
+  padding: 0.3rem 1rem;
   background: #f8faff;
   color: #475569;
   border: 1px solid rgba(94, 106, 210, 0.18);
@@ -353,11 +343,16 @@ h1 span {
   background: var(--accent);
 }
 
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
+.stats-sec {
+  display: flex;
+  flex-direction: column;
   margin-top: 2.5rem;
+}
+
+.stats-row {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
 }
 
 .stat-card {
@@ -384,10 +379,6 @@ h1 span {
   margin-top: 0.65rem;
   color: #6b7280;
   font-size: 0.92rem;
-}
-
-.home-section {
-  margin-top: 2.5rem;
 }
 
 .section-heading {
@@ -503,7 +494,6 @@ h1 span {
   overflow: hidden;
 }
 
-.jobs-table-head,
 .jobs-table-row {
   display: grid;
   grid-template-columns: minmax(0, 2.4fr) minmax(0, 1fr) minmax(120px, 0.9fr) minmax(90px, 0.8fr);
@@ -562,43 +552,5 @@ h1 span {
 
 .dot-onsite {
   background: #22c55e;
-}
-
-@media (max-width: 960px) {
-  .recommend-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .stats-row {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 860px) {
-  .home-hero {
-    grid-template-columns: 1fr;
-  }
-
-  .jobs-table-head,
-  .jobs-table-row {
-    grid-template-columns: 1fr;
-    gap: 0;
-    padding: 1rem 1.25rem;
-  }
-
-  .jobs-table-head {
-    display: none;
-  }
-
-  .jobs-table-row {
-    display: grid;
-    gap: 0.75rem;
-  }
-}
-
-@media (max-width: 860px) {
-  .home-hero {
-    grid-template-columns: 1fr;
-  }
 }
 </style>
