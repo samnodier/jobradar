@@ -66,7 +66,7 @@
 
 <script setup lang="ts">
 import type { Job } from '@/types/job'
-import { X } from '@lucide/vue';
+import { Check, ExternalLink, Link2, X } from 'lucide-vue-next';
 import { ref } from 'vue';
 
 const props = defineProps<{ job: Job }>()
@@ -224,7 +224,7 @@ async function copyLink() {
   background: var(--color-accent);
   color: #FFF;
   border: none;
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
   text-decoration: none;
@@ -236,29 +236,73 @@ async function copyLink() {
   font-size: var(--text-base);
 }
 
+.button-save {
+    height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: all 0.1s;
+  white-space: nowrap;
+}
+
+.button-save.saved {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #fff;
+}
+
+.button-icon {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.1s;
+}
+
 .detail-section {
-  display: grid;
-  gap: 0.75rem;
+padding: var(--spacing-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.detail-section:last-child {
+  border-bottom: none;
 }
 
 .section-label {
-  margin: 0;
-  color: #475569;
-  line-height: 1.7;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: var(--spacing-2);
 }
 
 .skills-wrap {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.65rem;
+  gap: var(--spacing-2);
 }
 
 .skill-tag {
-  background: #f5f5f3;
-  color: #1a1a1a;
-  padding: 0.45rem 0.8rem;
-  border-radius: 999px;
-  font-size: 0.85rem;
+  height: 20px;
+  color: var(--color-text);
+  padding: 0 var(--spacing-2);
+  font-size: var(--text-xs);
+  background: var(--color-accent-lighter);
+  border: 1px solid var(--color-accent);
+  display: flex;
+  align-items: center;
+  text-transform: capitalize;
+
 }
 
 .button-primary {

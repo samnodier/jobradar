@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
 import JobRow from '@/components/JobRow.vue'
@@ -16,6 +16,8 @@ const selectedJobId = ref<string | null>(null)
 const sortDirection = ref<'newest' | 'oldest'>('newest')
 const searchTerm = ref<string>('')
 const activeFilter = ref<string>((route.query.filter as string) || 'all')
+const headerHeight = ref(53)
+let resizeObserver: ResizeObserver | null = null
 
 const filters = [
   { label: 'All', value: 'all' },
@@ -141,7 +143,26 @@ function formatLocation(job: Job) {
   return parts.join(' • ')
 }
 
-onMounted(fetchJobs)
+onMounted(() => {
+  fetchJobs()
+
+  // Find the topbar element dynamically
+  const header = document.querySelector('.topbar')
+  if (header) {
+    // Update height initially and whenever the header resizes
+    resizeObserver = new ResizeObserver(() => {
+      headerHeight.value = header.getBoundingClientRect().height
+    })
+    resizeObserver.observe(header)
+  }
+})
+
+onUnmounted(() => {
+  // Clean up the observer to prevent memory leaks when navigating away
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+  }
+})
 </script>
 
 <template>
@@ -194,7 +215,7 @@ onMounted(fetchJobs)
     <!-- Details panel - slides in from the right as overlay -->
     <Teleport to="body">
       <Transition name="detail-slide">
-        <div v-if="detailOpen" class="detail-overlay" @click.self="closeDetail">
+        <div v-if="detailOpen" class="detail-overlay" @click.self="closeDetail" :style="{ top: `${headerHeight}px` }">
           <div class="detail-drawer">
             <div class="detail-back" @click="closeDetail">
               <ArrowLeft />
@@ -325,14 +346,15 @@ onMounted(fetchJobs)
 .detail-overlay {
   position: fixed;
   inset: 0;
-  top: 53px;
   z-index: 100;
   display: flex;
   justify-content: flex-end;
 }
 
 .detail-drawer {
-  width: min(560px, 100%);
+  width: 50vw;
+  min-width: 560px;
+  max-width: 100%;
   height: 100%;
   background: var(--surface);
   box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
