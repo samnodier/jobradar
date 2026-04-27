@@ -2,7 +2,7 @@
 import { routeLocationKey, RouterLink, useRoute } from 'vue-router'
 import IconGrid from '@/components/icons/IconGrid.vue'
 import { useAuthStore } from '@/stores/auth'
-import { AlertCircle, BarChart3, Bookmark, CheckCircle, User, Zap } from '@lucide/vue'
+import { AlertCircle, BarChart3, Bookmark, CheckCircle, User, Zap } from 'lucide-vue-next'
 import { computed } from 'vue'
 
 const authStore = useAuthStore()
