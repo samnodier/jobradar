@@ -319,9 +319,6 @@ const savePreferences = () => {
   font-size: var(--text-2xl);
 }
 
-.profile-page {
-  max-width: 800px;
-}
 
 .profile-max-width {
   display: flex;
@@ -420,10 +417,6 @@ const savePreferences = () => {
 
 .preferences-page {
   max-width: 900px;
-}
-
-.preferences-container {
-  padding: var(--spacing-8);
 }
 
 .page-header {
