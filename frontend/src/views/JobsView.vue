@@ -342,13 +342,13 @@ onUnmounted(() => {
 }
 
 /* Detail Overlay */
-
 .detail-overlay {
   position: fixed;
   inset: 0;
   z-index: 100;
   display: flex;
   justify-content: flex-end;
+  pointer-events: none;
 }
 
 .detail-drawer {
@@ -356,11 +356,12 @@ onUnmounted(() => {
   min-width: 560px;
   max-width: 100%;
   height: 100%;
-  background: var(--surface);
+  background: var(--color-bg-primary);
   box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  pointer-events: auto;
 }
 
 /* hide on desktop, show on mobile */

@@ -9,18 +9,22 @@ import (
 )
 
 var (
-	htmlTags     = regexp.MustCompile(`<[^>]*>`)
-	whitespace   = regexp.MustCompile(`[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]`)
-	controlChars = regexp.MustCompile(`\s+`)
+	htmlTagsRe     = regexp.MustCompile(`<[^>]*>`)
+	controlCharsRe = regexp.MustCompile(`[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]`)
+	extraSpaceRe   = regexp.MustCompile(`\s+`)
+	multiNewlineRe = regexp.MustCompile(`\n{3,}`)
 )
 
-func Sanitize(input string) string {
-	// Unescape HTML entities
+func SanitizeStrict(input string) string {
 	str := html.UnescapeString(input)
-	str = htmlTags.ReplaceAllString(str, " ")
-	str = controlChars.ReplaceAllString(str, " ")
-	str = whitespace.ReplaceAllString(str, " ")
+	str = htmlTagsRe.ReplaceAllString(str, " ")
+	str = controlCharsRe.ReplaceAllString(str, "")
+	str = extraSpaceRe.ReplaceAllString(str, " ")
 	return strings.TrimSpace(str)
+}
+
+func SanitizeDescription(input string) string {
+	return strings.TrimSpace(input)
 }
 
 func GenerateUsername(email string) string {

@@ -112,7 +112,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { Heart, Search } from 'lucide-vue-next'
+import { Heart, Search } from '@lucide/vue'
 
 type JobStats = {
   total_jobs: number
