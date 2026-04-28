@@ -54,9 +54,9 @@
       </div>
     </div>
 
-    <div class="detail-block">
-      <p class="block-title">Description</p>
-      <p class="block-text">{{ job.description || 'No description available.' }}</p>
+    <div class="detail-section">
+      <p class="section-label">About the role</p>
+      <div v-html="DOMPurify.sanitize(job.description || 'No description available.')" class="raw-description"></div>
     </div>
 
 
@@ -66,8 +66,10 @@
 
 <script setup lang="ts">
 import type { Job } from '@/types/job'
-import { X } from '@lucide/vue';
+import { Check, ExternalLink, Link2, X } from '@lucide/vue';
 import { ref } from 'vue';
+import DOMPurify from 'dompurify';
+
 
 const props = defineProps<{ job: Job }>()
 defineEmits(['close'])
@@ -153,7 +155,7 @@ async function copyLink() {
   margin: 0 0 var(--spacing-1);
   font-size: var(--text-3xl);
   font-weight: var(--font-weight-bold);
-  line-height: 1.4;
+  line-height: var(--text-3xl--line-height);
 }
 
 .company-name {
@@ -167,8 +169,8 @@ async function copyLink() {
   border: none;
   background: transparent;
   color: var(--color-muted);
-  font-size: 1.55rem;
-  line-height: 1;
+  font-size: var(--text-xl);
+  line-height: var(--text-xl--line-height);
   cursor: pointer;
   flex-shrink: 0;
   transition: var(--transition-fast);
@@ -224,7 +226,7 @@ async function copyLink() {
   background: var(--color-accent);
   color: #FFF;
   border: none;
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
   text-decoration: none;
@@ -236,29 +238,161 @@ async function copyLink() {
   font-size: var(--text-base);
 }
 
+.button-save {
+    height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: all 0.1s;
+  white-space: nowrap;
+}
+
+.button-save.saved {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #fff;
+}
+
+.button-icon {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.1s;
+}
+
 .detail-section {
-  display: grid;
-  gap: 0.75rem;
+  padding: var(--spacing-4);
+}
+
+.detail-section:last-child {
+  border-bottom: none;
 }
 
 .section-label {
-  margin: 0;
-  color: #475569;
-  line-height: 1.7;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: var(--spacing-2);
 }
 
 .skills-wrap {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.65rem;
+  gap: var(--spacing-2);
 }
 
 .skill-tag {
-  background: #f5f5f3;
+  height: 20px;
+  color: var(--color-text);
+  padding: 0 var(--spacing-2);
+  font-size: var(--text-xs);
+  background: var(--color-accent-lighter);
+  border: 1px solid var(--color-accent);
+  display: flex;
+  align-items: center;
+  text-transform: capitalize;
+
+}
+
+.raw-description {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  line-height: var(--text-sm--line-height);
+  margin: 0;
+  white-space: pre-line;
+    font-size: var(--text-sm);
+  color: #555;
+  margin: 0 0 6px;
+}
+
+.raw-description :deep(h1) {
+  font-size: var(--text-base);
+  font-weight: 600;
   color: #1a1a1a;
-  padding: 0.45rem 0.8rem;
-  border-radius: 999px;
-  font-size: 0.85rem;
+  margin: 0 0 12px;
+  line-height: var(--text-base--line-height);
+}
+
+.raw-description :deep(h2) {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 20px 0 8px;
+}
+
+.raw-description :deep(h3) {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: #444;
+  margin: 14px 0 6px;
+}
+
+.raw-description :deep(p) {
+  font-size: var(--text-sm);
+  color: #555;
+  line-height: var(--text-sm--line-height);
+  margin: 0 0 6px;
+}
+
+/* hide the empty spacer paragraphs remoteok injects */
+.raw-description :deep(p:empty),
+.raw-description :deep(p[style*="min-height"]:empty) {
+  display: none;
+}
+
+.raw-description :deep(ul) {
+  padding-left: 16px;
+  margin: 6px 0 12px;
+}
+
+.raw-description :deep(li) {
+  font-size: var(--text-sm);
+  color: #555;
+  line-height: var(--text-sm--line-height);
+  margin-bottom: 4px;
+}
+
+/* hide the nested p inside li that remoteok wraps everything in */
+.raw-description :deep(li p) {
+  margin: 0;
+  display: inline;
+}
+
+.raw-description :deep(strong) {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.raw-description :deep(a) {
+  color: #5e6ad2;
+  text-decoration: none;
+}
+
+.raw-description :deep(a:hover) {
+  text-decoration: underline;
+}
+
+/* hide the spam tag at the bottom */
+.raw-description :deep(br:last-child),
+.raw-description :deep(br + br) {
+  display: none;
+}
+
+/* hide images like the ashby header/footer */
+.raw-description :deep(img) {
+  display: none;
 }
 
 .button-primary {
@@ -266,4 +400,6 @@ async function copyLink() {
   justify-content: center;
   display: inline-flex;
 }
+
+
 </style>

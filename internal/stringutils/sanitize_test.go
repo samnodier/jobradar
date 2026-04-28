@@ -1,0 +1,162 @@
+package stringutils
+
+import (
+	"testing"
+)
+
+func TestSanitizeStrict(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "strips html tags",
+			input:    "<b>Software Engineer</b>",
+			expected: "Software Engineer",
+		},
+		{
+			name:     "unescapes html entities",
+			input:    "R&amp;D Engineer",
+			expected: "R&D Engineer",
+		},
+		{
+			name:     "unescapes html entities",
+			input:    "We&rsquo;re hiring",
+			expected: "We\u2019re hiring",
+		},
+		{
+			name:     "collapses extra whitespace",
+			input:    "Senior   Frontend    Engineer",
+			expected: "Senior Frontend Engineer",
+		},
+		{
+			name:     "trims surrounding whitespace",
+			input:    "  Engineer  ",
+			expected: "Engineer",
+		},
+		{
+			name:     "handles empty string",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "handles plain text unchanged",
+			input:    "Go Engineer",
+			expected: "Go Engineer",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := SanitizeStrict(tt.input)
+			if got != tt.expected {
+				t.Errorf("SanitizeStrict(%q)\n  got:  %q\n  want: %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestSanitizeDescription(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "preserves html tags",
+			input:    "<ul><li>Build things</li></ul>",
+			expected: "<ul><li>Build things</li></ul>",
+		},
+		{
+			name:     "unescapes html entities",
+			input:    "We&rsquo;re hiring",
+			expected: "We're hiring",
+		},
+		{
+			name:     "handles empty string",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "trims surrounding whitespace",
+			input:    "  About the role  ",
+			expected: "About the role",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := SanitizeDescription(tt.input)
+			if got != tt.expected {
+				t.Errorf("SanitizeDescription(%q)\n  got:  %q\n  want: %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestGenerateUsername(t *testing.T) {
+	tests := []struct {
+		name     string
+		email    string
+		expected string
+	}{
+		{
+			name:     "extracts username from email",
+			email:    "sam@example.com",
+			expected: "sam",
+		},
+		{
+			name:     "handles subdomain email",
+			email:    "sam.nodier@company.co.uk",
+			expected: "sam.nodier",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := GenerateUsername(tt.email)
+			if got != tt.expected {
+				t.Errorf("GenerateUsername(%q)\n  got:  %q\n  want: %q", tt.email, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestGenerateUsernameEmpty(t *testing.T) {
+	// empty email should generate a fallback username
+	got := GenerateUsername("")
+	if len(got) < 5 {
+		t.Errorf("GenerateUsername(\"\") returned too short: %q", got)
+	}
+	if got[:5] != "user_" {
+		t.Errorf("GenerateUsername(\"\") should start with 'user_', got: %q", got)
+	}
+}
+
+func TestIsValidUsername(t *testing.T) {
+	tests := []struct {
+		name     string
+		username string
+		valid    bool
+	}{
+		{"valid username", "sam_123", true},
+		{"valid all letters", "samuel", true},
+		{"too short", "ab", false},
+		{"too long", "this_username_is_way_too_long_123", false},
+		{"has spaces", "sam nodier", false},
+		{"has hyphen", "sam-nodier", false},
+		{"has special chars", "sam@nodier", false},
+		{"exactly 3 chars", "sam", true},
+		{"exactly 20 chars", "sam_123_sam_123_sam_", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := IsValidUsername(tt.username)
+			if got != tt.valid {
+				t.Errorf("IsValidUsername(%q) = %v, want %v", tt.username, got, tt.valid)
+			}
+		})
+	}
+}
