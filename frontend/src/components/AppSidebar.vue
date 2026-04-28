@@ -8,6 +8,10 @@ import { computed } from 'vue'
 const authStore = useAuthStore()
 const route = useRoute()
 
+const isAllJobsActive = computed(() => {
+  return route.path === '/jobs' && !route.query.filter
+})
+
 const isSavedActive = computed(() => {
   return route.path === '/jobs' && route.query.filter === 'saved'
 })
@@ -23,7 +27,7 @@ const isAppliedActive = computed(() => {
     <nav class="sidebar-nav">
       <div class="nav-section">
         <h2 class="nav-section-title">Discover</h2>
-        <RouterLink to="/jobs" class="nav-item" active-class="active">
+        <RouterLink to="/jobs" class="nav-item" :class="{ active: isAllJobsActive }">
           <Zap class="nav-icon" />
           All jobs
         </RouterLink>

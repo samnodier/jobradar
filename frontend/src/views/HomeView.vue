@@ -94,7 +94,7 @@
             <div class="position-cell">
               <div class="status-dot" :class="statusClass(job)"></div>
               <div>
-                <p class="job-title">{{ job.title }}</p>
+                <a :href="job.url" target="_blank" class="job-title">{{ job.title }}</a>
               </div>
             </div>
             <span class="company-cell">{{ job.company }}</span>

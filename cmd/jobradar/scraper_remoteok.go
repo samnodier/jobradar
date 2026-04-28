@@ -34,8 +34,7 @@ func (cfg *apiConfig) scrapeRemoteOK(ctx context.Context) {
 
 	remote := true
 	for _, rJob := range jobs {
-		cleanTitle := stringutils.Sanitize(rJob.Position)
-		cleanDesc := stringutils.Sanitize(rJob.Description)
+		cleanTitle := stringutils.SanitizeStrict(rJob.Position)
 
 		_, err := cfg.db.CreateJob(ctx, database.CreateJobParams{
 
@@ -43,7 +42,7 @@ func (cfg *apiConfig) scrapeRemoteOK(ctx context.Context) {
 			Source:      "remoteok",
 			Title:       cleanTitle,
 			Company:     rJob.Company,
-			Description: convert.ToNullString(cleanDesc),
+			Description: convert.ToNullString(stringutils.SanitizeDescription(rJob.Description)),
 			Url:         rJob.URL,
 			SalaryMin:   convert.ToNullInt32(rJob.SalaryMin),
 			SalaryMax:   convert.ToNullInt32(rJob.SalaryMax),
