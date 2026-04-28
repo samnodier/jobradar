@@ -124,6 +124,7 @@ type Job = {
   id: string
   title: string
   company: string
+  url: string
   location?: string | null
   is_remote?: boolean | null
   employment_type?: string | null

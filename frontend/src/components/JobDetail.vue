@@ -313,14 +313,14 @@ async function copyLink() {
   margin: 0;
   white-space: pre-line;
     font-size: var(--text-sm);
-  color: #555;
+  color: var(--color-text);
   margin: 0 0 6px;
 }
 
 .raw-description :deep(h1) {
   font-size: var(--text-base);
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--color-text);
   margin: 0 0 12px;
   line-height: var(--text-base--line-height);
 }
@@ -328,20 +328,27 @@ async function copyLink() {
 .raw-description :deep(h2) {
   font-size: var(--text-base);
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--color-text);
   margin: 20px 0 8px;
 }
 
 .raw-description :deep(h3) {
   font-size: var(--text-sm);
   font-weight: 600;
-  color: #444;
+  color: var(--color-text);
   margin: 14px 0 6px;
 }
 
 .raw-description :deep(p) {
   font-size: var(--text-sm);
-  color: #555;
+  color: var(--color-text);
+  line-height: var(--text-sm--line-height);
+  margin: 0 0 6px;
+}
+
+.raw-description :deep(span) {
+  font-size: var(--text-sm) !important;
+  color: var(--color-text);
   line-height: var(--text-sm--line-height);
   margin: 0 0 6px;
 }
@@ -359,7 +366,7 @@ async function copyLink() {
 
 .raw-description :deep(li) {
   font-size: var(--text-sm);
-  color: #555;
+  color: var(--color-text);
   line-height: var(--text-sm--line-height);
   margin-bottom: 4px;
 }
@@ -372,11 +379,11 @@ async function copyLink() {
 
 .raw-description :deep(strong) {
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--color-text);
 }
 
 .raw-description :deep(a) {
-  color: #5e6ad2;
+  color: var(--color-accent);
   text-decoration: none;
 }
 
