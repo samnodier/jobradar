@@ -1,115 +1,310 @@
-<script setup lang="ts">
-import AppSidebar from '@/components/AppSidebar.vue'
-import { useAuthStore } from '@/stores/auth'
-import { RouterLink, useRouter } from 'vue-router'
-
-const authStore = useAuthStore()
-const router = useRouter()
-
-async function handleLogout() {
-  await authStore.logout()
-  router.push('/login')
-}
-</script>
-
 <template>
   <div class="profile-container">
     <AppSidebar />
 
+    <main class="profile-main">
+      <div class="content-area profile-page">
+        <div class="profile-max-width">
+          <!-- Profile Header -->
+          <div class="profile-header">
+            <div class="profile-info">
+              <div class="profile-avatar">
+                <div class="avatar-shell">
+                  <img v-if="authStore.user?.avatar_url" :src="authStore.user.avatar_url" alt="Profile avatar" />
+                  <span v-else class="avatar-fallback">{{ authStore.user?.username?.[0]?.toUpperCase() || 'U' }}</span>
+                </div>
+              </div>
+              <div style="flex: 1;">
+                <h1 class="profile-name">{{ authStore.user?.name || authStore.user?.username }}</h1>
+                <p class="profile-email">{{ authStore.user?.email }}</p>
+                <p class="profile-bio">Senior Full Stack Engineer with 8 years of experience. Passionate about building
+                  scalable applications.</p>
+              </div>
+            </div>
+            <button class="button button-primary">Edit Profile</button>
+          </div>
+        </div>
+        <!-- Profile Sections -->
+        <div class="profile-sections">
+          <!-- About Section -->
+          <section class="profile-section">
+            <h2 class="section-heading">About</h2>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">Experience</span>
+                <span class="info-value">8 years</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Location</span>
+                <span class="info-value">San Francisco, CA</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Skills</span>
+                <span class="info-value">React, TypeScript, Node.js, Python, AWS</span>
+              </div>
+            </div>
+          </section>
 
-    <main class="profile-page">
-      <div v-if="authStore.loading" class="status-card">
-        <p>Loading profile…</p>
+          <!-- Preferences Section -->
+          <section class="profile-section">
+            <h2 class="section-heading">Job Preferences</h2>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">Job Type</span>
+                <span class="info-value">Full-time, Remote</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Salary Range</span>
+                <span class="info-value">$150k - $200k</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Saved Jobs Section -->
+          <section class="profile-section">
+            <h2 class="section-heading">Activity</h2>
+            <div class="info-item">
+              <span class="info-label">Saved Jobs</span>
+              <span class="info-value">{{ savedCount }} jobs</span>
+            </div>
+          </section>
+        </div>
       </div>
 
-      <div v-else-if="!authStore.user" class="status-card">
-        <p class="status-title">You are not logged in.</p>
-        <RouterLink to="/login" class="button button-primary">Go to login</RouterLink>
+      <div class="content-area preferences-page">
+        <div class="preferences-container profile-max-width">
+          <!-- Header -->
+          <div class="page-header">
+            <h1 class="page-title">Preferences & Settings</h1>
+            <p class="page-subtitle">Fine-tune your job recommendations and notification preferences</p>
+          </div>
+
+          <!-- Settings Sections -->
+          <div class="settings-grid">
+            <!-- Job Preferences -->
+            <section class="settings-section">
+              <h2 class="section-title">Job Preferences</h2>
+
+              <div class="setting-group">
+                <label class="setting-label">Preferred Job Types</label>
+                <div class="checkbox-group">
+                  <div class="checkbox-item">
+                    <input id="ft" v-model="preferences.jobTypes" type="checkbox" value="Full-time" />
+                    <label for="ft">Full-time</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input id="pt" v-model="preferences.jobTypes" type="checkbox" value="Part-time" />
+                    <label for="pt">Part-time</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input id="contract" v-model="preferences.jobTypes" type="checkbox" value="Contract" />
+                    <label for="contract">Contract</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="setting-group">
+                <label class="setting-label">Work Location</label>
+                <select v-model="preferences.location" class="form-input">
+                  <option>Remote</option>
+                  <option>On-site</option>
+                  <option>Hybrid</option>
+                  <option>Any</option>
+                </select>
+              </div>
+
+              <div class="setting-group">
+                <label class="setting-label">Salary Range</label>
+                <input v-model="preferences.salaryMin" type="number" placeholder="Min" class="form-input" />
+                <input v-model="preferences.salaryMax" type="number" placeholder="Max" class="form-input" />
+              </div>
+            </section>
+
+            <!-- Skills & Experience -->
+            <section class="settings-section">
+              <h2 class="section-title">Skills & Experience</h2>
+
+              <div class="setting-group">
+                <label class="setting-label">Years of Experience</label>
+                <select v-model="preferences.experience" class="form-input">
+                  <option value="0-2">0-2 years</option>
+                  <option value="2-5">2-5 years</option>
+                  <option value="5-10">5-10 years</option>
+                  <option value="10+">10+ years</option>
+                </select>
+              </div>
+
+              <div class="setting-group">
+                <label class="setting-label">Primary Skills</label>
+                <div class="skills-tags">
+                  <span v-for="skill in preferences.skills" :key="skill" class="skill-tag">
+                    {{ skill }}
+                    <button @click="removeSkill(skill)" class="tag-close">×</button>
+                  </span>
+                </div>
+                <input type="text" placeholder="Add a skill and press Enter" @keydown.enter="addSkill"
+                  class="form-input" />
+              </div>
+            </section>
+
+            <!-- Company Preferences -->
+            <section class="settings-section">
+              <h2 class="section-title">Company Preferences</h2>
+
+              <div class="setting-group">
+                <label class="setting-label">Company Stage</label>
+                <div class="checkbox-group">
+                  <div class="checkbox-item">
+                    <input id="startup" v-model="preferences.companyStage" type="checkbox" value="Startup" />
+                    <label for="startup">Startup</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input id="growth" v-model="preferences.companyStage" type="checkbox" value="Growth" />
+                    <label for="growth">Growth Stage</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input id="enterprise" v-model="preferences.companyStage" type="checkbox" value="Enterprise" />
+                    <label for="enterprise">Enterprise</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="setting-group">
+                <label class="setting-label">Industries of Interest</label>
+                <input v-model="preferences.industries" type="text" placeholder="e.g., SaaS, AI/ML, FinTech"
+                  class="form-input" />
+              </div>
+            </section>
+
+            <!-- Notifications -->
+            <section class="settings-section">
+              <h2 class="section-title">Notifications</h2>
+
+              <div class="setting-group toggle-group">
+                <label class="setting-label">Job Recommendations</label>
+                <button :class="['toggle-btn', { 'toggle-active': preferences.notifyJobs }]"
+                  @click="preferences.notifyJobs = !preferences.notifyJobs">
+                  {{ preferences.notifyJobs ? 'On' : 'Off' }}
+                </button>
+              </div>
+
+              <div class="setting-group toggle-group">
+                <label class="setting-label">Interview Updates</label>
+                <button :class="['toggle-btn', { 'toggle-active': preferences.notifyInterviews }]"
+                  @click="preferences.notifyInterviews = !preferences.notifyInterviews">
+                  {{ preferences.notifyInterviews ? 'On' : 'Off' }}
+                </button>
+              </div>
+
+              <div class="setting-group toggle-group">
+                <label class="setting-label">Weekly Digest</label>
+                <button :class="['toggle-btn', { 'toggle-active': preferences.notifyDigest }]"
+                  @click="preferences.notifyDigest = !preferences.notifyDigest">
+                  {{ preferences.notifyDigest ? 'On' : 'Off' }}
+                </button>
+              </div>
+            </section>
+
+            <!-- Privacy & Account -->
+            <section class="settings-section">
+              <h2 class="section-title">Privacy & Account</h2>
+
+              <div class="setting-group">
+                <button class="button button-secondary">Download My Data</button>
+              </div>
+            </section>
+          </div>
+
+          <!-- Save Button -->
+          <div class="save-section">
+            <button class="button button-primary" @click="savePreferences">Save Changes</button>
+            <p class="save-message" v-if="saved">✓ Preferences saved successfully</p>
+          </div>
+        </div>
       </div>
-
-      <section v-else class="profile-card">
-        <div class="profile-header">
-          <div class="avatar-shell">
-            <img v-if="authStore.user.avatar_url" :src="authStore.user.avatar_url" alt="Profile avatar" />
-            <span v-else class="avatar-fallback">{{ authStore.user.username?.[0]?.toUpperCase() || 'U' }}</span>
-          </div>
-          <div>
-            <p class="eyebrow">Your profile</p>
-            <h1>{{ authStore.user.name || authStore.user.username }}</h1>
-            <p class="subtitle">@{{ authStore.user.username }}</p>
-          </div>
-        </div>
-
-        <div class="profile-details">
-          <div class="detail-row">
-            <span>Email</span>
-            <p>{{ authStore.user.email }}</p>
-          </div>
-          <div class="detail-row">
-            <span>Username</span>
-            <p>{{ authStore.user.username }}</p>
-          </div>
-        </div>
-
-        <div class="profile-actions">
-          <button class="button button-ghost" @click="handleLogout">Logout</button>
-        </div>
-      </section>
     </main>
   </div>
 </template>
 
+<script setup lang="ts">
+import { ref } from 'vue'
+import AppSidebar from '@/components/AppSidebar.vue'
+import { useAuthStore } from '@/stores/auth'
+
+const authStore = useAuthStore()
+const saved = ref(false)
+
+const savedCount = ref(12)
+
+const preferences = ref({
+  jobTypes: ['Full-time', 'Contract'],
+  location: 'Remote',
+  salaryMin: 150000,
+  salaryMax: 250000,
+  experience: '5-10',
+  skills: ['React', 'TypeScript', 'Node.js'],
+  companyStage: ['Growth', 'Enterprise'],
+  industries: 'SaaS, AI/ML, Developer Tools',
+  notifyJobs: true,
+  notifyInterviews: true,
+  notifyDigest: false,
+  visibleToRecruiters: true,
+})
+
+const removeSkill = (skill: string) => {
+  const idx = preferences.value.skills.indexOf(skill)
+  if (idx > -1) {
+    preferences.value.skills.splice(idx, 1)
+  }
+}
+
+const addSkill = (e: Event) => {
+  const target = e.target as HTMLInputElement
+  if (target.value && !preferences.value.skills.includes(target.value)) {
+    preferences.value.skills.push(target.value)
+    target.value = ''
+  }
+}
+
+const savePreferences = () => {
+  console.log('[v0] Preferences saved:', preferences.value)
+  saved.value = true
+  setTimeout(() => {
+    saved.value = false
+  }, 3000)
+}
+</script>
+
 <style scoped>
 .profile-container {
-  width: min(1200px, 100%);
-  margin: 0 auto;
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
   min-height: calc(100vh - 96px);
-  gap: 1.5rem;
 }
 
-.profile-page {
-  max-width: 720px;
-  margin: 2rem auto;
-  padding: 0 1rem;
-}
-
-.status-card,
-.profile-card {
-  background: #ffffff;
-  border: 1px solid #e7ebf0;
-  border-radius: 22px;
-  padding: 28px;
-}
-
-.status-card {
-  display: grid;
-  gap: 1rem;
-  text-align: center;
-}
-
-.status-title {
-  margin: 0;
-  font-size: 1.15rem;
-  font-weight: 700;
-}
-
-.profile-header {
+.profile-main {
   display: flex;
-  align-items: center;
-  gap: 1.25rem;
-  margin-bottom: 1.75rem;
+  flex-direction: column;
+  gap: 1.5rem;
+  background: var(--color-bg-primary);
+}
+
+.content-area {
+  margin: 0 auto;
+  padding: var(--spacing-8);
+  width: 100%;
 }
 
 .avatar-shell {
-  width: 72px;
-  height: 72px;
-  border-radius: 18px;
-  background: #f5f7fb;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   display: grid;
   place-items: center;
   overflow: hidden;
+  box-shadow: 0 0 0 4px var(--color-bg-primary), 0 0 0 5px var(--color-border);
 }
 
 .avatar-shell img {
@@ -119,77 +314,297 @@ async function handleLogout() {
 }
 
 .avatar-fallback {
-  color: #0f172a;
-  font-weight: 700;
-  font-size: 1.25rem;
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--text-2xl);
 }
 
-.eyebrow {
-  margin: 0 0 0.45rem;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  font-size: 0.75rem;
-  color: #667085;
+.profile-page {
+  max-width: 800px;
 }
 
-h1 {
-  margin: 0;
-  font-size: 2rem;
-  color: #0f172a;
-}
-
-.subtitle {
-  margin: 0.5rem 0 0;
-  color: #475569;
-}
-
-.profile-details {
-  display: grid;
-  gap: 1rem;
-  margin-bottom: 1.75rem;
-}
-
-.detail-row {
-  display: grid;
-  gap: 0.35rem;
-}
-
-.detail-row span {
-  color: #667085;
-  font-size: 0.85rem;
-}
-
-.detail-row p {
-  margin: 0;
-  color: #0f172a;
-  font-weight: 600;
-}
-
-.profile-actions {
+.profile-max-width {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  gap: var(--spacing-8);
 }
 
-.button {
-  border: 1px solid transparent;
-  border-radius: 999px;
-  padding: 0.85rem 1.4rem;
-  font-weight: 600;
+.profile-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-6);
+  padding-bottom: var(--spacing-8);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.profile-info {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-4);
+  flex: 1;
+}
+
+.profile-avatar {
+  flex-shrink: 0;
+}
+
+.profile-name {
+  font-size: 24px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-1);
+  letter-spacing: -0.3px;
+}
+
+.profile-email {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-3);
+}
+
+.profile-bio {
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.profile-sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-8);
+}
+
+.profile-section {
+  padding-bottom: var(--spacing-6);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.profile-section:last-child {
+  border-bottom: none;
+}
+
+.section-heading {
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-4);
+  letter-spacing: -0.2px;
+}
+
+.info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.info-label {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.5px;
+}
+
+.info-value {
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.preferences-page {
+  max-width: 900px;
+}
+
+.preferences-container {
+  padding: var(--spacing-8);
+}
+
+.page-header {
+  padding-bottom: var(--spacing-6);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-2);
+}
+
+.page-subtitle {
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: var(--spacing-6);
+  margin-bottom: var(--spacing-8);
+}
+
+.settings-section {
+  padding: var(--spacing-6);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.section-title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-4);
+}
+
+.setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-4);
+}
+
+.setting-group:last-child {
+  margin-bottom: 0;
+}
+
+.setting-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.form-input {
+  padding: var(--spacing-2) var(--spacing-3);
+  border: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  transition: all var(--transition-fast);
+  width: 100%;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.checkbox-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
   cursor: pointer;
+  accent-color: var(--color-accent);
 }
 
-.button-primary {
-  color: #ffffff;
-  background: #4f46e5;
+.checkbox-item label {
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
 }
 
-.button-ghost {
-  color: #0f172a;
-  background: #f8fafc;
-  border-color: #e2e8f0;
+.skills-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-2);
 }
 
-.button:hover {
-  opacity: 0.95;
+.skill-tag {
+  padding: var(--spacing-1) var(--spacing-2);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-accent);
+  font-size: var(--text-xs);
+  color: var(--color-accent);
+  font-weight: var(--font-weight-medium);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.tag-close {
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0;
+  line-height: 1;
+}
+
+.toggle-group {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.toggle-btn {
+  padding: var(--spacing-1) var(--spacing-2);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+  min-width: 50px;
+}
+
+.toggle-btn:hover {
+  border-color: var(--color-accent);
+}
+
+.toggle-active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: white;
+}
+
+
+
+.save-section {
+  text-align: center;
+  padding: var(--spacing-6);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+}
+
+
+
+.save-message {
+  margin-top: var(--spacing-3);
+  font-size: var(--text-sm);
+  color: var(--color-success);
+  font-weight: var(--font-weight-medium);
+}
+
+@media (max-width: 768px) {
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .toggle-group {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-2);
+  }
 }
 </style>
