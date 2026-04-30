@@ -20,10 +20,9 @@ const router = createRouter({
       component: () => import('@/views/JobsView.vue'),
     },
     {
-      path: '/onboarding',
+      path: '/auth/onboarding',
       name: 'onboarding',
       component: () => import('@/views/OnboardingView.vue'),
-      meta: { requiresAuth: true },
     },
     {
       path: '/profile',
