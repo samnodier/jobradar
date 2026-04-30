@@ -11,6 +11,19 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Application struct {
+	ID                  uuid.UUID          `json:"id"`
+	UserID              uuid.UUID          `json:"user_id"`
+	JobID               uuid.UUID          `json:"job_id"`
+	Status              string             `json:"status"`
+	AppliedAt           *time.Time         `json:"applied_at"`
+	LastStatusChangedAt pgtype.Timestamptz `json:"last_status_changed_at"`
+	FollowUpAt          *time.Time         `json:"follow_up_at"`
+	Notes               *string            `json:"notes"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Job struct {
 	ID              uuid.UUID  `json:"id"`
 	ExternalID      string     `json:"external_id"`
@@ -33,6 +46,13 @@ type Job struct {
 	CreatedAt       *time.Time `json:"created_at"`
 	UpdatedAt       *time.Time `json:"updated_at"`
 	LogoUrl         *string    `json:"logo_url"`
+}
+
+type SavedJob struct {
+	ID        uuid.UUID          `json:"id"`
+	UserID    uuid.UUID          `json:"user_id"`
+	JobID     uuid.UUID          `json:"job_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type ServiceHealth struct {

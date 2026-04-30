@@ -20,9 +20,11 @@ migrate-up:
 	goose -dir sql/schema postgres "${DB_URL}" up
 migrate-down:
 	goose -dir sql/schema postgres "${DB_URL}" down
+migrate-create:
+	goose -dir sql/schema create $(name) sql
 
 sqlc:
 	sqlc generate
 
-.PHONY: up down migrate-up migrate-down sqlc
+.PHONY: up down migrate-up migrate-down migrate-create sqlc
 # end
