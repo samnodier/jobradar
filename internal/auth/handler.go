@@ -60,8 +60,6 @@ func (h *Handler) Routes() http.Handler {
 
 	r.Get("/github/login", h.handleGitHubLogin)
 	r.Get("/github/callback", h.handleGitHubCallback)
-	r.Get("/onboarding", h.handleOnboardingGet)
-	r.Post("/onboarding", h.handleOnboardingComplete)
 	r.Post("/logout", h.handleLogout)
 
 	return r

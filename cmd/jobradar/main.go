@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 	"github.com/samnodier/jobradar/internal/auth"
@@ -17,7 +18,10 @@ import (
 )
 
 type apiConfig struct {
-	db *database.Queries
+	db           *database.Queries
+	rdb          *redis.Client
+	pool         *pgxpool.Pool
+	IsProduction bool
 }
 
 func main() {
@@ -31,8 +35,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to create a db client: %v", err)
 	}
+
+	rdb := redis.NewClient(&redis.Options{
+		Addr: os.Getenv("REDIS_ADDR"),
+	})
+
 	cfg := &apiConfig{
-		db: dbClient.Queries,
+		db:           dbClient.Queries,
+		rdb:          rdb,
+		pool:         dbClient.Pool,
+		IsProduction: os.Getenv("APP_ENV") == "production",
 	}
 
 	router := chi.NewRouter()
@@ -73,10 +85,6 @@ func main() {
 		IsProduction:  os.Getenv("APP_ENV") == "production",
 	}
 
-	rdb := redis.NewClient(&redis.Options{
-		Addr: os.Getenv("REDIS_ADDR"),
-	})
-
 	authHandler, err := auth.NewHandler(authCfg, rdb, dbClient.Queries, dbClient.Pool)
 	if err != nil {
 		log.Fatalf("failed to create auth handler: %v", err)
@@ -89,10 +97,12 @@ func main() {
 		r.Get("/jobs", cfg.handlerJobsGet)
 		r.Get("/jobs/stats", cfg.handlerJobStatsGet)
 		r.Get("/jobs/{jobID}", cfg.handlerJobGetByID)
+		r.Get("/auth/onboarding", authHandler.HandleOnboardingGet)
+		r.Post("/auth/onboarding", authHandler.HandleOnboardingComplete)
 		r.Group(func(r chi.Router) {
 			r.Use(authHandler.RequireAuth)
 
-			// r.Get("/users/me", authHandler.HandlerUserGet)
+			r.Delete("/users/me", cfg.HandleDeleteAccount)
 		})
 	})
 

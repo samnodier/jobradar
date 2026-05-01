@@ -11,7 +11,15 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
-      '/auth': {
+      '/auth/github': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      '/auth/logout': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      '/auth/users': {
         target: 'http://localhost:8080',
         changeOrigin: true,
       },

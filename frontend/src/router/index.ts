@@ -1,33 +1,44 @@
 import { useAuthStore } from '@/stores/auth'
 import { createRouter, createWebHistory } from 'vue-router'
 
+import Home from '@/views/HomeView.vue'
+import Login from '@/views/LoginView.vue'
+import Jobs from '@/views/JobsView.vue'
+import Onboarding from '@/views/OnboardingView.vue'
+import Profile from '@/views/ProfileView.vue'
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
       name: 'home',
-      component: () => import('@/views/HomeView.vue'),
+      component: Home,
     },
     {
       path: '/login',
       name: 'login',
-      component: () => import('@/views/LoginView.vue'),
+      component: Login,
     },
     {
       path: '/jobs',
       name: 'jobs',
-      component: () => import('@/views/JobsView.vue'),
+      component: Jobs,
     },
     {
       path: '/auth/onboarding',
       name: 'onboarding',
-      component: () => import('@/views/OnboardingView.vue'),
+      component: Onboarding,
+      // beforeEnter: (to) => {
+      //   if (!to.query.token) {
+      //     return '/login'
+      //   }
+      // },
     },
     {
       path: '/profile',
       name: 'profile',
-      component: () => import('@/views/ProfileView.vue'),
+      component: Profile,
       meta: { requiresAuth: true },
     },
   ],

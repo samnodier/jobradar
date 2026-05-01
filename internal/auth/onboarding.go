@@ -15,7 +15,7 @@ import (
 	"github.com/samnodier/jobradar/internal/stringutils"
 )
 
-func (h *Handler) handleOnboardingGet(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleOnboardingGet(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Read token
@@ -42,12 +42,11 @@ func (h *Handler) handleOnboardingGet(w http.ResponseWriter, r *http.Request) {
 		"name":               pending.Name,
 		"email":              pending.Email,
 		"suggested_username": stringutils.GenerateUsername(pending.Email),
-		"login":              pending.Login,
 		"avatar_url":         pending.AvatarURL,
 	})
 }
 
-func (h *Handler) handleOnboardingComplete(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleOnboardingComplete(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Get the token
