@@ -169,7 +169,6 @@ func (h *Handler) handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("AppBaseURL: %q", h.cfg.AppBaseURL)
 	http.Redirect(w, r, h.cfg.AppBaseURL+"/auth/onboarding?token="+pendingToken, http.StatusFound)
 }
 
