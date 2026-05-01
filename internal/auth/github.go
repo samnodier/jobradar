@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -16,7 +17,6 @@ import (
 
 type GitHubUser struct {
 	ID        int64  `json:"id"`
-	Login     string `json:"login"`
 	Name      string `json:"name"`
 	Email     string `json:"email"`
 	AvatarURL string `json:"avatar_url"`
@@ -160,7 +160,6 @@ func (h *Handler) handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 	pendingToken := generateRandomToken()
 	signup := PendingSignup{
 		GitHubID:  user.ID,
-		Login:     user.Login,
 		Name:      user.Name,
 		Email:     user.Email,
 		AvatarURL: user.AvatarURL,
@@ -170,6 +169,7 @@ func (h *Handler) handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("AppBaseURL: %q", h.cfg.AppBaseURL)
 	http.Redirect(w, r, h.cfg.AppBaseURL+"/auth/onboarding?token="+pendingToken, http.StatusFound)
 }
 

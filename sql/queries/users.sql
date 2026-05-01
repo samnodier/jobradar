@@ -14,3 +14,6 @@ SELECT u.* FROM users u
 JOIN user_accounts ua ON ua.user_id = u.id
 WHERE ua.provider = $1 AND ua.provider_id = $2
 LIMIT 1;
+
+-- name: DeleteUserByID :exec
+DELETE FROM users WHERE id = $1;

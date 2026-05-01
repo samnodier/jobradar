@@ -10,15 +10,23 @@
             <div class="profile-info">
               <div class="profile-avatar">
                 <div class="avatar-shell">
-                  <img v-if="authStore.user?.avatar_url" :src="authStore.user.avatar_url" alt="Profile avatar" />
-                  <span v-else class="avatar-fallback">{{ authStore.user?.username?.[0]?.toUpperCase() || 'U' }}</span>
+                  <img
+                    v-if="authStore.user?.avatar_url"
+                    :src="authStore.user.avatar_url"
+                    alt="Profile avatar"
+                  />
+                  <span v-else class="avatar-fallback">{{
+                    authStore.user?.username?.[0]?.toUpperCase() || 'U'
+                  }}</span>
                 </div>
               </div>
-              <div style="flex: 1;">
+              <div style="flex: 1">
                 <h1 class="profile-name">{{ authStore.user?.name || authStore.user?.username }}</h1>
                 <p class="profile-email">{{ authStore.user?.email }}</p>
-                <p class="profile-bio">Senior Full Stack Engineer with 8 years of experience. Passionate about building
-                  scalable applications.</p>
+                <p class="profile-bio">
+                  Senior Full Stack Engineer with 8 years of experience. Passionate about building
+                  scalable applications.
+                </p>
               </div>
             </div>
             <button class="button button-primary">Edit Profile</button>
@@ -76,7 +84,9 @@
           <!-- Header -->
           <div class="page-header">
             <h1 class="page-title">Preferences & Settings</h1>
-            <p class="page-subtitle">Fine-tune your job recommendations and notification preferences</p>
+            <p class="page-subtitle">
+              Fine-tune your job recommendations and notification preferences
+            </p>
           </div>
 
           <!-- Settings Sections -->
@@ -89,15 +99,30 @@
                 <label class="setting-label">Preferred Job Types</label>
                 <div class="checkbox-group">
                   <div class="checkbox-item">
-                    <input id="ft" v-model="preferences.jobTypes" type="checkbox" value="Full-time" />
+                    <input
+                      id="ft"
+                      v-model="preferences.jobTypes"
+                      type="checkbox"
+                      value="Full-time"
+                    />
                     <label for="ft">Full-time</label>
                   </div>
                   <div class="checkbox-item">
-                    <input id="pt" v-model="preferences.jobTypes" type="checkbox" value="Part-time" />
+                    <input
+                      id="pt"
+                      v-model="preferences.jobTypes"
+                      type="checkbox"
+                      value="Part-time"
+                    />
                     <label for="pt">Part-time</label>
                   </div>
                   <div class="checkbox-item">
-                    <input id="contract" v-model="preferences.jobTypes" type="checkbox" value="Contract" />
+                    <input
+                      id="contract"
+                      v-model="preferences.jobTypes"
+                      type="checkbox"
+                      value="Contract"
+                    />
                     <label for="contract">Contract</label>
                   </div>
                 </div>
@@ -115,8 +140,18 @@
 
               <div class="setting-group">
                 <label class="setting-label">Salary Range</label>
-                <input v-model="preferences.salaryMin" type="number" placeholder="Min" class="form-input" />
-                <input v-model="preferences.salaryMax" type="number" placeholder="Max" class="form-input" />
+                <input
+                  v-model="preferences.salaryMin"
+                  type="number"
+                  placeholder="Min"
+                  class="form-input"
+                />
+                <input
+                  v-model="preferences.salaryMax"
+                  type="number"
+                  placeholder="Max"
+                  class="form-input"
+                />
               </div>
             </section>
 
@@ -142,8 +177,12 @@
                     <button @click="removeSkill(skill)" class="tag-close">×</button>
                   </span>
                 </div>
-                <input type="text" placeholder="Add a skill and press Enter" @keydown.enter="addSkill"
-                  class="form-input" />
+                <input
+                  type="text"
+                  placeholder="Add a skill and press Enter"
+                  @keydown.enter="addSkill"
+                  class="form-input"
+                />
               </div>
             </section>
 
@@ -155,15 +194,30 @@
                 <label class="setting-label">Company Stage</label>
                 <div class="checkbox-group">
                   <div class="checkbox-item">
-                    <input id="startup" v-model="preferences.companyStage" type="checkbox" value="Startup" />
+                    <input
+                      id="startup"
+                      v-model="preferences.companyStage"
+                      type="checkbox"
+                      value="Startup"
+                    />
                     <label for="startup">Startup</label>
                   </div>
                   <div class="checkbox-item">
-                    <input id="growth" v-model="preferences.companyStage" type="checkbox" value="Growth" />
+                    <input
+                      id="growth"
+                      v-model="preferences.companyStage"
+                      type="checkbox"
+                      value="Growth"
+                    />
                     <label for="growth">Growth Stage</label>
                   </div>
                   <div class="checkbox-item">
-                    <input id="enterprise" v-model="preferences.companyStage" type="checkbox" value="Enterprise" />
+                    <input
+                      id="enterprise"
+                      v-model="preferences.companyStage"
+                      type="checkbox"
+                      value="Enterprise"
+                    />
                     <label for="enterprise">Enterprise</label>
                   </div>
                 </div>
@@ -171,8 +225,12 @@
 
               <div class="setting-group">
                 <label class="setting-label">Industries of Interest</label>
-                <input v-model="preferences.industries" type="text" placeholder="e.g., SaaS, AI/ML, FinTech"
-                  class="form-input" />
+                <input
+                  v-model="preferences.industries"
+                  type="text"
+                  placeholder="e.g., SaaS, AI/ML, FinTech"
+                  class="form-input"
+                />
               </div>
             </section>
 
@@ -182,25 +240,11 @@
 
               <div class="setting-group toggle-group">
                 <label class="setting-label">Job Recommendations</label>
-                <button :class="['toggle-btn', { 'toggle-active': preferences.notifyJobs }]"
-                  @click="preferences.notifyJobs = !preferences.notifyJobs">
+                <button
+                  :class="['toggle-btn', { 'toggle-active': preferences.notifyJobs }]"
+                  @click="preferences.notifyJobs = !preferences.notifyJobs"
+                >
                   {{ preferences.notifyJobs ? 'On' : 'Off' }}
-                </button>
-              </div>
-
-              <div class="setting-group toggle-group">
-                <label class="setting-label">Interview Updates</label>
-                <button :class="['toggle-btn', { 'toggle-active': preferences.notifyInterviews }]"
-                  @click="preferences.notifyInterviews = !preferences.notifyInterviews">
-                  {{ preferences.notifyInterviews ? 'On' : 'Off' }}
-                </button>
-              </div>
-
-              <div class="setting-group toggle-group">
-                <label class="setting-label">Weekly Digest</label>
-                <button :class="['toggle-btn', { 'toggle-active': preferences.notifyDigest }]"
-                  @click="preferences.notifyDigest = !preferences.notifyDigest">
-                  {{ preferences.notifyDigest ? 'On' : 'Off' }}
                 </button>
               </div>
             </section>
@@ -211,6 +255,34 @@
 
               <div class="setting-group">
                 <button class="button button-secondary">Download My Data</button>
+              </div>
+              <div class="setting-group" v-if="!isDeleteConfirmVisible">
+                <button @click="isDeleteConfirmVisible = true" class="button button-secondary">
+                  Delete My Account
+                </button>
+              </div>
+              <div class="setting-group" v-else>
+                <p style="font-size: var(--text-xs); color: var(--color-accent)">
+                  This action is permanent and cannot be undone.
+                </p>
+                <label class="setting-label">Type your email to confirm</label>
+                <input
+                  v-model="typedEmail"
+                  type="email"
+                  placeholder="your@email.com"
+                  class="form-input"
+                />
+                <p v-if="deleteError" class="delete-error">{{ deleteError }}</p>
+                <div class="delete-actions">
+                  <button class="button button-secondary" @click="cancelDelete">Cancel</button>
+                  <button
+                    class="button button-primary"
+                    :disabled="typedEmail !== authStore.user?.email"
+                    @click="deleteAccount"
+                  >
+                    Confirm Delete
+                  </button>
+                </div>
               </div>
             </section>
           </div>
@@ -230,6 +302,9 @@
 import { ref } from 'vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const authStore = useAuthStore()
 const saved = ref(false)
@@ -246,10 +321,12 @@ const preferences = ref({
   companyStage: ['Growth', 'Enterprise'],
   industries: 'SaaS, AI/ML, Developer Tools',
   notifyJobs: true,
-  notifyInterviews: true,
-  notifyDigest: false,
   visibleToRecruiters: true,
 })
+
+const isDeleteConfirmVisible = ref(false)
+const typedEmail = ref('')
+const deleteError = ref('')
 
 const removeSkill = (skill: string) => {
   const idx = preferences.value.skills.indexOf(skill)
@@ -272,6 +349,39 @@ const savePreferences = () => {
   setTimeout(() => {
     saved.value = false
   }, 3000)
+}
+
+// Cancel delete to void multi-statement
+function cancelDelete() {
+  isDeleteConfirmVisible.value = false
+  typedEmail.value = ''
+  deleteError.value = ''
+}
+
+// Delete account
+async function deleteAccount() {
+  if (typedEmail.value !== authStore.user?.email) {
+    deleteError.value = 'Please enter your email address to confirm account deletion.'
+    return
+  }
+
+  try {
+    // Send a delete request to the backend
+    const response = await fetch('/api/users/me', {
+      method: 'DELETE',
+      credentials: 'include',
+    })
+    if (!response.ok) {
+      deleteError.value = 'Failed to delete account. Please try again.'
+      return
+    }
+    authStore.user = null
+    router.push('/login')
+  } catch (err) {
+    deleteError.value =
+      'Something went wrong. Please try again' + (err instanceof Error ? err.message : String(err))
+    return
+  }
 }
 </script>
 
@@ -304,7 +414,9 @@ const savePreferences = () => {
   display: grid;
   place-items: center;
   overflow: hidden;
-  box-shadow: 0 0 0 4px var(--color-bg-primary), 0 0 0 5px var(--color-border);
+  box-shadow:
+    0 0 0 4px var(--color-bg-primary),
+    0 0 0 5px var(--color-border);
 }
 
 .avatar-shell img {
@@ -318,7 +430,6 @@ const savePreferences = () => {
   font-weight: var(--font-weight-bold);
   font-size: var(--text-2xl);
 }
-
 
 .profile-max-width {
   display: flex;
@@ -501,7 +612,7 @@ const savePreferences = () => {
   gap: var(--spacing-2);
 }
 
-.checkbox-item input[type="checkbox"] {
+.checkbox-item input[type='checkbox'] {
   width: 16px;
   height: 16px;
   cursor: pointer;
@@ -571,16 +682,12 @@ const savePreferences = () => {
   color: white;
 }
 
-
-
 .save-section {
   text-align: center;
   padding: var(--spacing-6);
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
 }
-
-
 
 .save-message {
   margin-top: var(--spacing-3);
