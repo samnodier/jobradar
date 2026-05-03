@@ -427,7 +427,7 @@ async function deleteAccount() {
 
 .avatar-fallback {
   color: var(--color-text-primary);
-  font-weight: var(--font-weight-bold);
+  font-weight: var(--font-bold);
   font-size: var(--text-2xl);
 }
 
@@ -442,7 +442,7 @@ async function deleteAccount() {
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--spacing-6);
-  padding-bottom: var(--spacing-8);
+  padding-bottom: var(--spacing-6);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -458,8 +458,8 @@ async function deleteAccount() {
 }
 
 .profile-name {
-  font-size: 24px;
-  font-weight: var(--font-weight-bold);
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
   color: var(--color-text-primary);
   margin-bottom: var(--spacing-1);
   letter-spacing: -0.3px;
@@ -478,23 +478,26 @@ async function deleteAccount() {
 }
 
 .profile-sections {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-8);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: var(--spacing-6);
+  margin-top: var(--spacing-6);
+  margin-bottom: var(--spacing-6);
 }
 
 .profile-section {
-  padding-bottom: var(--spacing-6);
-  border-bottom: 1px solid var(--color-border);
+  padding: var(--spacing-6);
+  border: 1px solid var(--color-border);
+  margin-bottom: var(--spacing-4);
 }
 
 .profile-section:last-child {
-  border-bottom: none;
+  margin-bottom: unset;
 }
 
 .section-heading {
   font-size: var(--text-lg);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-semibold);
   color: var(--color-text-primary);
   margin-bottom: var(--spacing-4);
   letter-spacing: -0.2px;
@@ -514,20 +517,16 @@ async function deleteAccount() {
 
 .info-label {
   font-size: var(--text-xs);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-semibold);
   text-transform: uppercase;
   color: var(--color-text-tertiary);
   letter-spacing: 0.5px;
 }
 
 .info-value {
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   color: var(--color-text-primary);
-  font-weight: var(--font-weight-medium);
-}
-
-.preferences-page {
-  max-width: 900px;
+  font-weight: var(--font-normal);
 }
 
 .page-header {
@@ -537,7 +536,7 @@ async function deleteAccount() {
 
 .page-title {
   font-size: 24px;
-  font-weight: var(--font-weight-bold);
+  font-weight: var(--font-bold);
   color: var(--color-text-primary);
   margin-bottom: var(--spacing-2);
 }
@@ -562,7 +561,7 @@ async function deleteAccount() {
 
 .section-title {
   font-size: var(--text-lg);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-semibold);
   color: var(--color-text-primary);
   margin-bottom: var(--spacing-4);
 }
@@ -580,7 +579,7 @@ async function deleteAccount() {
 
 .setting-label {
   font-size: var(--text-sm);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-semibold);
   color: var(--color-text-primary);
 }
 
@@ -638,7 +637,7 @@ async function deleteAccount() {
   border: 1px solid var(--color-accent);
   font-size: var(--text-xs);
   color: var(--color-accent);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-medium);
   display: flex;
   align-items: center;
   gap: var(--spacing-1);
@@ -649,7 +648,7 @@ async function deleteAccount() {
   border: none;
   color: var(--color-accent);
   cursor: pointer;
-  font-size: 16px;
+  font-size: var(--text-sm);
   padding: 0;
   line-height: 1;
 }
@@ -666,7 +665,7 @@ async function deleteAccount() {
   border: 1px solid var(--color-border);
   cursor: pointer;
   font-size: var(--text-xs);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-semibold);
   color: var(--color-text-secondary);
   transition: all var(--transition-fast);
   min-width: 50px;
@@ -693,7 +692,7 @@ async function deleteAccount() {
   margin-top: var(--spacing-3);
   font-size: var(--text-sm);
   color: var(--color-success);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-medium);
 }
 
 @media (max-width: 768px) {

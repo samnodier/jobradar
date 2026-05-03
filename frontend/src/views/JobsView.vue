@@ -6,7 +6,6 @@ import JobRow from '@/components/JobRow.vue'
 import JobDetail from '@/components/JobDetail.vue'
 import type { Job } from '@/types/job'
 
-
 const route = useRoute()
 const router = useRouter()
 const jobs = ref<Job[]>([])
@@ -36,14 +35,16 @@ watch(
 
 watch(activeFilter, (value) => {
   if (value === 'all') {
-    router.replace({ query: {} }).catch(() => { })
+    router.replace({ query: {} }).catch(() => {})
   } else {
-    router.replace({
-      query: {
-        filter: value === 'all' ? undefined : value,
-        q: route.query.q,
-      }
-    }).catch(() => { })
+    router
+      .replace({
+        query: {
+          filter: value === 'all' ? undefined : value,
+          q: route.query.q,
+        },
+      })
+      .catch(() => {})
   }
 })
 
@@ -85,7 +86,9 @@ const sortedJobs = computed(() => {
 
 const groupedJobs = computed(() => {
   return sortedJobs.value.reduce<Record<string, Job[]>>((groups, job) => {
-    const label = job.posted_at ? new Date(job.posted_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Unknown'
+    const label = job.posted_at
+      ? new Date(job.posted_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+      : 'Unknown'
     groups[label] = groups[label] || []
     groups[label].push(job)
     return groups
@@ -101,7 +104,6 @@ const detailOpen = computed(() => !!selectedJob.value)
 function closeDetail() {
   selectedJobId.value = null
 }
-
 
 function fetchJobs() {
   loading.value = true
@@ -128,19 +130,6 @@ function formatCount(count: number) {
 
 function toggleSort() {
   sortDirection.value = sortDirection.value === 'newest' ? 'oldest' : 'newest'
-}
-
-function statusLabel(job: Job) {
-  if (job.status === 'saved') return 'Saved'
-  if (job.status === 'applied') return 'Applied'
-  return 'Open'
-}
-
-function formatLocation(job: Job) {
-  const parts: string[] = []
-  if (job.location) parts.push(job.location)
-  if (job.is_remote) parts.push('Remote')
-  return parts.join(' • ')
 }
 
 onMounted(() => {
@@ -171,20 +160,28 @@ onUnmounted(() => {
 
     <main class="jobs-main">
       <header class="jobs-topbar">
-
         <div class="search-bar">
           <Search class="search-icon" />
-          <input v-model="searchTerm" type="text" placeholder="Search by title, company, or skill"
-            class="search-input" />
+          <input
+            v-model="searchTerm"
+            type="text"
+            placeholder="Search by title, company, or skill"
+            class="search-input"
+          />
           <span v-if="searchTerm" class="search-clear" @click="searchTerm = ''">✕</span>
           <button class="button search-button button-primary">Search</button>
-
         </div>
 
         <div class="topbar-actions">
           <div class="jobs-filter-bar">
-            <button v-for="f in filters" :key="f.value" :class="['filter-pill', { active: activeFilter === f.value }]"
-              @click="activeFilter = f.value">{{ f.label }}</button>
+            <button
+              v-for="f in filters"
+              :key="f.value"
+              :class="['filter-pill', { active: activeFilter === f.value }]"
+              @click="activeFilter = f.value"
+            >
+              {{ f.label }}
+            </button>
           </div>
           <button class="button-sort" @click="toggleSort">
             <Sort />
@@ -201,13 +198,20 @@ onUnmounted(() => {
       <section class="jobs-body">
         <div v-if="loading" class="status-card">Loading jobs…</div>
         <div v-else-if="error" class="status-card status-error">{{ error }}</div>
-        <div v-else-if="filteredJobs.length === 0" class="status-card">No jobs match this filter.</div>
+        <div v-else-if="filteredJobs.length === 0" class="status-card">
+          No jobs match this filter.
+        </div>
         <div v-else class="job-list-scroll">
-            <div v-for="(group, label) in groupedJobs" :key="label" class="job-group">
-              <div class="group-label">{{ label }}</div>
-              <JobRow v-for="job in group" :key="job.id" :job="job" :selected="job.id === selectedJobId"
-                @click="selectedJobId = job.id" />
-            </div>
+          <div v-for="(group, label) in groupedJobs" :key="label" class="job-group">
+            <div class="group-label">{{ label }}</div>
+            <JobRow
+              v-for="job in group"
+              :key="job.id"
+              :job="job"
+              :selected="job.id === selectedJobId"
+              @click="selectedJobId = job.id"
+            />
+          </div>
         </div>
       </section>
     </main>
@@ -215,7 +219,12 @@ onUnmounted(() => {
     <!-- Details panel - slides in from the right as overlay -->
     <Teleport to="body">
       <Transition name="detail-slide">
-        <div v-if="detailOpen" class="detail-overlay" @click.self="closeDetail" :style="{ top: `${headerHeight}px` }">
+        <div
+          v-if="detailOpen"
+          class="detail-overlay"
+          @click.self="closeDetail"
+          :style="{ top: `${headerHeight}px` }"
+        >
           <div class="detail-drawer">
             <div class="detail-back" @click="closeDetail">
               <ArrowLeft />
@@ -253,7 +262,6 @@ onUnmounted(() => {
   gap: var(--spacing-2);
 }
 
-
 .topbar-actions {
   display: flex;
   align-items: center;
@@ -290,7 +298,6 @@ onUnmounted(() => {
   height: 2rem;
   padding: 0 var(--spacing-2);
   font-size: var(--text-sm);
-
 }
 
 .filter-pill.active {
@@ -305,7 +312,6 @@ onUnmounted(() => {
   align-items: center;
   gap: var(--spacing-1);
   font-size: var(--text-sm);
-
 }
 
 .count-label {
@@ -420,9 +426,9 @@ onUnmounted(() => {
 }
 
 @media (max-width: 480px) {
-.filter-pill {
-  font-size: var(--text-xs);
-  padding: 0 var(--spacing-1);
-}
+  .filter-pill {
+    font-size: var(--text-xs);
+    padding: 0 var(--spacing-1);
+  }
 }
 </style>
