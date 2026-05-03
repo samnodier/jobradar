@@ -97,11 +97,14 @@ func main() {
 		r.Get("/jobs", cfg.handlerJobsGet)
 		r.Get("/jobs/stats", cfg.handlerJobStatsGet)
 		r.Get("/jobs/{jobID}", cfg.handlerJobGetByID)
+
 		r.Get("/auth/onboarding", authHandler.HandleOnboardingGet)
 		r.Post("/auth/onboarding", authHandler.HandleOnboardingComplete)
 		r.Group(func(r chi.Router) {
 			r.Use(authHandler.RequireAuth)
 
+			r.Get("/applications", cfg.handlerApplicationsGet)
+			r.Get("/applications/{applicationID}", cfg.handlerApplicationGetByID)
 			r.Delete("/users/me", cfg.HandleDeleteAccount)
 		})
 	})
