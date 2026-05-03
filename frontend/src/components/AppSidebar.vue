@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { routeLocationKey, RouterLink, useRoute } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import IconGrid from '@/components/icons/IconGrid.vue'
 import { useAuthStore } from '@/stores/auth'
 import { AlertCircle, BarChart3, Bookmark, CheckCircle, User, Zap } from '@lucide/vue'
@@ -15,15 +15,10 @@ const isAllJobsActive = computed(() => {
 const isSavedActive = computed(() => {
   return route.path === '/jobs' && route.query.filter === 'saved'
 })
-
-const isAppliedActive = computed(() => {
-  return route.path === '/jobs' && route.query.filter === 'applied'
-})
 </script>
 
 <template>
   <aside class="sidebar-container">
-
     <nav class="sidebar-nav">
       <div class="nav-section">
         <h2 class="nav-section-title">Discover</h2>
@@ -52,17 +47,18 @@ const isAppliedActive = computed(() => {
           <User class="nav-icon" />
           Profile
         </RouterLink>
-        <RouterLink :to="{
-          path: '/jobs',
-          query: { filter: 'saved' }
-        }" class="nav-item" :class="{ active: isSavedActive }">
+        <RouterLink
+          :to="{
+            path: '/jobs',
+            query: { filter: 'saved' },
+          }"
+          class="nav-item"
+          :class="{ active: isSavedActive }"
+        >
           <Bookmark class="nav-icon" />
           Saved
         </RouterLink>
-        <RouterLink :to="{
-          path: '/jobs',
-          query: { filter: 'applied' }
-        }" class="nav-item" :class="{ active: isAppliedActive }">
+        <RouterLink to="/applications" class="nav-item">
           <CheckCircle class="nav-icon" />
           Applied
         </RouterLink>
@@ -85,7 +81,6 @@ const isAppliedActive = computed(() => {
     </nav>
   </aside>
 </template>
-
 
 <style scoped>
 .sidebar-container {
