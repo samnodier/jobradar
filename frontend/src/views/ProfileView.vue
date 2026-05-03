@@ -315,7 +315,7 @@ const savePreferences = () => {
 
 .avatar-fallback {
   color: var(--color-text-primary);
-  font-weight: var(--font-weight-bold);
+  font-weight: var(--font-bold);
   font-size: var(--text-2xl);
 }
 
@@ -334,7 +334,7 @@ const savePreferences = () => {
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--spacing-6);
-  padding-bottom: var(--spacing-8);
+  padding-bottom: var(--spacing-6);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -350,8 +350,8 @@ const savePreferences = () => {
 }
 
 .profile-name {
-  font-size: 24px;
-  font-weight: var(--font-weight-bold);
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
   color: var(--color-text-primary);
   margin-bottom: var(--spacing-1);
   letter-spacing: -0.3px;
@@ -370,23 +370,26 @@ const savePreferences = () => {
 }
 
 .profile-sections {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-8);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: var(--spacing-6);
+  margin-top: var(--spacing-6);
+  margin-bottom: var(--spacing-6);
 }
 
 .profile-section {
-  padding-bottom: var(--spacing-6);
-  border-bottom: 1px solid var(--color-border);
+  padding: var(--spacing-6);
+  border: 1px solid var(--color-border);
+  margin-bottom: var(--spacing-4);
 }
 
 .profile-section:last-child {
-  border-bottom: none;
+  margin-bottom: unset;
 }
 
 .section-heading {
   font-size: var(--text-lg);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-semibold);
   color: var(--color-text-primary);
   margin-bottom: var(--spacing-4);
   letter-spacing: -0.2px;
@@ -406,20 +409,16 @@ const savePreferences = () => {
 
 .info-label {
   font-size: var(--text-xs);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-semibold);
   text-transform: uppercase;
   color: var(--color-text-tertiary);
   letter-spacing: 0.5px;
 }
 
 .info-value {
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   color: var(--color-text-primary);
-  font-weight: var(--font-weight-medium);
-}
-
-.preferences-page {
-  max-width: 900px;
+  font-weight: var(--font-normal);
 }
 
 .preferences-container {
@@ -433,7 +432,7 @@ const savePreferences = () => {
 
 .page-title {
   font-size: 24px;
-  font-weight: var(--font-weight-bold);
+  font-weight: var(--font-bold);
   color: var(--color-text-primary);
   margin-bottom: var(--spacing-2);
 }
@@ -458,7 +457,7 @@ const savePreferences = () => {
 
 .section-title {
   font-size: var(--text-lg);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-semibold);
   color: var(--color-text-primary);
   margin-bottom: var(--spacing-4);
 }
@@ -476,7 +475,7 @@ const savePreferences = () => {
 
 .setting-label {
   font-size: var(--text-sm);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-semibold);
   color: var(--color-text-primary);
 }
 
@@ -534,7 +533,7 @@ const savePreferences = () => {
   border: 1px solid var(--color-accent);
   font-size: var(--text-xs);
   color: var(--color-accent);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-medium);
   display: flex;
   align-items: center;
   gap: var(--spacing-1);
@@ -545,7 +544,7 @@ const savePreferences = () => {
   border: none;
   color: var(--color-accent);
   cursor: pointer;
-  font-size: 16px;
+  font-size: var(--text-sm);
   padding: 0;
   line-height: 1;
 }
@@ -562,7 +561,7 @@ const savePreferences = () => {
   border: 1px solid var(--color-border);
   cursor: pointer;
   font-size: var(--text-xs);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-semibold);
   color: var(--color-text-secondary);
   transition: all var(--transition-fast);
   min-width: 50px;
@@ -593,7 +592,7 @@ const savePreferences = () => {
   margin-top: var(--spacing-3);
   font-size: var(--text-sm);
   color: var(--color-success);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-medium);
 }
 
 @media (max-width: 768px) {
