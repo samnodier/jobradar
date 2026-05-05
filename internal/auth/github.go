@@ -131,8 +131,8 @@ func (h *Handler) handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 
 	providerID := strconv.FormatInt(user.ID, 10)
 	dbUser, err := h.db.GetUserByProviderIdentity(ctx, database.GetUserByProviderIdentityParams{
-		Provider:   "github",
-		ProviderID: providerID,
+		AuthProvider:   "github",
+		AuthProviderID: providerID,
 	})
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		// real DB error

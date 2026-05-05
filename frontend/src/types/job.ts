@@ -1,17 +1,17 @@
 export interface Job {
   id: string
   external_id: string
-  source: string
+  job_source: string
   title: string
-  company: string
+  company_name: string
   description?: string | null
-  url: string
+  source_url: string
   salary_min?: number | null
   salary_max?: number | null
   currency?: string | null
-  location?: string | null
+  job_location?: string | null
   is_remote?: boolean | null
-  status?: string | null
+  job_status?: string | null
   employment_type?: string | null
   experience_level?: string | null
   skills: string[]
@@ -20,4 +20,6 @@ export interface Job {
   created_at?: string | null
   updated_at?: string | null
   logo_url?: string | null
+  is_saved: boolean
+  is_applied: boolean
 }

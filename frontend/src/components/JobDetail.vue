@@ -3,8 +3,8 @@
     <div class="detail-header">
       <div class="company-row">
         <div class="company-info">
-          <span class="company-name">{{ job.company }}</span>
-          <span class="source-badge">{{ job.source }}</span>
+          <span class="company-name">{{ job.company_name }}</span>
+          <span class="source-badge">{{ job.job_source }}</span>
         </div>
         <button class="close-button" @click="$emit('close')">
           <X :size="16" />
@@ -15,7 +15,7 @@
       <div class="meta-row">
         <span class="meta-pill">
           <MapPin :size="12" />
-          {{ job.location || (job.is_remote ? 'Remote' : 'On-site') }}
+          {{ job.job_location || (job.is_remote ? 'Remote' : 'On-site') }}
         </span>
         <span class="meta-pill">
           <Briefcase :size="12" />
@@ -34,12 +34,12 @@
 
     <!-- Actions -->
     <div class="detail-actions">
-      <a :href="job.url" target="_blank" rel="noreferrer" class="button-apply">
+      <a :href="job.source_url" target="_blank" rel="noreferrer" class="button-apply">
         Apply now
         <ExternalLink :size="13" />
       </a>
-      <button class="button-save" :class="{ saved: isSaved }" @click="isSaved = !isSaved">
-        {{ isSaved ? 'Saved' : 'Save' }}
+      <button class="button-save" :class="{ saved: job.is_saved }" @click="$emit('save', job)">
+        {{ job.is_saved ? 'Saved' : 'Save' }}
       </button>
       <button class="button-icon" @click="copyLink" :title="copied ? 'Copied!' : 'Copy link'">
         <Check v-if="copied" :size="14" />
@@ -60,7 +60,7 @@
     </div>
 
 
-    <a :href="job.url" target="_blank" rel="noreferrer" class="button button-primary">View job posting</a>
+    <a :href="job.source_url" target="_blank" rel="noreferrer" class="button button-primary">View job posting</a>
   </aside>
 </template>
 
@@ -72,9 +72,8 @@ import DOMPurify from 'dompurify';
 
 
 const props = defineProps<{ job: Job }>()
-defineEmits(['close'])
+defineEmits(['close', 'save'])
 
-const isSaved = ref(props.job.status === 'saved')
 const copied = ref(false)
 
 function formatSalary(job: Job) {
@@ -96,7 +95,7 @@ function timeAgo(date: string | null | undefined): string {
 
 async function copyLink() {
   try {
-    await navigator.clipboard.writeText(props.job.url)
+    await navigator.clipboard.writeText(props.job.source_url)
     copied.value = true
     setTimeout(() => copied.value = false, 2000)
   } catch {

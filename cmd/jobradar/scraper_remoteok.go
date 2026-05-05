@@ -22,7 +22,7 @@ func (cfg *apiConfig) scrapeRemoteOK(ctx context.Context) {
 		cfg.db.UpdateServiceHealth(ctx, database.UpdateServiceHealthParams{
 			ServiceName:     "remoteok",
 			LastSuccessAt:   convert.ToNullTime(time.Time{}),
-			Status:          "failing",
+			ServiceStatus:   "failing",
 			LastError:       convert.ToNullString(err.Error()),
 			JobCountLastRun: convert.ToNullInt32(0),
 		})
@@ -37,17 +37,16 @@ func (cfg *apiConfig) scrapeRemoteOK(ctx context.Context) {
 		cleanTitle := stringutils.SanitizeStrict(rJob.Position)
 
 		_, err := cfg.db.CreateJob(ctx, database.CreateJobParams{
-
 			ExternalID:  rJob.ID,
-			Source:      "remoteok",
+			JobSource:   "remoteok",
 			Title:       cleanTitle,
-			Company:     rJob.Company,
+			CompanyName: rJob.Company,
 			Description: convert.ToNullString(stringutils.SanitizeDescription(rJob.Description)),
-			Url:         rJob.URL,
+			SourceUrl:   rJob.URL,
 			SalaryMin:   convert.ToNullInt32(rJob.SalaryMin),
 			SalaryMax:   convert.ToNullInt32(rJob.SalaryMax),
 			Currency:    convert.ToNullString(""),
-			Location:    convert.ToNullString(rJob.Location),
+			JobLocation: convert.ToNullString(rJob.Location),
 			IsRemote:    &remote,
 			Skills:      rJob.Tags,
 			LogoUrl:     convert.ToNullString(rJob.Logo),
@@ -66,7 +65,7 @@ func (cfg *apiConfig) scrapeRemoteOK(ctx context.Context) {
 	cfg.db.UpdateServiceHealth(ctx, database.UpdateServiceHealthParams{
 		ServiceName:     "remoteok",
 		LastSuccessAt:   convert.ToNullTime(time.Now()),
-		Status:          "healthy",
+		ServiceStatus:   "healthy",
 		LastError:       convert.ToNullString(""),
 		JobCountLastRun: convert.ToNullInt32(count),
 	})

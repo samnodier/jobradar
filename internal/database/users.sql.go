@@ -13,17 +13,17 @@ import (
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
-    email, username, name, avatar_url
+    email, username, full_name, avatar_url
 ) VALUES (
     $1, $2, $3, $4
 )
-RETURNING id, email, username, name, avatar_url, is_admin, created_at, updated_at
+RETURNING id, email, username, full_name, avatar_url, is_admin, created_at, updated_at
 `
 
 type CreateUserParams struct {
 	Email     string  `json:"email"`
 	Username  *string `json:"username"`
-	Name      *string `json:"name"`
+	FullName  *string `json:"full_name"`
 	AvatarUrl *string `json:"avatar_url"`
 }
 
@@ -31,7 +31,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	row := q.db.QueryRow(ctx, createUser,
 		arg.Email,
 		arg.Username,
-		arg.Name,
+		arg.FullName,
 		arg.AvatarUrl,
 	)
 	var i User
@@ -39,7 +39,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.ID,
 		&i.Email,
 		&i.Username,
-		&i.Name,
+		&i.FullName,
 		&i.AvatarUrl,
 		&i.IsAdmin,
 		&i.CreatedAt,
@@ -49,7 +49,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 }
 
 const deleteUserByID = `-- name: DeleteUserByID :exec
-DELETE FROM users WHERE id = $1
+DELETE FROM users
+WHERE id = $1
 `
 
 func (q *Queries) DeleteUserByID(ctx context.Context, id uuid.UUID) error {
@@ -58,7 +59,19 @@ func (q *Queries) DeleteUserByID(ctx context.Context, id uuid.UUID) error {
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, username, name, avatar_url, is_admin, created_at, updated_at FROM users WHERE id = $1 LIMIT 1
+SELECT
+    id,
+    email,
+    username,
+    full_name,
+    avatar_url,
+    is_admin,
+    created_at,
+    updated_at
+FROM users
+WHERE id = $1
+ORDER BY id
+LIMIT 1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
@@ -68,7 +81,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.ID,
 		&i.Email,
 		&i.Username,
-		&i.Name,
+		&i.FullName,
 		&i.AvatarUrl,
 		&i.IsAdmin,
 		&i.CreatedAt,
@@ -78,25 +91,35 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 }
 
 const getUserByProviderIdentity = `-- name: GetUserByProviderIdentity :one
-SELECT u.id, u.email, u.username, u.name, u.avatar_url, u.is_admin, u.created_at, u.updated_at FROM users u
-JOIN user_accounts ua ON ua.user_id = u.id
-WHERE ua.provider = $1 AND ua.provider_id = $2
+SELECT
+    u.id,
+    u.email,
+    u.username,
+    u.full_name,
+    u.avatar_url,
+    u.is_admin,
+    u.created_at,
+    u.updated_at
+FROM users AS u
+INNER JOIN user_accounts AS ua ON u.id = ua.user_id
+WHERE ua.auth_provider = $1 AND ua.auth_provider_id = $2
+ORDER BY u.id
 LIMIT 1
 `
 
 type GetUserByProviderIdentityParams struct {
-	Provider   string `json:"provider"`
-	ProviderID string `json:"provider_id"`
+	AuthProvider   string `json:"auth_provider"`
+	AuthProviderID string `json:"auth_provider_id"`
 }
 
 func (q *Queries) GetUserByProviderIdentity(ctx context.Context, arg GetUserByProviderIdentityParams) (User, error) {
-	row := q.db.QueryRow(ctx, getUserByProviderIdentity, arg.Provider, arg.ProviderID)
+	row := q.db.QueryRow(ctx, getUserByProviderIdentity, arg.AuthProvider, arg.AuthProviderID)
 	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
 		&i.Username,
-		&i.Name,
+		&i.FullName,
 		&i.AvatarUrl,
 		&i.IsAdmin,
 		&i.CreatedAt,

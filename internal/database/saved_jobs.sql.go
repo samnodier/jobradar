@@ -13,24 +13,33 @@ import (
 )
 
 const getSavedJobsForUser = `-- name: GetSavedJobsForUser :many
-SELECT s.id, j.id as job_id, j.title, j.company, j.location, j.is_remote, j.logo_url, a.status, s.created_at AS saved_at
-FROM saved_jobs s
-JOIN jobs j ON s.job_id = j.id
-LEFT JOIN applications a ON s.job_id = a.job_id AND s.user_id = a.user_id
+SELECT
+    s.id,
+    j.id AS job_id,
+    j.title,
+    j.company_name,
+    j.job_location,
+    j.is_remote,
+    j.logo_url,
+    a.application_status,
+    s.created_at AS saved_at
+FROM saved_jobs AS s
+INNER JOIN jobs AS j ON s.job_id = j.id
+LEFT JOIN applications AS a ON s.job_id = a.job_id AND s.user_id = a.user_id
 WHERE s.user_id = $1
 ORDER BY s.created_at DESC
 `
 
 type GetSavedJobsForUserRow struct {
-	ID       uuid.UUID          `json:"id"`
-	JobID    uuid.UUID          `json:"job_id"`
-	Title    string             `json:"title"`
-	Company  string             `json:"company"`
-	Location *string            `json:"location"`
-	IsRemote *bool              `json:"is_remote"`
-	LogoUrl  *string            `json:"logo_url"`
-	Status   *string            `json:"status"`
-	SavedAt  pgtype.Timestamptz `json:"saved_at"`
+	ID                uuid.UUID          `json:"id"`
+	JobID             uuid.UUID          `json:"job_id"`
+	Title             string             `json:"title"`
+	CompanyName       string             `json:"company_name"`
+	JobLocation       *string            `json:"job_location"`
+	IsRemote          *bool              `json:"is_remote"`
+	LogoUrl           *string            `json:"logo_url"`
+	ApplicationStatus *string            `json:"application_status"`
+	SavedAt           pgtype.Timestamptz `json:"saved_at"`
 }
 
 func (q *Queries) GetSavedJobsForUser(ctx context.Context, userID uuid.UUID) ([]GetSavedJobsForUserRow, error) {
@@ -46,11 +55,11 @@ func (q *Queries) GetSavedJobsForUser(ctx context.Context, userID uuid.UUID) ([]
 			&i.ID,
 			&i.JobID,
 			&i.Title,
-			&i.Company,
-			&i.Location,
+			&i.CompanyName,
+			&i.JobLocation,
 			&i.IsRemote,
 			&i.LogoUrl,
-			&i.Status,
+			&i.ApplicationStatus,
 			&i.SavedAt,
 		); err != nil {
 			return nil, err
@@ -88,15 +97,15 @@ func (q *Queries) SaveJob(ctx context.Context, arg SaveJobParams) (SavedJob, err
 
 const unSaveJob = `-- name: UnSaveJob :exec
 DELETE FROM saved_jobs
-WHERE id = $1 AND user_id = $2
+WHERE job_id = $1 AND user_id = $2
 `
 
 type UnSaveJobParams struct {
-	ID     uuid.UUID `json:"id"`
+	JobID  uuid.UUID `json:"job_id"`
 	UserID uuid.UUID `json:"user_id"`
 }
 
 func (q *Queries) UnSaveJob(ctx context.Context, arg UnSaveJobParams) error {
-	_, err := q.db.Exec(ctx, unSaveJob, arg.ID, arg.UserID)
+	_, err := q.db.Exec(ctx, unSaveJob, arg.JobID, arg.UserID)
 	return err
 }

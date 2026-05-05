@@ -7,32 +7,33 @@ package database
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
 
 const createJob = `-- name: CreateJob :one
 INSERT INTO jobs (
-    external_id, source, title, company, description, url,
-    salary_min, salary_max, currency, location, is_remote, skills, logo_url
+    external_id, job_source, title, company_name, description, source_url,
+    salary_min, salary_max, currency, job_location, is_remote, skills, logo_url
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
 )
-ON CONFLICT (external_id, source) DO NOTHING
-RETURNING id, external_id, source, title, company, description, url, salary_min, salary_max, currency, location, is_remote, status, employment_type, experience_level, skills, posted_at, expires_at, created_at, updated_at, logo_url
+ON CONFLICT (external_id, job_source) DO NOTHING
+RETURNING id, external_id, job_source, title, company_name, description, source_url, salary_min, salary_max, currency, job_location, is_remote, job_status, employment_type, experience_level, skills, posted_at, expires_at, created_at, updated_at, logo_url
 `
 
 type CreateJobParams struct {
 	ExternalID  string   `json:"external_id"`
-	Source      string   `json:"source"`
+	JobSource   string   `json:"job_source"`
 	Title       string   `json:"title"`
-	Company     string   `json:"company"`
+	CompanyName string   `json:"company_name"`
 	Description *string  `json:"description"`
-	Url         string   `json:"url"`
+	SourceUrl   string   `json:"source_url"`
 	SalaryMin   *int32   `json:"salary_min"`
 	SalaryMax   *int32   `json:"salary_max"`
 	Currency    *string  `json:"currency"`
-	Location    *string  `json:"location"`
+	JobLocation *string  `json:"job_location"`
 	IsRemote    *bool    `json:"is_remote"`
 	Skills      []string `json:"skills"`
 	LogoUrl     *string  `json:"logo_url"`
@@ -41,15 +42,15 @@ type CreateJobParams struct {
 func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, error) {
 	row := q.db.QueryRow(ctx, createJob,
 		arg.ExternalID,
-		arg.Source,
+		arg.JobSource,
 		arg.Title,
-		arg.Company,
+		arg.CompanyName,
 		arg.Description,
-		arg.Url,
+		arg.SourceUrl,
 		arg.SalaryMin,
 		arg.SalaryMax,
 		arg.Currency,
-		arg.Location,
+		arg.JobLocation,
 		arg.IsRemote,
 		arg.Skills,
 		arg.LogoUrl,
@@ -58,17 +59,17 @@ func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, erro
 	err := row.Scan(
 		&i.ID,
 		&i.ExternalID,
-		&i.Source,
+		&i.JobSource,
 		&i.Title,
-		&i.Company,
+		&i.CompanyName,
 		&i.Description,
-		&i.Url,
+		&i.SourceUrl,
 		&i.SalaryMin,
 		&i.SalaryMax,
 		&i.Currency,
-		&i.Location,
+		&i.JobLocation,
 		&i.IsRemote,
-		&i.Status,
+		&i.JobStatus,
 		&i.EmploymentType,
 		&i.ExperienceLevel,
 		&i.Skills,
@@ -82,43 +83,90 @@ func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, erro
 }
 
 const getJobByID = `-- name: GetJobByID :one
-SELECT id, external_id, source, title, company, description, url, salary_min, salary_max, currency, location, is_remote, status, employment_type, experience_level, skills, posted_at, expires_at, created_at, updated_at, logo_url FROM jobs WHERE id = $1
+SELECT
+    j.id,
+    j.external_id,
+    j.job_source,
+    j.title,
+    j.company_name,
+    j.description,
+    j.source_url,
+    j.salary_min,
+    j.salary_max,
+    j.currency,
+    j.job_location,
+    j.is_remote,
+    j.skills,
+    j.logo_url,
+    j.created_at,
+    j.updated_at,
+    (s.id IS NOT NULL)::BOOLEAN AS is_saved,
+    (a.id IS NOT NULL)::BOOLEAN AS is_applied
+FROM jobs AS j
+LEFT JOIN saved_jobs AS s ON j.id = s.job_id AND s.user_id = $1
+LEFT JOIN applications AS a ON j.id = a.job_id AND a.user_id = $1
+WHERE j.id = $2
 `
 
-func (q *Queries) GetJobByID(ctx context.Context, id uuid.UUID) (Job, error) {
-	row := q.db.QueryRow(ctx, getJobByID, id)
-	var i Job
+type GetJobByIDParams struct {
+	UserID uuid.UUID `json:"user_id"`
+	ID     uuid.UUID `json:"id"`
+}
+
+type GetJobByIDRow struct {
+	ID          uuid.UUID  `json:"id"`
+	ExternalID  string     `json:"external_id"`
+	JobSource   string     `json:"job_source"`
+	Title       string     `json:"title"`
+	CompanyName string     `json:"company_name"`
+	Description *string    `json:"description"`
+	SourceUrl   string     `json:"source_url"`
+	SalaryMin   *int32     `json:"salary_min"`
+	SalaryMax   *int32     `json:"salary_max"`
+	Currency    *string    `json:"currency"`
+	JobLocation *string    `json:"job_location"`
+	IsRemote    *bool      `json:"is_remote"`
+	Skills      []string   `json:"skills"`
+	LogoUrl     *string    `json:"logo_url"`
+	CreatedAt   *time.Time `json:"created_at"`
+	UpdatedAt   *time.Time `json:"updated_at"`
+	IsSaved     bool       `json:"is_saved"`
+	IsApplied   bool       `json:"is_applied"`
+}
+
+func (q *Queries) GetJobByID(ctx context.Context, arg GetJobByIDParams) (GetJobByIDRow, error) {
+	row := q.db.QueryRow(ctx, getJobByID, arg.UserID, arg.ID)
+	var i GetJobByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.ExternalID,
-		&i.Source,
+		&i.JobSource,
 		&i.Title,
-		&i.Company,
+		&i.CompanyName,
 		&i.Description,
-		&i.Url,
+		&i.SourceUrl,
 		&i.SalaryMin,
 		&i.SalaryMax,
 		&i.Currency,
-		&i.Location,
+		&i.JobLocation,
 		&i.IsRemote,
-		&i.Status,
-		&i.EmploymentType,
-		&i.ExperienceLevel,
 		&i.Skills,
-		&i.PostedAt,
-		&i.ExpiresAt,
+		&i.LogoUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.LogoUrl,
+		&i.IsSaved,
+		&i.IsApplied,
 	)
 	return i, err
 }
 
 const getJobStats = `-- name: GetJobStats :one
 SELECT
-  COUNT(*) AS total_jobs,
-  COUNT(*) FILTER (WHERE created_at >= date_trunc('day', NOW())) AS new_jobs_today,
-  MAX(created_at) AS latest_scrape_at
+    COUNT(*) AS total_jobs,
+    COUNT(*) FILTER (
+        WHERE created_at >= DATE_TRUNC('day', NOW())
+    ) AS new_jobs_today,
+    MAX(created_at) AS latest_scrape_at
 FROM jobs
 `
 
@@ -136,41 +184,80 @@ func (q *Queries) GetJobStats(ctx context.Context) (GetJobStatsRow, error) {
 }
 
 const getJobs = `-- name: GetJobs :many
-SELECT id, external_id, source, title, company, description, url, salary_min, salary_max, currency, location, is_remote, status, employment_type, experience_level, skills, posted_at, expires_at, created_at, updated_at, logo_url FROM jobs
-ORDER BY created_at DESC
+SELECT
+    j.id,
+    j.external_id,
+    j.job_source,
+    j.title,
+    j.company_name,
+    j.description,
+    j.source_url,
+    j.salary_min,
+    j.salary_max,
+    j.currency,
+    j.job_location,
+    j.is_remote,
+    j.skills,
+    j.logo_url,
+    j.created_at,
+    j.updated_at,
+    (s.id IS NOT NULL)::BOOLEAN AS is_saved,
+    (a.id IS NOT NULL)::BOOLEAN AS is_applied
+FROM jobs AS j
+LEFT JOIN saved_jobs AS s ON j.id = s.job_id AND s.user_id = $1
+LEFT JOIN applications AS a ON j.id = a.job_id AND a.user_id = $1
+ORDER BY j.created_at DESC
 `
 
-func (q *Queries) GetJobs(ctx context.Context) ([]Job, error) {
-	rows, err := q.db.Query(ctx, getJobs)
+type GetJobsRow struct {
+	ID          uuid.UUID  `json:"id"`
+	ExternalID  string     `json:"external_id"`
+	JobSource   string     `json:"job_source"`
+	Title       string     `json:"title"`
+	CompanyName string     `json:"company_name"`
+	Description *string    `json:"description"`
+	SourceUrl   string     `json:"source_url"`
+	SalaryMin   *int32     `json:"salary_min"`
+	SalaryMax   *int32     `json:"salary_max"`
+	Currency    *string    `json:"currency"`
+	JobLocation *string    `json:"job_location"`
+	IsRemote    *bool      `json:"is_remote"`
+	Skills      []string   `json:"skills"`
+	LogoUrl     *string    `json:"logo_url"`
+	CreatedAt   *time.Time `json:"created_at"`
+	UpdatedAt   *time.Time `json:"updated_at"`
+	IsSaved     bool       `json:"is_saved"`
+	IsApplied   bool       `json:"is_applied"`
+}
+
+func (q *Queries) GetJobs(ctx context.Context, userID uuid.UUID) ([]GetJobsRow, error) {
+	rows, err := q.db.Query(ctx, getJobs, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Job
+	var items []GetJobsRow
 	for rows.Next() {
-		var i Job
+		var i GetJobsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ExternalID,
-			&i.Source,
+			&i.JobSource,
 			&i.Title,
-			&i.Company,
+			&i.CompanyName,
 			&i.Description,
-			&i.Url,
+			&i.SourceUrl,
 			&i.SalaryMin,
 			&i.SalaryMax,
 			&i.Currency,
-			&i.Location,
+			&i.JobLocation,
 			&i.IsRemote,
-			&i.Status,
-			&i.EmploymentType,
-			&i.ExperienceLevel,
 			&i.Skills,
-			&i.PostedAt,
-			&i.ExpiresAt,
+			&i.LogoUrl,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.LogoUrl,
+			&i.IsSaved,
+			&i.IsApplied,
 		); err != nil {
 			return nil, err
 		}
@@ -183,7 +270,24 @@ func (q *Queries) GetJobs(ctx context.Context) ([]Job, error) {
 }
 
 const searchJobs = `-- name: SearchJobs :many
-SELECT id, external_id, source, title, company, description, url, salary_min, salary_max, currency, location, is_remote, status, employment_type, experience_level, skills, posted_at, expires_at, created_at, updated_at, logo_url FROM jobs
+SELECT
+    id,
+    external_id,
+    job_source,
+    title,
+    company_name,
+    description,
+    source_url,
+    salary_min,
+    salary_max,
+    currency,
+    job_location,
+    is_remote,
+    skills,
+    logo_url,
+    created_at,
+    updated_at
+FROM jobs
 WHERE
     (title ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
     AND ($2::TEXT IS NULL OR $2 = ANY(skills))
@@ -195,37 +299,51 @@ type SearchJobsParams struct {
 	Column2 string  `json:"column_2"`
 }
 
-func (q *Queries) SearchJobs(ctx context.Context, arg SearchJobsParams) ([]Job, error) {
+type SearchJobsRow struct {
+	ID          uuid.UUID  `json:"id"`
+	ExternalID  string     `json:"external_id"`
+	JobSource   string     `json:"job_source"`
+	Title       string     `json:"title"`
+	CompanyName string     `json:"company_name"`
+	Description *string    `json:"description"`
+	SourceUrl   string     `json:"source_url"`
+	SalaryMin   *int32     `json:"salary_min"`
+	SalaryMax   *int32     `json:"salary_max"`
+	Currency    *string    `json:"currency"`
+	JobLocation *string    `json:"job_location"`
+	IsRemote    *bool      `json:"is_remote"`
+	Skills      []string   `json:"skills"`
+	LogoUrl     *string    `json:"logo_url"`
+	CreatedAt   *time.Time `json:"created_at"`
+	UpdatedAt   *time.Time `json:"updated_at"`
+}
+
+func (q *Queries) SearchJobs(ctx context.Context, arg SearchJobsParams) ([]SearchJobsRow, error) {
 	rows, err := q.db.Query(ctx, searchJobs, arg.Column1, arg.Column2)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Job
+	var items []SearchJobsRow
 	for rows.Next() {
-		var i Job
+		var i SearchJobsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ExternalID,
-			&i.Source,
+			&i.JobSource,
 			&i.Title,
-			&i.Company,
+			&i.CompanyName,
 			&i.Description,
-			&i.Url,
+			&i.SourceUrl,
 			&i.SalaryMin,
 			&i.SalaryMax,
 			&i.Currency,
-			&i.Location,
+			&i.JobLocation,
 			&i.IsRemote,
-			&i.Status,
-			&i.EmploymentType,
-			&i.ExperienceLevel,
 			&i.Skills,
-			&i.PostedAt,
-			&i.ExpiresAt,
+			&i.LogoUrl,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.LogoUrl,
 		); err != nil {
 			return nil, err
 		}

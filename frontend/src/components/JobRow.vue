@@ -1,23 +1,45 @@
 <template>
   <div class="job-row" :class="{ selected }" @click="$emit('click')">
-    <span class="status-dot" :class="`status-${job.status ?? 'new'}`" />
+    <span
+      v-if="job.is_saved || job.is_applied"
+      class="status-dot"
+      style="background: var(--color-accent)"
+    />
+    <div v-else style="width: 7px; flex-shrink: 0" />
     <span class="job-title">{{ job.title }}</span>
-    <span class="job-company">{{ job.company }}</span>
+    <span class="job-company">{{ job.company_name }}</span>
     <span class="job-tag">{{ job.is_remote ? 'Remote' : 'On-site' }}</span>
     <span class="job-meta">{{ timeAgo(job.posted_at) }}</span>
     <span class="job-actions">
-      <button @click="saveJob"><HeartIcon /></button>
-      <button @click="addToApplications"><Plus /></button>
+      <button @click="saveJob" :class="{ 'is-saved': job.is_saved }">
+        <HeartIcon
+          :fill="job.is_saved ? 'var(--color-accent)' : 'none'"
+          :color="job.is_saved ? 'var(--color-accent)' : 'currentColor'"
+        />
+      </button>
+      <button
+        @mouseenter="isHovered = true"
+        @mouseleave="isHovered = false"
+        @click="addToApplications"
+        :disabled="job.is_applied"
+      >
+        <ListPlus v-if="!job.is_applied" />
+        <ListX v-else-if="isHovered && job.is_applied" :class="{ 'is-applied': job.is_applied }" />
+        <ListCheck v-if="!isHovered && job.is_applied" color="currentColor" />
+      </button>
     </span>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { Job } from '@/types/job'
-import { HeartIcon, Plus } from '@lucide/vue'
+import { HeartIcon, ListCheck, ListPlus, ListX } from '@lucide/vue'
+import { ref } from 'vue'
 
 const props = defineProps<{ job: Job; selected: boolean }>()
 const emit = defineEmits(['click', 'save', 'apply'])
+
+const isHovered = ref(false)
 
 function timeAgo(dateStr: string | null | undefined): string {
   if (!dateStr) return ''
