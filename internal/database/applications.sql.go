@@ -133,6 +133,7 @@ SELECT
     j.title AS job_title,
     j.company AS job_company,
     j.location AS job_location,
+    j.url AS job_url,
     j.is_remote AS job_is_remote,
     j.logo_url AS job_logo_url
 FROM applications a
@@ -155,6 +156,7 @@ type GetApplicationsByUserIDRow struct {
 	JobTitle            string             `json:"job_title"`
 	JobCompany          string             `json:"job_company"`
 	JobLocation         *string            `json:"job_location"`
+	JobUrl              string             `json:"job_url"`
 	JobIsRemote         *bool              `json:"job_is_remote"`
 	JobLogoUrl          *string            `json:"job_logo_url"`
 }
@@ -182,6 +184,7 @@ func (q *Queries) GetApplicationsByUserID(ctx context.Context, userID uuid.UUID)
 			&i.JobTitle,
 			&i.JobCompany,
 			&i.JobLocation,
+			&i.JobUrl,
 			&i.JobIsRemote,
 			&i.JobLogoUrl,
 		); err != nil {

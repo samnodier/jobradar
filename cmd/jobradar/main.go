@@ -1,3 +1,4 @@
+// Package main...
 package main
 
 import (
@@ -104,7 +105,11 @@ func main() {
 			r.Use(authHandler.RequireAuth)
 
 			r.Get("/applications", cfg.handlerApplicationsGet)
+			r.Post("/applications", cfg.handlerApplicationCreate)
 			r.Get("/applications/{applicationID}", cfg.handlerApplicationGetByID)
+
+			r.Post("/saved_jobs", cfg.handlerJobSave)
+
 			r.Delete("/users/me", cfg.HandleDeleteAccount)
 		})
 	})
