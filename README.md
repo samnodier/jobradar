@@ -1,3 +1,5 @@
+<!-- markdownlint-disable MD013 -->
+
 # Jobradar
 
 Jobradar is a full-stack job aggregator with AI matching, notifications, and an integrated job application tracker. It is built to streamline the job search process by centralizing listings and tracking application statuses.
@@ -19,6 +21,7 @@ Jobradar is a full-stack job aggregator with AI matching, notifications, and an 
 ## Local Development Setup
 
 ### Prerequisites
+
 - Docker & Docker Compose
 - Go 1.22+
 - Node.js 20+
@@ -26,27 +29,44 @@ Jobradar is a full-stack job aggregator with AI matching, notifications, and an 
 ### Steps to Run
 
 1. **Clone the repository:**
+
    ```bash
-   git clone https:/`/github.com/yourusername/jobradar.git`
+   git clone https:/`/github.com/samnodier/jobradar.git`
    cd jobradar
+   ```
+
 2. Environment Variables:
    Copy `.env.example` to `.env` (you will need GitHub OAuth credentials).
+
    ```bash
    cp .env.example .env
+   ```
+
 3. Start Infrastructure (Postgres & Redis):
 
-    ```bash
-    make up
-4. Database Migrations: (Add your migration command here, e.g.,
-    ```bash
-    make migrate-up
-5. **Run the Backend (Go):**
-    ```bash
-    make run
-6. **Run the Frontend (Vue 3):**
-    ```bash
-    cd frontend
-    npm install
-    npm run dev
+   ```bash
+   make up
+   ```
 
-The backend will run on http://localhost:8080 (or your configured port) and the frontend on http://localhost:5173.
+4. Database Migrations: (Add your migration command here, e.g.,
+
+   ```bash
+   make migrate-up
+   ```
+
+5. **Run the Backend (Go):**
+
+   ```bash
+   make run
+   ```
+
+6. **Run the Frontend (Vue 3):**
+
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+The backend will run on <http://localhost:8080> (or your configured port) and the frontend on <http://localhost:5173>.
+
