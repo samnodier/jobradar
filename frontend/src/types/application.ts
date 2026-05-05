@@ -12,6 +12,7 @@ export interface Application {
   job_title: string
   job_company: string
   job_location: string | null
+  job_url: string
   job_is_remote: boolean
   job_logo_url: string | null
 }
