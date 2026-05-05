@@ -92,7 +92,7 @@
 83. State Management: After an API call modifies data on the server, we must also update the local frontend state (e.g., the Pinia store or a ref array) to keep the UI in sync without a page refresh.
 84. SQL Joins for User State: Using LEFT JOIN allows us to combine global data (Jobs) with user-specific data (Saved/Applied) in a single query. IS NOT NULL is a handy way to turn a join result into a boolean is_saved flag.
 85. The "Immediate" Watcher: Why immediate: true is necessary when a component needs to react to props as soon as it's born.
-86. Hoisting in <script setup>: Why constants like formatters must be defined at the top before they are used in watchers or lifecycle hooks.
+86. Hoisting in `<script setup>`: Why constants like formatters must be defined at the top before they are used in watchers or lifecycle hooks.
 87. The "Stale State" Problem: Why the parent needs to update its list when a child updates a single item (and how the Spread Operator helps keep joined data intact).
 88. Debouncing: Why we use clearTimeout and setTimeout to protect the server from excessive API calls.
 89. SQL Data Loss: Why RETURNING \* in an update doesn't return joined columns.
