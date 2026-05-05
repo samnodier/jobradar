@@ -60,7 +60,7 @@ const isSavedActive = computed(() => {
         </RouterLink>
         <RouterLink to="/applications" class="nav-item">
           <CheckCircle class="nav-icon" />
-          Applied
+          Applications
         </RouterLink>
       </div>
 

@@ -8,20 +8,17 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/samnodier/jobradar/internal/auth"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/samnodier/jobradar/internal/database"
 	"github.com/samnodier/jobradar/internal/httpx"
 )
 
 func (cfg *apiConfig) handlerApplicationGetByID(w http.ResponseWriter, r *http.Request) {
-	// Extract the session and then the user ID
-	session, ok := auth.SessionFromContext(r.Context())
+	// Use helper function to get userID
+	userID, ok := getUserIDFromRequest(w, r)
 	if !ok {
-		httpx.RespondError(w, http.StatusUnauthorized, "Session not found in context")
 		return
 	}
-
-	userID := session.UserID
 
 	applicationIDString := chi.URLParam(r, "applicationID")
 	applicationID, err := uuid.Parse(applicationIDString)
@@ -47,14 +44,12 @@ func (cfg *apiConfig) handlerApplicationGetByID(w http.ResponseWriter, r *http.R
 }
 
 func (cfg *apiConfig) handlerApplicationsGet(w http.ResponseWriter, r *http.Request) {
-	// Extract the session and then the user ID
-	session, ok := auth.SessionFromContext(r.Context())
+	// Use helper function to get userID
+	userID, ok := getUserIDFromRequest(w, r)
 	if !ok {
-		httpx.RespondError(w, http.StatusUnauthorized, "Session not found in context")
 		return
 	}
 
-	userID := session.UserID
 	applications, err := cfg.db.GetApplicationsByUserID(r.Context(), userID)
 	if err != nil {
 		// Check for pgx "no rows" err
@@ -74,18 +69,15 @@ func (cfg *apiConfig) handlerApplicationsGet(w http.ResponseWriter, r *http.Requ
 }
 
 func (cfg *apiConfig) handlerApplicationCreate(w http.ResponseWriter, r *http.Request) {
-	// Extract the session and then the user ID
-	session, ok := auth.SessionFromContext(r.Context())
+	// Use helper function to get userID
+	userID, ok := getUserIDFromRequest(w, r)
 	if !ok {
-		httpx.RespondError(w, http.StatusUnauthorized, "Session not found in context")
 		return
 	}
 
-	userID := session.UserID
-
 	type applicationCreateRequest struct {
-		JobID  uuid.UUID `json:"job_id"`
-		Status string    `json:"status"`
+		JobID             uuid.UUID `json:"job_id"`
+		ApplicationStatus string    `json:"application_status"`
 	}
 
 	var req applicationCreateRequest
@@ -95,11 +87,79 @@ func (cfg *apiConfig) handlerApplicationCreate(w http.ResponseWriter, r *http.Re
 	}
 
 	application, err := cfg.db.CreateApplication(r.Context(), database.CreateApplicationParams{
-		UserID: userID,
-		JobID:  req.JobID,
-		Status: req.Status,
+		UserID:            userID,
+		JobID:             req.JobID,
+		ApplicationStatus: req.ApplicationStatus,
 	})
 	if err != nil {
+		// check for "no rows" first (e.g. if query uses RETURNING and finds nothing)
+		if errors.Is(err, pgx.ErrNoRows) {
+			httpx.RespondError(w, http.StatusNotFound, "job not found")
+			return
+		}
+
+		// check for postgres-specific errors
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			switch pgErr.Code {
+			case "23505":
+				httpx.RespondError(w, http.StatusConflict, "you have already tracked this application")
+				return
+			case "23503":
+				httpx.RespondError(w, http.StatusBadRequest, "job not found")
+				return
+			}
+		}
+		httpx.RespondError(w, http.StatusInternalServerError, "failed to create the application")
+		return
+	}
+
+	httpx.RespondJSON(w, http.StatusCreated, application)
+}
+
+// Update the notes of the application
+func (cfg *apiConfig) handlerApplicationUpdateNotes(w http.ResponseWriter, r *http.Request) {
+	// Use helper function to get userID
+	userID, ok := getUserIDFromRequest(w, r)
+	if !ok {
+		return
+	}
+
+	// Get the application id from url and parse it
+	appIDStr := chi.URLParam(r, "id")
+	applicationID, err := uuid.Parse(appIDStr)
+	if err != nil {
+		httpx.RespondError(w, http.StatusBadRequest, "invalid application id format")
+	}
+
+	// Decode the JSON body
+	type applicationUpdateNotesRequest struct {
+		ApplicationNotes string `json:"application_notes"`
+	}
+
+	var req applicationUpdateNotesRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.RespondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	application, err := cfg.db.UpdateApplicationNotes(r.Context(), database.UpdateApplicationNotesParams{
+		ID:     applicationID,
+		Notes:  &req.ApplicationNotes,
+		UserID: userID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			httpx.RespondError(w, http.StatusNotFound, "application not found")
+			return
+		}
+
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
+			httpx.RespondError(w, http.StatusBadRequest, "job not found")
+			return
+		}
+
 		httpx.RespondError(w, http.StatusInternalServerError, "failed to create the application")
 		return
 	}

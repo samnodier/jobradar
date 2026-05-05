@@ -1,0 +1,22 @@
+-- Keymaps are automatically loaded on the VeryLazy event
+-- Default keymaps that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua
+-- Add any additional keymaps here
+
+local map = vim.keymap.set
+
+-- 1. Easy Escape
+map("i", "jk", "<ESC>", { desc = "Exit insert mode" })
+
+-- 2. Save file with Ctrl+S
+map({ "i", "x", "n", "s" }, "<C-s>", "<cmd>w<cr><esc>", { desc = "Save file" })
+
+-- 3. Diagnostics: jump to next with floating preview
+map("n", "<C-j>", function()
+  vim.diagnostic.jump({ count = 1, float = true })
+end, { desc = "Next diagnostic" })
+
+-- 4. Better delete word backwards (your version is good)
+map("n", "db", "vbd<Esc>", { desc = "Delete word backwards" })
+
+-- Switch to previous buffer, then delete the target buffer
+map("n", "<leader>bk", "<cmd>bp|sp #|bd#<cr>", { desc = "Kill Buffer (Preserve Window)" })

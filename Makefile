@@ -20,6 +20,8 @@ migrate-up:
 	goose -dir sql/schema postgres "${DB_URL}" up
 migrate-down:
 	goose -dir sql/schema postgres "${DB_URL}" down
+migrate-reset:
+	goose -dir sql/schema postgres "${DB_URL}" reset
 migrate-create:
 	goose -dir sql/schema create $(name) sql
 

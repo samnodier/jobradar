@@ -104,7 +104,7 @@ func (h *Handler) HandleOnboardingComplete(w http.ResponseWriter, r *http.Reques
 	user, err := qtx.CreateUser(ctx, database.CreateUserParams{
 		Email:     req.Email,
 		Username:  convert.ToNullString(req.Username),
-		Name:      convert.ToNullString(req.Name),
+		FullName:  convert.ToNullString(req.Name),
 		AvatarUrl: convert.ToNullString(pending.AvatarURL),
 	})
 	if err != nil {
@@ -118,12 +118,12 @@ func (h *Handler) HandleOnboardingComplete(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Create the provider account
+	// Create the AuthProvider account
 	_, err = qtx.CreateUserAccount(ctx, database.CreateUserAccountParams{
-		UserID:      user.ID,
-		Provider:    "github",
-		ProviderID:  strconv.FormatInt(pending.GitHubID, 10),
-		AccessToken: convert.ToNullString(pending.AccessToken),
+		UserID:         user.ID,
+		AuthProvider:   "github",
+		AuthProviderID: strconv.FormatInt(pending.GitHubID, 10),
+		AccessToken:    convert.ToNullString(pending.AccessToken),
 	})
 	if err != nil {
 		redirectWithError(w, r, "/login", "create_account_failed")

@@ -42,7 +42,7 @@ func (h *Handler) HandlerUserGet(w http.ResponseWriter, r *http.Request) {
 		ID:        user.ID.String(),
 		Email:     user.Email,
 		Username:  convert.FromNullString(user.Username),
-		Name:      convert.FromNullString(user.Name),
+		Name:      convert.FromNullString(user.FullName),
 		AvatarURL: convert.FromNullString(user.AvatarUrl),
 	}
 

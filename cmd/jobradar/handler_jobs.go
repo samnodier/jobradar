@@ -6,11 +6,19 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/samnodier/jobradar/internal/auth"
+	"github.com/samnodier/jobradar/internal/database"
 	"github.com/samnodier/jobradar/internal/httpx"
 )
 
 func (cfg *apiConfig) handlerJobsGet(w http.ResponseWriter, r *http.Request) {
-	jobs, err := cfg.db.GetJobs(r.Context())
+	session, ok := auth.SessionFromContext(r.Context())
+	userID := uuid.Nil
+	if ok {
+		userID = session.UserID
+	}
+
+	jobs, err := cfg.db.GetJobs(r.Context(), userID)
 	if err != nil {
 		log.Printf("Error fetching jobs: %v", err)
 		httpx.RespondError(w, http.StatusInternalServerError, "Couldn't fetch jobs")
@@ -20,6 +28,12 @@ func (cfg *apiConfig) handlerJobsGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *apiConfig) handlerJobGetByID(w http.ResponseWriter, r *http.Request) {
+	session, ok := auth.SessionFromContext(r.Context())
+	userID := uuid.Nil
+	if ok {
+		userID = session.UserID
+	}
+
 	jobIDString := chi.URLParam(r, "jobID")
 	jobID, err := uuid.Parse(jobIDString)
 	if err != nil {
@@ -27,7 +41,10 @@ func (cfg *apiConfig) handlerJobGetByID(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	job, err := cfg.db.GetJobByID(r.Context(), jobID)
+	job, err := cfg.db.GetJobByID(r.Context(), database.GetJobByIDParams{
+		UserID: userID,
+		ID:     jobID,
+	})
 	if err != nil {
 		httpx.RespondError(w, http.StatusNotFound, "Job not found")
 		return

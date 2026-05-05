@@ -93,6 +93,8 @@ func main() {
 
 	// Define routes
 	router.Route("/api", func(r chi.Router) {
+		r.Use(authHandler.TryAuth)
+
 		r.Get("/health", cfg.handlerHealth)
 
 		r.Get("/jobs", cfg.handlerJobsGet)
@@ -104,11 +106,14 @@ func main() {
 		r.Group(func(r chi.Router) {
 			r.Use(authHandler.RequireAuth)
 
+
 			r.Get("/applications", cfg.handlerApplicationsGet)
 			r.Post("/applications", cfg.handlerApplicationCreate)
 			r.Get("/applications/{applicationID}", cfg.handlerApplicationGetByID)
+			r.Put("/applications/{id}/notes", cfg.handlerApplicationUpdateNotes)
 
 			r.Post("/saved_jobs", cfg.handlerJobSave)
+			r.Delete("/saved_jobs", cfg.handlerJobUnsave)
 
 			r.Delete("/users/me", cfg.HandleDeleteAccount)
 		})

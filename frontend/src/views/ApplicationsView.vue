@@ -50,6 +50,16 @@ onMounted(async () => {
 })
 
 const hasApplications = computed(() => applications.value.length > 0)
+
+function handleApplicationUpdate(updatedApp: Application) {
+  const index = applications.value.findIndex((a) => a.id === updatedApp.id)
+  if (index !== -1) {
+    applications.value[index] = {
+      ...applications.value[index],
+      ...updatedApp,
+    }
+  }
+}
 </script>
 
 <template>
@@ -95,8 +105,8 @@ const hasApplications = computed(() => applications.value.length > 0)
       <!-- Applications list -->
       <section class="applications-body">
         <div class="applications-header">
-          <span>Company</span>
           <span>Role</span>
+          <span>Company</span>
           <span>Status</span>
           <span>Applied</span>
           <span>Follow up</span>
@@ -105,15 +115,14 @@ const hasApplications = computed(() => applications.value.length > 0)
           v-for="app in applications"
           class="application-row"
           :key="app.id"
-          :app="app"
           :class="{ selected: app.id === selectedApplicationID }"
           @click="selectedApplicationID = app.id"
         >
-          <div class="app-company">{{ app.job_company }}</div>
           <div class="app-role">{{ app.job_title }}</div>
+          <div class="app-company">{{ app.company_name }}</div>
           <div>
             <span class="status-badge">
-              {{ statusLabels[app.status] ?? app.status }}
+              {{ statusLabels[app.application_status] ?? app.application_status }}
             </span>
           </div>
           <div class="app-date">
@@ -144,6 +153,7 @@ const hasApplications = computed(() => applications.value.length > 0)
               v-if="selectedApplication"
               :app="selectedApplication"
               @close="closeDetail"
+              @updated="handleApplicationUpdate"
             />
           </div>
         </div>
@@ -345,7 +355,7 @@ const hasApplications = computed(() => applications.value.length > 0)
   background: var(--color-bg-secondary);
 }
 
-.app-company {
+.app-role {
   font-weight: var(--font-semibold);
 }
 

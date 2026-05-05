@@ -15,27 +15,27 @@ import (
 
 const createApplication = `-- name: CreateApplication :one
 INSERT INTO applications (
-    user_id, job_id, status, applied_at, notes, follow_up_at
+    user_id, job_id, application_status, applied_at, notes, follow_up_at
 ) VALUES (
     $1, $2, $3, $4, $5, $6
 )
-RETURNING id, user_id, job_id, status, applied_at, last_status_changed_at, follow_up_at, notes, created_at, updated_at
+RETURNING id, user_id, job_id, application_status, applied_at, last_status_changed_at, follow_up_at, notes, created_at, updated_at
 `
 
 type CreateApplicationParams struct {
-	UserID     uuid.UUID  `json:"user_id"`
-	JobID      uuid.UUID  `json:"job_id"`
-	Status     string     `json:"status"`
-	AppliedAt  *time.Time `json:"applied_at"`
-	Notes      *string    `json:"notes"`
-	FollowUpAt *time.Time `json:"follow_up_at"`
+	UserID            uuid.UUID  `json:"user_id"`
+	JobID             uuid.UUID  `json:"job_id"`
+	ApplicationStatus string     `json:"application_status"`
+	AppliedAt         *time.Time `json:"applied_at"`
+	Notes             *string    `json:"notes"`
+	FollowUpAt        *time.Time `json:"follow_up_at"`
 }
 
 func (q *Queries) CreateApplication(ctx context.Context, arg CreateApplicationParams) (Application, error) {
 	row := q.db.QueryRow(ctx, createApplication,
 		arg.UserID,
 		arg.JobID,
-		arg.Status,
+		arg.ApplicationStatus,
 		arg.AppliedAt,
 		arg.Notes,
 		arg.FollowUpAt,
@@ -45,7 +45,7 @@ func (q *Queries) CreateApplication(ctx context.Context, arg CreateApplicationPa
 		&i.ID,
 		&i.UserID,
 		&i.JobID,
-		&i.Status,
+		&i.ApplicationStatus,
 		&i.AppliedAt,
 		&i.LastStatusChangedAt,
 		&i.FollowUpAt,
@@ -72,7 +72,17 @@ func (q *Queries) DeleteApplication(ctx context.Context, arg DeleteApplicationPa
 }
 
 const getApplicationByID = `-- name: GetApplicationByID :one
-SELECT id, user_id, job_id, status, applied_at, last_status_changed_at, follow_up_at, notes, created_at, updated_at FROM applications
+SELECT
+    id,
+    user_id,
+    job_id,
+    application_status,
+    applied_at,
+    notes,
+    follow_up_at,
+    created_at,
+    updated_at
+FROM applications
 WHERE id = $1 AND user_id = $2
 `
 
@@ -81,18 +91,29 @@ type GetApplicationByIDParams struct {
 	UserID uuid.UUID `json:"user_id"`
 }
 
-func (q *Queries) GetApplicationByID(ctx context.Context, arg GetApplicationByIDParams) (Application, error) {
+type GetApplicationByIDRow struct {
+	ID                uuid.UUID          `json:"id"`
+	UserID            uuid.UUID          `json:"user_id"`
+	JobID             uuid.UUID          `json:"job_id"`
+	ApplicationStatus string             `json:"application_status"`
+	AppliedAt         *time.Time         `json:"applied_at"`
+	Notes             *string            `json:"notes"`
+	FollowUpAt        *time.Time         `json:"follow_up_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) GetApplicationByID(ctx context.Context, arg GetApplicationByIDParams) (GetApplicationByIDRow, error) {
 	row := q.db.QueryRow(ctx, getApplicationByID, arg.ID, arg.UserID)
-	var i Application
+	var i GetApplicationByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
 		&i.JobID,
-		&i.Status,
+		&i.ApplicationStatus,
 		&i.AppliedAt,
-		&i.LastStatusChangedAt,
-		&i.FollowUpAt,
 		&i.Notes,
+		&i.FollowUpAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -100,7 +121,17 @@ func (q *Queries) GetApplicationByID(ctx context.Context, arg GetApplicationByID
 }
 
 const getApplicationByUserAndJob = `-- name: GetApplicationByUserAndJob :one
-SELECT id, user_id, job_id, status, applied_at, last_status_changed_at, follow_up_at, notes, created_at, updated_at FROM applications
+SELECT
+    id,
+    user_id,
+    job_id,
+    application_status,
+    applied_at,
+    notes,
+    follow_up_at,
+    created_at,
+    updated_at
+FROM applications
 WHERE user_id = $1 AND job_id = $2
 `
 
@@ -109,18 +140,29 @@ type GetApplicationByUserAndJobParams struct {
 	JobID  uuid.UUID `json:"job_id"`
 }
 
-func (q *Queries) GetApplicationByUserAndJob(ctx context.Context, arg GetApplicationByUserAndJobParams) (Application, error) {
+type GetApplicationByUserAndJobRow struct {
+	ID                uuid.UUID          `json:"id"`
+	UserID            uuid.UUID          `json:"user_id"`
+	JobID             uuid.UUID          `json:"job_id"`
+	ApplicationStatus string             `json:"application_status"`
+	AppliedAt         *time.Time         `json:"applied_at"`
+	Notes             *string            `json:"notes"`
+	FollowUpAt        *time.Time         `json:"follow_up_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) GetApplicationByUserAndJob(ctx context.Context, arg GetApplicationByUserAndJobParams) (GetApplicationByUserAndJobRow, error) {
 	row := q.db.QueryRow(ctx, getApplicationByUserAndJob, arg.UserID, arg.JobID)
-	var i Application
+	var i GetApplicationByUserAndJobRow
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
 		&i.JobID,
-		&i.Status,
+		&i.ApplicationStatus,
 		&i.AppliedAt,
-		&i.LastStatusChangedAt,
-		&i.FollowUpAt,
 		&i.Notes,
+		&i.FollowUpAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -128,37 +170,44 @@ func (q *Queries) GetApplicationByUserAndJob(ctx context.Context, arg GetApplica
 }
 
 const getApplicationsByUserID = `-- name: GetApplicationsByUserID :many
-SELECT 
-    a.id, a.user_id, a.job_id, a.status, a.applied_at, a.last_status_changed_at, a.follow_up_at, a.notes, a.created_at, a.updated_at,
+SELECT
+    a.id,
+    a.user_id,
+    a.job_id,
+    a.application_status,
+    a.applied_at,
+    a.notes,
+    a.follow_up_at,
+    a.created_at,
+    a.updated_at,
     j.title AS job_title,
-    j.company AS job_company,
-    j.location AS job_location,
-    j.url AS job_url,
+    j.company_name,
+    j.job_location,
+    j.source_url,
     j.is_remote AS job_is_remote,
     j.logo_url AS job_logo_url
-FROM applications a
-JOIN jobs j ON a.job_id = j.id
+FROM applications AS a
+INNER JOIN jobs AS j ON a.job_id = j.id
 WHERE a.user_id = $1
 ORDER BY a.updated_at DESC
 `
 
 type GetApplicationsByUserIDRow struct {
-	ID                  uuid.UUID          `json:"id"`
-	UserID              uuid.UUID          `json:"user_id"`
-	JobID               uuid.UUID          `json:"job_id"`
-	Status              string             `json:"status"`
-	AppliedAt           *time.Time         `json:"applied_at"`
-	LastStatusChangedAt pgtype.Timestamptz `json:"last_status_changed_at"`
-	FollowUpAt          *time.Time         `json:"follow_up_at"`
-	Notes               *string            `json:"notes"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
-	JobTitle            string             `json:"job_title"`
-	JobCompany          string             `json:"job_company"`
-	JobLocation         *string            `json:"job_location"`
-	JobUrl              string             `json:"job_url"`
-	JobIsRemote         *bool              `json:"job_is_remote"`
-	JobLogoUrl          *string            `json:"job_logo_url"`
+	ID                uuid.UUID          `json:"id"`
+	UserID            uuid.UUID          `json:"user_id"`
+	JobID             uuid.UUID          `json:"job_id"`
+	ApplicationStatus string             `json:"application_status"`
+	AppliedAt         *time.Time         `json:"applied_at"`
+	Notes             *string            `json:"notes"`
+	FollowUpAt        *time.Time         `json:"follow_up_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	JobTitle          string             `json:"job_title"`
+	CompanyName       string             `json:"company_name"`
+	JobLocation       *string            `json:"job_location"`
+	SourceUrl         string             `json:"source_url"`
+	JobIsRemote       *bool              `json:"job_is_remote"`
+	JobLogoUrl        *string            `json:"job_logo_url"`
 }
 
 func (q *Queries) GetApplicationsByUserID(ctx context.Context, userID uuid.UUID) ([]GetApplicationsByUserIDRow, error) {
@@ -174,17 +223,16 @@ func (q *Queries) GetApplicationsByUserID(ctx context.Context, userID uuid.UUID)
 			&i.ID,
 			&i.UserID,
 			&i.JobID,
-			&i.Status,
+			&i.ApplicationStatus,
 			&i.AppliedAt,
-			&i.LastStatusChangedAt,
-			&i.FollowUpAt,
 			&i.Notes,
+			&i.FollowUpAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.JobTitle,
-			&i.JobCompany,
+			&i.CompanyName,
 			&i.JobLocation,
-			&i.JobUrl,
+			&i.SourceUrl,
 			&i.JobIsRemote,
 			&i.JobLogoUrl,
 		); err != nil {
@@ -200,11 +248,11 @@ func (q *Queries) GetApplicationsByUserID(ctx context.Context, userID uuid.UUID)
 
 const updateApplicationFollowUp = `-- name: UpdateApplicationFollowUp :one
 UPDATE applications
-SET 
+SET
     follow_up_at = $2,
     updated_at = NOW()
 WHERE id = $1 AND user_id = $3
-RETURNING id, user_id, job_id, status, applied_at, last_status_changed_at, follow_up_at, notes, created_at, updated_at
+RETURNING id, user_id, job_id, application_status, applied_at, last_status_changed_at, follow_up_at, notes, created_at, updated_at
 `
 
 type UpdateApplicationFollowUpParams struct {
@@ -220,7 +268,7 @@ func (q *Queries) UpdateApplicationFollowUp(ctx context.Context, arg UpdateAppli
 		&i.ID,
 		&i.UserID,
 		&i.JobID,
-		&i.Status,
+		&i.ApplicationStatus,
 		&i.AppliedAt,
 		&i.LastStatusChangedAt,
 		&i.FollowUpAt,
@@ -233,11 +281,11 @@ func (q *Queries) UpdateApplicationFollowUp(ctx context.Context, arg UpdateAppli
 
 const updateApplicationNotes = `-- name: UpdateApplicationNotes :one
 UPDATE applications
-SET 
+SET
     notes = $2,
     updated_at = NOW()
 WHERE id = $1 AND user_id = $3
-RETURNING id, user_id, job_id, status, applied_at, last_status_changed_at, follow_up_at, notes, created_at, updated_at
+RETURNING id, user_id, job_id, application_status, applied_at, last_status_changed_at, follow_up_at, notes, created_at, updated_at
 `
 
 type UpdateApplicationNotesParams struct {
@@ -253,7 +301,7 @@ func (q *Queries) UpdateApplicationNotes(ctx context.Context, arg UpdateApplicat
 		&i.ID,
 		&i.UserID,
 		&i.JobID,
-		&i.Status,
+		&i.ApplicationStatus,
 		&i.AppliedAt,
 		&i.LastStatusChangedAt,
 		&i.FollowUpAt,
@@ -266,28 +314,28 @@ func (q *Queries) UpdateApplicationNotes(ctx context.Context, arg UpdateApplicat
 
 const updateApplicationStatus = `-- name: UpdateApplicationStatus :one
 UPDATE applications
-SET 
-    status = $2,
+SET
+    application_status = $2,
     last_status_changed_at = NOW(),
     updated_at = NOW()
 WHERE id = $1 AND user_id = $3
-RETURNING id, user_id, job_id, status, applied_at, last_status_changed_at, follow_up_at, notes, created_at, updated_at
+RETURNING id, user_id, job_id, application_status, applied_at, last_status_changed_at, follow_up_at, notes, created_at, updated_at
 `
 
 type UpdateApplicationStatusParams struct {
-	ID     uuid.UUID `json:"id"`
-	Status string    `json:"status"`
-	UserID uuid.UUID `json:"user_id"`
+	ID                uuid.UUID `json:"id"`
+	ApplicationStatus string    `json:"application_status"`
+	UserID            uuid.UUID `json:"user_id"`
 }
 
 func (q *Queries) UpdateApplicationStatus(ctx context.Context, arg UpdateApplicationStatusParams) (Application, error) {
-	row := q.db.QueryRow(ctx, updateApplicationStatus, arg.ID, arg.Status, arg.UserID)
+	row := q.db.QueryRow(ctx, updateApplicationStatus, arg.ID, arg.ApplicationStatus, arg.UserID)
 	var i Application
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
 		&i.JobID,
-		&i.Status,
+		&i.ApplicationStatus,
 		&i.AppliedAt,
 		&i.LastStatusChangedAt,
 		&i.FollowUpAt,

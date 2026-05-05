@@ -63,14 +63,14 @@
           <article v-for="(job, index) in recommendedJobs" :key="job.id" class="recommend-card">
             <div class="card-top">
               <h3 class="card-title">{{ job.title }}</h3>
-              <Heart class="icon-button" />
+              <Heart :fill="job.is_saved ? 'currentColor' : 'none'" class="icon-button" />
 
             </div>
             <div class="card-match">{{ 92 - index * 4 }}% match</div>
 
-            <p class="card-company">{{ job.company }}</p>
+            <p class="card-company">{{ job.company_name }}</p>
             <div class="card-meta">
-              <span class="meta-pill">{{ job.is_remote ? 'Remote' : job.location || 'On-site' }}</span>
+              <span class="meta-pill">{{ job.is_remote ? 'Remote' : job.job_location || 'On-site' }}</span>
               <span class="meta-pill">{{ job.employment_type || 'Full time' }}</span>
             </div>
             <div class="card-footer">
@@ -94,10 +94,10 @@
             <div class="position-cell">
               <div class="status-dot" :class="statusClass(job)"></div>
               <div>
-                <a :href="job.url" target="_blank" class="job-title">{{ job.title }}</a>
+                <a :href="job.source_url" target="_blank" class="job-title">{{ job.title }}</a>
               </div>
             </div>
-            <span class="company-cell">{{ job.company }}</span>
+            <span class="company-cell">{{ job.company_name }}</span>
             <span class="type-cell">{{ job.employment_type || 'Full time' }}</span>
             <span class="when-cell">{{ formatWhen(job) }}</span>
           </div>
@@ -123,14 +123,15 @@ type JobStats = {
 type Job = {
   id: string
   title: string
-  company: string
-  url: string
-  location?: string | null
+  company_name: string
+  source_url: string
+  job_location?: string | null
   is_remote?: boolean | null
   employment_type?: string | null
   salary_min?: number | null
   salary_max?: number | null
   posted_at?: string | null
+  is_saved: boolean
 }
 const router = useRouter()
 const authStore = useAuthStore()

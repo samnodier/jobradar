@@ -1,3 +1,4 @@
+// Package httpx
 package httpx
 
 import (
@@ -6,7 +7,7 @@ import (
 	"net/http"
 )
 
-// Heaper to format all the successful responses
+// RespondJSON Helper to format all the successful responses
 func RespondJSON(w http.ResponseWriter, code int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)

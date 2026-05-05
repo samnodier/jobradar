@@ -2,9 +2,76 @@
 import type { Application } from '@/types/application'
 import { ArrowUpRight, X } from '@lucide/vue'
 import { statusLabels } from '@/constants/applicationStatus'
+import { ref, watch } from 'vue'
+import { useToast } from '@/composables/useToast'
+
+const toast = useToast()
+
+// Define the formatter
+const formatDateTime = new Intl.DateTimeFormat('en-US', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+})
 
 const props = defineProps<{ app: Application }>()
-defineEmits(['close'])
+const emit = defineEmits(['close', 'updated'])
+
+const currentText = ref(props.app.notes || '')
+const isSaving = ref(false)
+const lastSaved = ref<string | null>(null)
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(
+  () => props.app.id,
+  () => {
+    currentText.value = props.app.notes ?? ''
+    if (props.app.updated_at) {
+      lastSaved.value = formatDateTime.format(new Date(props.app.updated_at))
+    } else {
+      lastSaved.value = null
+    }
+  },
+  { immediate: true },
+)
+
+function handleInput() {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    saveNotes()
+  }, 2000)
+}
+
+async function saveNotes() {
+  isSaving.value = true
+
+  try {
+    const response = await fetch(`/api/applications/${props.app.id}/notes`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        application_notes: currentText.value,
+      }),
+    })
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => null)
+      toast.error(data?.error ?? 'Failed to save notes')
+      return
+    }
+
+    const data = await response.json()
+    emit('updated', data)
+    lastSaved.value =
+      formatDateTime.format(new Date(data.updated_at)) ?? formatDateTime.format(new Date())
+  } catch (err) {
+    toast.error('Something went wrong' + err)
+  } finally {
+    isSaving.value = false
+  }
+}
 
 function formatDate(date: string | null | undefined): string {
   if (!date) return '—'
@@ -21,9 +88,9 @@ function formatDate(date: string | null | undefined): string {
     <div class="detail-header">
       <div class="company-row">
         <div class="company-info">
-          <span class="company-name">{{ props.app.job_company }}</span>
-          <span class="status-badge" :data-status="app.status">
-            {{ statusLabels[app.status] ?? app.status }}
+          <span class="company-name">{{ app.company_name }}</span>
+          <span class="status-badge" :data-status="app.application_status">
+            {{ statusLabels[app.application_status] ?? app.application_status }}
           </span>
         </div>
         <button class="close-button" @click="$emit('close')">
@@ -50,13 +117,22 @@ function formatDate(date: string | null | undefined): string {
 
     <!-- Notes -->
     <div class="detail-section">
-      <p class="section-label">Notes</p>
-      <p class="notes-text">{{ app.notes || 'No notes added yet.' }}</p>
+      <div class="notes">
+        <h2 class="section-label">Notes</h2>
+        <p class="notes-status" v-if="isSaving">Saving...</p>
+      </div>
+      <textarea
+        v-model="currentText"
+        @input="handleInput"
+        class="notes-textarea"
+        placeholder="Add your research, interview notes, or follow-up plan here..."
+      ></textarea>
+      <p class="notes-status" v-if="lastSaved">Last saved: {{ lastSaved }}</p>
     </div>
 
     <!-- Actions -->
-    <div class="detail-actions" v-if="app.job_url">
-      <a :href="app.job_url" target="_blank" rel="noreferrer" class="button-apply">
+    <div class="detail-actions" v-if="app.source_url">
+      <a :href="app.source_url" target="_blank" rel="noreferrer" class="button-apply">
         View job posting
         <ArrowUpRight :size="13" />
       </a>
@@ -169,6 +245,8 @@ function formatDate(date: string | null | undefined): string {
 .detail-section {
   padding: var(--spacing-4);
   border-bottom: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
 }
 
 .section-label {
@@ -205,10 +283,17 @@ function formatDate(date: string | null | undefined): string {
 }
 
 /* Notes */
-.notes-text {
+.notes-textarea {
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
   line-height: 1.6;
+  width: 100%;
+  font-family: monospace;
+  flex-basis: 20rem;
+  flex-shrink: 1;
+  min-height: 3rem;
+  padding: var(--spacing-4);
+  resize: vertical;
 }
 
 /* Actions */

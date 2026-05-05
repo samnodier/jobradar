@@ -15,7 +15,7 @@ type Application struct {
 	ID                  uuid.UUID          `json:"id"`
 	UserID              uuid.UUID          `json:"user_id"`
 	JobID               uuid.UUID          `json:"job_id"`
-	Status              string             `json:"status"`
+	ApplicationStatus   string             `json:"application_status"`
 	AppliedAt           *time.Time         `json:"applied_at"`
 	LastStatusChangedAt pgtype.Timestamptz `json:"last_status_changed_at"`
 	FollowUpAt          *time.Time         `json:"follow_up_at"`
@@ -27,17 +27,17 @@ type Application struct {
 type Job struct {
 	ID              uuid.UUID  `json:"id"`
 	ExternalID      string     `json:"external_id"`
-	Source          string     `json:"source"`
+	JobSource       string     `json:"job_source"`
 	Title           string     `json:"title"`
-	Company         string     `json:"company"`
+	CompanyName     string     `json:"company_name"`
 	Description     *string    `json:"description"`
-	Url             string     `json:"url"`
+	SourceUrl       string     `json:"source_url"`
 	SalaryMin       *int32     `json:"salary_min"`
 	SalaryMax       *int32     `json:"salary_max"`
 	Currency        *string    `json:"currency"`
-	Location        *string    `json:"location"`
+	JobLocation     *string    `json:"job_location"`
 	IsRemote        *bool      `json:"is_remote"`
-	Status          *string    `json:"status"`
+	JobStatus       *string    `json:"job_status"`
 	EmploymentType  *string    `json:"employment_type"`
 	ExperienceLevel *string    `json:"experience_level"`
 	Skills          []string   `json:"skills"`
@@ -60,7 +60,7 @@ type ServiceHealth struct {
 	ServiceName     string             `json:"service_name"`
 	LastRunAt       pgtype.Timestamptz `json:"last_run_at"`
 	LastSuccessAt   *time.Time         `json:"last_success_at"`
-	Status          string             `json:"status"`
+	ServiceStatus   string             `json:"service_status"`
 	LastError       *string            `json:"last_error"`
 	JobCountLastRun *int32             `json:"job_count_last_run"`
 	UpdatedAt       *time.Time         `json:"updated_at"`
@@ -70,7 +70,7 @@ type User struct {
 	ID        uuid.UUID  `json:"id"`
 	Email     string     `json:"email"`
 	Username  *string    `json:"username"`
-	Name      *string    `json:"name"`
+	FullName  *string    `json:"full_name"`
 	AvatarUrl *string    `json:"avatar_url"`
 	IsAdmin   *bool      `json:"is_admin"`
 	CreatedAt *time.Time `json:"created_at"`
@@ -78,14 +78,14 @@ type User struct {
 }
 
 type UserAccount struct {
-	ID           uuid.UUID  `json:"id"`
-	UserID       uuid.UUID  `json:"user_id"`
-	Provider     string     `json:"provider"`
-	ProviderID   string     `json:"provider_id"`
-	AccessToken  *string    `json:"access_token"`
-	RefreshToken *string    `json:"refresh_token"`
-	ExpiresAt    *time.Time `json:"expires_at"`
-	RevokedAt    *time.Time `json:"revoked_at"`
-	CreatedAt    *time.Time `json:"created_at"`
-	UpdatedAt    *time.Time `json:"updated_at"`
+	ID             uuid.UUID  `json:"id"`
+	UserID         uuid.UUID  `json:"user_id"`
+	AuthProvider   string     `json:"auth_provider"`
+	AuthProviderID string     `json:"auth_provider_id"`
+	AccessToken    *string    `json:"access_token"`
+	RefreshToken   *string    `json:"refresh_token"`
+	ExpiresAt      *time.Time `json:"expires_at"`
+	RevokedAt      *time.Time `json:"revoked_at"`
+	CreatedAt      *time.Time `json:"created_at"`
+	UpdatedAt      *time.Time `json:"updated_at"`
 }

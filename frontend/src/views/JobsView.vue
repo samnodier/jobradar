@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useToast } from '@/composables/useToast'
 import AppSidebar from '@/components/AppSidebar.vue'
 import JobRow from '@/components/JobRow.vue'
 import JobDetail from '@/components/JobDetail.vue'
@@ -8,6 +9,8 @@ import type { Job } from '@/types/job'
 
 const route = useRoute()
 const router = useRouter()
+const toast = useToast()
+
 const jobs = ref<Job[]>([])
 const loading = ref(false)
 const error = ref('')
@@ -20,9 +23,9 @@ let resizeObserver: ResizeObserver | null = null
 
 const filters = [
   { label: 'All', value: 'all' },
-  { label: 'Remote', value: 'remote' },
   { label: 'Saved', value: 'saved' },
   { label: 'Applied', value: 'applied' },
+  { label: 'Remote', value: 'remote' },
   { label: 'Today', value: 'today' },
 ]
 
@@ -57,15 +60,19 @@ const filteredJobs = computed(() => {
     result = result.filter((job) => {
       return (
         job.title.toLowerCase().includes(q) ||
-        job.company.toLowerCase().includes(q) ||
+        job.company_name.toLowerCase().includes(q) ||
         job.skills?.some((skill) => skill.toLowerCase().includes(q))
       )
     })
   }
-  if (activeFilter.value === 'remote') return result.filter((job) => job.is_remote)
-  if (activeFilter.value === 'saved') return jobs.value.filter((job) => job.status === 'saved')
-  if (activeFilter.value === 'applied') return jobs.value.filter((job) => job.status === 'applied')
-  if (activeFilter.value === 'today') {
+
+  if (activeFilter.value === 'remote') {
+    result = result.filter((job) => job.is_remote)
+  } else if (activeFilter.value === 'saved') {
+    result = result.filter((job) => job.is_saved)
+  } else if (activeFilter.value === 'applied') {
+    result = result.filter((job) => job.is_applied)
+  } else if (activeFilter.value === 'today') {
     const today = new Date().toDateString()
     result = result.filter((job) => {
       const postedDate = new Date(job.posted_at ?? '').toDateString()
@@ -108,7 +115,9 @@ function closeDetail() {
 function fetchJobs() {
   loading.value = true
   error.value = ''
-  fetch('/api/jobs')
+  fetch('/api/jobs', {
+    credentials: 'include',
+  })
     .then(async (response) => {
       if (!response.ok) throw new Error('Failed to load jobs')
       jobs.value = await response.json()
@@ -126,31 +135,73 @@ function fetchJobs() {
 
 // Save the job in the system
 async function handleSaveJob(job: Job) {
-  await fetch('/api/saved_jobs', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-    body: JSON.stringify({
-      job_id: job.id,
-    }),
-  })
+  if (job.is_saved) {
+    try {
+      const response = await fetch('/api/saved_jobs', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          job_id: job.id,
+        }),
+      })
+      if (response.ok) {
+        job.is_saved = false
+      } else {
+        toast.error('Failed to unsave job')
+      }
+    } catch (err) {
+      toast.error('Something went wrong:' + err)
+    }
+  } else {
+    try {
+      const response = await fetch('/api/saved_jobs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          job_id: job.id,
+        }),
+      })
+      if (response.ok) {
+        job.is_saved = true
+      } else {
+        toast.error('Failed to save job')
+      }
+    } catch (err) {
+      toast.error('Something went wrong:' + err)
+    }
+  }
 }
 
 // Mark the job as applied in the database
 async function handleApplyJob(job: Job) {
-  await fetch('/api/applications', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-    body: JSON.stringify({
-      job_id: job.id,
-      status: 'applied',
-    }),
-  })
+  try {
+    const response = await fetch('/api/applications', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        job_id: job.id,
+        application_status: 'applied',
+      }),
+    })
+    if (response.ok) {
+      job.is_applied = true
+      job.is_saved = true
+    } else {
+      const data = await response.json().catch(() => null)
+      toast.error(data?.error ?? 'Failed to track application')
+    }
+  } catch (err) {
+    toast.error('Something went wrong:' + err)
+  }
 }
 
 function formatCount(count: number) {
@@ -261,7 +312,12 @@ onUnmounted(() => {
               <ArrowLeft />
               Back to jobs
             </div>
-            <JobDetail v-if="selectedJob" :job="selectedJob" @close="closeDetail" />
+            <JobDetail
+              v-if="selectedJob"
+              :job="selectedJob"
+              @close="closeDetail"
+              @save="handleSaveJob"
+            />
           </div>
         </div>
       </Transition>

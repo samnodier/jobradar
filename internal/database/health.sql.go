@@ -12,27 +12,33 @@ import (
 
 const updateServiceHealth = `-- name: UpdateServiceHealth :one
 INSERT INTO service_health (
-    service_name, last_run_at, last_success_at, status, last_error, job_count_last_run
+    service_name,
+    last_run_at,
+    last_success_at,
+    service_status,
+    last_error,
+    job_count_last_run
 ) VALUES (
     $1, NOW(), $2, $3, $4, $5
 )
-ON CONFLICT (service_name) DO UPDATE SET
-   last_run_at = EXCLUDED.last_run_at,
-   last_success_at = COALESCE(
-        EXCLUDED.last_success_at,       -- new value (maybe be null)
-        service_health.last_success_at  -- existing value (fallback)
-    ),
-   status = EXCLUDED.status,
-   last_error = EXCLUDED.last_error,
-   job_count_last_run = EXCLUDED.job_count_last_run,
-   updated_at = NOW()
-RETURNING id, service_name, last_run_at, last_success_at, status, last_error, job_count_last_run, updated_at
+ON CONFLICT (service_name) DO UPDATE
+    SET
+        last_run_at = excluded.last_run_at,
+        last_success_at = COALESCE(
+            excluded.last_success_at,       -- new value (maybe be null)
+            service_health.last_success_at  -- existing value (fallback)
+        ),
+        service_status = excluded.service_status,
+        last_error = excluded.last_error,
+        job_count_last_run = excluded.job_count_last_run,
+        updated_at = NOW()
+RETURNING id, service_name, last_run_at, last_success_at, service_status, last_error, job_count_last_run, updated_at
 `
 
 type UpdateServiceHealthParams struct {
 	ServiceName     string     `json:"service_name"`
 	LastSuccessAt   *time.Time `json:"last_success_at"`
-	Status          string     `json:"status"`
+	ServiceStatus   string     `json:"service_status"`
 	LastError       *string    `json:"last_error"`
 	JobCountLastRun *int32     `json:"job_count_last_run"`
 }
@@ -41,7 +47,7 @@ func (q *Queries) UpdateServiceHealth(ctx context.Context, arg UpdateServiceHeal
 	row := q.db.QueryRow(ctx, updateServiceHealth,
 		arg.ServiceName,
 		arg.LastSuccessAt,
-		arg.Status,
+		arg.ServiceStatus,
 		arg.LastError,
 		arg.JobCountLastRun,
 	)
@@ -51,7 +57,7 @@ func (q *Queries) UpdateServiceHealth(ctx context.Context, arg UpdateServiceHeal
 		&i.ServiceName,
 		&i.LastRunAt,
 		&i.LastSuccessAt,
-		&i.Status,
+		&i.ServiceStatus,
 		&i.LastError,
 		&i.JobCountLastRun,
 		&i.UpdatedAt,

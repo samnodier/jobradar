@@ -13,33 +13,33 @@ import (
 
 const createUserAccount = `-- name: CreateUserAccount :one
 INSERT INTO user_accounts (
-    user_id, provider, provider_id, access_token
+    user_id, auth_provider, auth_provider_id, access_token
 ) VALUES (
     $1, $2, $3, $4
 )
-RETURNING id, user_id, provider, provider_id, access_token, refresh_token, expires_at, revoked_at, created_at, updated_at
+RETURNING id, user_id, auth_provider, auth_provider_id, access_token, refresh_token, expires_at, revoked_at, created_at, updated_at
 `
 
 type CreateUserAccountParams struct {
-	UserID      uuid.UUID `json:"user_id"`
-	Provider    string    `json:"provider"`
-	ProviderID  string    `json:"provider_id"`
-	AccessToken *string   `json:"access_token"`
+	UserID         uuid.UUID `json:"user_id"`
+	AuthProvider   string    `json:"auth_provider"`
+	AuthProviderID string    `json:"auth_provider_id"`
+	AccessToken    *string   `json:"access_token"`
 }
 
 func (q *Queries) CreateUserAccount(ctx context.Context, arg CreateUserAccountParams) (UserAccount, error) {
 	row := q.db.QueryRow(ctx, createUserAccount,
 		arg.UserID,
-		arg.Provider,
-		arg.ProviderID,
+		arg.AuthProvider,
+		arg.AuthProviderID,
 		arg.AccessToken,
 	)
 	var i UserAccount
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
-		&i.Provider,
-		&i.ProviderID,
+		&i.AuthProvider,
+		&i.AuthProviderID,
 		&i.AccessToken,
 		&i.RefreshToken,
 		&i.ExpiresAt,
