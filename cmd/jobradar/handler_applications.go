@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -25,7 +26,7 @@ func (cfg *apiConfig) handlerApplicationGetByID(w http.ResponseWriter, r *http.R
 	applicationIDString := chi.URLParam(r, "applicationID")
 	applicationID, err := uuid.Parse(applicationIDString)
 	if err != nil {
-		httpx.RespondError(w, http.StatusBadRequest, "Invalid job ID format")
+		httpx.RespondError(w, http.StatusBadRequest, "Invalid application ID format")
 		return
 	}
 
@@ -38,7 +39,7 @@ func (cfg *apiConfig) handlerApplicationGetByID(w http.ResponseWriter, r *http.R
 			httpx.RespondError(w, http.StatusNotFound, "application not found")
 			return
 		}
-		httpx.RespondError(w, http.StatusNotFound, "failed to retrrive application")
+		httpx.RespondError(w, http.StatusInternalServerError, "failed to retrieve application")
 		return
 	}
 
@@ -58,9 +59,10 @@ func (cfg *apiConfig) handlerApplicationsGet(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		// Check for pgx "no rows" err
 		if errors.Is(err, pgx.ErrNoRows) {
-			httpx.RespondJSON(w, http.StatusOK, []database.Application{})
+			httpx.RespondJSON(w, http.StatusOK, []database.GetApplicationsByUserIDRow{})
+			return
 		}
-		httpx.RespondError(w, http.StatusInternalServerError, "failed to retrieve applications by the user")
+		httpx.RespondError(w, http.StatusInternalServerError, "failed to retrieve applications")
 		return
 	}
 
@@ -69,4 +71,38 @@ func (cfg *apiConfig) handlerApplicationsGet(w http.ResponseWriter, r *http.Requ
 	}
 
 	httpx.RespondJSON(w, http.StatusOK, applications)
+}
+
+func (cfg *apiConfig) handlerApplicationCreate(w http.ResponseWriter, r *http.Request) {
+	// Extract the session and then the user ID
+	session, ok := auth.SessionFromContext(r.Context())
+	if !ok {
+		httpx.RespondError(w, http.StatusUnauthorized, "Session not found in context")
+		return
+	}
+
+	userID := session.UserID
+
+	type applicationCreateRequest struct {
+		JobID  uuid.UUID `json:"job_id"`
+		Status string    `json:"status"`
+	}
+
+	var req applicationCreateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.RespondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	application, err := cfg.db.CreateApplication(r.Context(), database.CreateApplicationParams{
+		UserID: userID,
+		JobID:  req.JobID,
+		Status: req.Status,
+	})
+	if err != nil {
+		httpx.RespondError(w, http.StatusInternalServerError, "failed to create the application")
+		return
+	}
+
+	httpx.RespondJSON(w, http.StatusCreated, application)
 }

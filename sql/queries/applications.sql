@@ -20,6 +20,7 @@ SELECT
     j.title AS job_title,
     j.company AS job_company,
     j.location AS job_location,
+    j.url AS job_url,
     j.is_remote AS job_is_remote,
     j.logo_url AS job_logo_url
 FROM applications a
