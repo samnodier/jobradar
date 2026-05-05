@@ -124,6 +124,35 @@ function fetchJobs() {
     })
 }
 
+// Save the job in the system
+async function handleSaveJob(job: Job) {
+  await fetch('/api/saved_jobs', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify({
+      job_id: job.id,
+    }),
+  })
+}
+
+// Mark the job as applied in the database
+async function handleApplyJob(job: Job) {
+  await fetch('/api/applications', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify({
+      job_id: job.id,
+      status: 'applied',
+    }),
+  })
+}
+
 function formatCount(count: number) {
   return count === 1 ? '1 role' : `${count} roles`
 }
@@ -210,6 +239,8 @@ onUnmounted(() => {
               :job="job"
               :selected="job.id === selectedJobId"
               @click="selectedJobId = job.id"
+              @save="handleSaveJob"
+              @apply="handleApplyJob"
             />
           </div>
         </div>

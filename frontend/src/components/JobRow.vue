@@ -5,14 +5,19 @@
     <span class="job-company">{{ job.company }}</span>
     <span class="job-tag">{{ job.is_remote ? 'Remote' : 'On-site' }}</span>
     <span class="job-meta">{{ timeAgo(job.posted_at) }}</span>
+    <span class="job-actions">
+      <button @click="saveJob"><HeartIcon /></button>
+      <button @click="addToApplications"><Plus /></button>
+    </span>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { Job } from '@/types/job'
+import { HeartIcon, Plus } from '@lucide/vue'
 
-defineProps<{ job: Job; selected: boolean }>()
-defineEmits(['click'])
+const props = defineProps<{ job: Job; selected: boolean }>()
+const emit = defineEmits(['click', 'save', 'apply'])
 
 function timeAgo(dateStr: string | null | undefined): string {
   if (!dateStr) return ''
@@ -23,6 +28,17 @@ function timeAgo(dateStr: string | null | undefined): string {
   const days = Math.floor(hours / 24)
   return `${days}d ago`
 }
+
+// Add job to the application job
+function addToApplications(event: MouseEvent) {
+  event.stopPropagation()
+  emit('apply', props.job)
+}
+
+function saveJob(event: MouseEvent) {
+  event.stopPropagation()
+  emit('save', props.job)
+}
 </script>
 
 <style scoped>
@@ -31,7 +47,6 @@ function timeAgo(dateStr: string | null | undefined): string {
   align-items: center;
   padding: 0 20px;
   height: 44px;
-  cursor: pointer;
   border-bottom: 1px solid #f0f0ec;
   gap: 12px;
   transition: background 0.08s;
@@ -53,9 +68,15 @@ function timeAgo(dateStr: string | null | undefined): string {
   flex-shrink: 0;
 }
 
-.status-new { background: #5e6ad2; }
-.status-saved { background: #26c6a6; }
-.status-applied { background: #f5a623; }
+.status-new {
+  background: #5e6ad2;
+}
+.status-saved {
+  background: #26c6a6;
+}
+.status-applied {
+  background: #f5a623;
+}
 
 .job-title {
   font-size: 13.5px;
@@ -63,6 +84,7 @@ function timeAgo(dateStr: string | null | undefined): string {
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
+  cursor: pointer;
   text-overflow: ellipsis;
   min-width: 0;
 }
@@ -96,5 +118,21 @@ function timeAgo(dateStr: string | null | undefined): string {
   width: 70px;
   text-align: right;
   flex-shrink: 0;
+}
+
+.job-actions {
+  display: flex;
+  column-gap: 1rem;
+  color: var(--color-text-muted);
+}
+
+.job-actions button {
+  cursor: pointer;
+  border: none;
+  background: transparent;
+}
+
+.job-actions button:hover {
+  color: var(--color-accent);
 }
 </style>

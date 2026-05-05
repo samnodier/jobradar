@@ -1,22 +1,31 @@
 <script setup lang="ts">
+import ApplicationDetail from '@/components/ApplicationDetail.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import type { Application } from '@/types/application'
 // import { useAuthStore } from '@/stores/auth'
 import { Clipboard, Plus } from '@lucide/vue'
 import { computed, onMounted, ref } from 'vue'
+import { statusLabels } from '@/constants/applicationStatus'
 
 // const authStore = useAuthStore()
 
 const applications = ref<Application[]>([])
+const selectedApplicationID = ref<string | null>(null)
 const loading = ref(false)
 const error = ref('')
+const headerHeight = ref(53)
 
-const statusLabels: Record<string, string> = {
-  saved: 'Saved',
-  applied: 'Applied',
-  interview: 'Interview',
-  offer: 'Offer',
-  rejected: 'Rejected',
+const selectedApplication = computed(() => {
+  if (!selectedApplicationID.value) return null
+  return (
+    applications.value.find((application) => application.id === selectedApplicationID.value) ?? null
+  )
+})
+
+const detailOpen = computed(() => !!selectedApplicationID.value)
+
+function closeDetail() {
+  selectedApplicationID.value = null
 }
 
 onMounted(async () => {
@@ -83,39 +92,63 @@ const hasApplications = computed(() => applications.value.length > 0)
         <button class="button-primary">Track your first application</button>
       </div>
 
-      <!-- Applications table -->
-      <div v-else class="applications-table-wrapper">
-        <table class="applications-table">
-          <thead>
-            <tr>
-              <th>Company</th>
-              <th>Role</th>
-              <th>Status</th>
-              <th>Applied</th>
-              <th>Follow up</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="app in applications" :key="app.id" class="application-row">
-              <td class="td-company">{{ app.job_company }}</td>
-              <td class="td-role">{{ app.job_title }}</td>
-              <td></td>
-              <td>
-                <span class="status-badge">
-                  {{ statusLabels[app.status] ?? app.status }}
-                </span>
-              </td>
-              <td class="td-date">
-                {{ app.applied_at ? new Date(app.applied_at).toLocaleDateString() : '—' }}
-              </td>
-              <td class="td-date">
-                {{ app.follow_up_at ? new Date(app.follow_up_at).toLocaleDateString() : '—' }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <!-- Applications list -->
+      <section class="applications-body">
+        <div class="applications-header">
+          <span>Company</span>
+          <span>Role</span>
+          <span>Status</span>
+          <span>Applied</span>
+          <span>Follow up</span>
+        </div>
+        <div
+          v-for="app in applications"
+          class="application-row"
+          :key="app.id"
+          :app="app"
+          :class="{ selected: app.id === selectedApplicationID }"
+          @click="selectedApplicationID = app.id"
+        >
+          <div class="app-company">{{ app.job_company }}</div>
+          <div class="app-role">{{ app.job_title }}</div>
+          <div>
+            <span class="status-badge">
+              {{ statusLabels[app.status] ?? app.status }}
+            </span>
+          </div>
+          <div class="app-date">
+            {{ app.applied_at ? new Date(app.applied_at).toLocaleDateString() : '—' }}
+          </div>
+          <div class="app-date">
+            {{ app.follow_up_at ? new Date(app.follow_up_at).toLocaleDateString() : '—' }}
+          </div>
+        </div>
+      </section>
     </main>
+
+    <!-- Details panel - slides in from the right as overlay -->
+    <Teleport to="body">
+      <Transition name="detail-slide">
+        <div
+          v-if="detailOpen"
+          class="detail-overlay"
+          @click.self="closeDetail"
+          :style="{ top: `${headerHeight}px` }"
+        >
+          <div class="detail-drawer">
+            <div class="detail-back" @click="closeDetail">
+              <ArrowLeft />
+              Back to jobs
+            </div>
+            <ApplicationDetail
+              v-if="selectedApplication"
+              :app="selectedApplication"
+              @close="closeDetail"
+            />
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -266,26 +299,30 @@ const hasApplications = computed(() => applications.value.length > 0)
 }
 
 /* Table */
-.applications-table-wrapper {
+.application-body {
+  display: flex;
+  flex-direction: column;
   background: var(--color-bg-primary);
-  border-radius: var(--radius-lg);
   overflow: hidden;
   border: 1px solid var(--color-border);
-}
-
-.applications-table {
   width: 100%;
-  border-collapse: collapse;
 }
 
-.applications-table thead tr {
+.applications-header,
+.application-row {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1fr 1fr 1fr;
+  align-items: center;
+  gap: var(--spacing-4);
+  padding: var(--spacing-3) var(--spacing-4);
+}
+
+.applications-header {
   background: var(--color-bg-secondary);
   border-bottom: 1px solid var(--color-border);
 }
 
-.applications-table th {
-  padding: var(--spacing-3) var(--spacing-4);
-  text-align: left;
+.applications-header span {
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
   color: var(--color-text-secondary);
@@ -294,9 +331,10 @@ const hasApplications = computed(() => applications.value.length > 0)
 }
 
 .application-row {
+  font-size: var(--text-sm);
   border-bottom: 1px solid var(--color-border);
-  transition: background 0.12s ease;
   cursor: pointer;
+  transition: background 0.12s ease;
 }
 
 .application-row:last-child {
@@ -307,17 +345,11 @@ const hasApplications = computed(() => applications.value.length > 0)
   background: var(--color-bg-secondary);
 }
 
-.application-row td {
-  padding: var(--spacing-3) var(--spacing-4);
-  font-size: var(--text-sm);
-  color: var(--color-text-primary);
-}
-
-.td-company {
+.app-company {
   font-weight: var(--font-semibold);
 }
 
-.td-date {
+.app-date {
   color: var(--color-text-secondary);
   font-size: var(--text-xs);
 }
@@ -332,5 +364,45 @@ const hasApplications = computed(() => applications.value.length > 0)
   font-weight: var(--font-semibold);
   background: var(--color-bg-secondary);
   color: var(--color-text-secondary);
+}
+
+/* Detail Overlay */
+.detail-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.detail-drawer {
+  width: 50vw;
+  min-width: 560px;
+  max-width: 100%;
+  height: 100%;
+  background: var(--color-bg-primary);
+  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  pointer-events: auto;
+}
+
+/* hide on desktop, show on mobile */
+.detail-back {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--muted);
+  cursor: pointer;
+  height: 0;
+  padding: 0;
+  overflow: hidden;
+  visibility: hidden;
+  flex-shrink: 0;
+  font-size: var(--text-sm);
 }
 </style>
