@@ -96,3 +96,6 @@
 87. The "Stale State" Problem: Why the parent needs to update its list when a child updates a single item (and how the Spread Operator helps keep joined data intact).
 88. Debouncing: Why we use clearTimeout and setTimeout to protect the server from excessive API calls.
 89. SQL Data Loss: Why RETURNING \* in an update doesn't return joined columns.
+90. Computed vs. Watch: Use computed when you need to transform data for the template (like filtering or grouping). Use watch when you need to perform "side effects" (like making an API call or saving to localStorage) in response to a change.
+91. Fail Fast (Validation): Validate data at the "Edge" (the API handler) before sending it to the "Core" (the Database). This saves database resources and provides better error messages to the user.
+92. Database vs. API Constraints: Keep database constraints strict (NOT NULL) for data integrity, and use SQL casting or pointers in the application layer to handle optional/partial updates.

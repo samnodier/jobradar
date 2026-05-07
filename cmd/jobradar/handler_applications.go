@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -117,8 +118,8 @@ func (cfg *apiConfig) handlerApplicationCreate(w http.ResponseWriter, r *http.Re
 	httpx.RespondJSON(w, http.StatusCreated, application)
 }
 
-// Update the notes of the application
-func (cfg *apiConfig) handlerApplicationUpdateNotes(w http.ResponseWriter, r *http.Request) {
+// Update the application
+func (cfg *apiConfig) handlerApplicationUpdate(w http.ResponseWriter, r *http.Request) {
 	// Use helper function to get userID
 	userID, ok := getUserIDFromRequest(w, r)
 	if !ok {
@@ -130,23 +131,31 @@ func (cfg *apiConfig) handlerApplicationUpdateNotes(w http.ResponseWriter, r *ht
 	applicationID, err := uuid.Parse(appIDStr)
 	if err != nil {
 		httpx.RespondError(w, http.StatusBadRequest, "invalid application id format")
+		return
 	}
 
 	// Decode the JSON body
-	type applicationUpdateNotesRequest struct {
-		ApplicationNotes string `json:"application_notes"`
+	type applicationUpdateRequest struct {
+		ApplicationNotes  *string    `json:"application_notes"`
+		ApplicationStatus *string    `json:"application_status"`
+		AppliedAt         *time.Time `json:"applied_at"`
+		FollowUpAt        *time.Time `json:"follow_up_at"`
 	}
 
-	var req applicationUpdateNotesRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	var req applicationUpdateRequest
+	err = json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
 		httpx.RespondError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	application, err := cfg.db.UpdateApplicationNotes(r.Context(), database.UpdateApplicationNotesParams{
-		ID:     applicationID,
-		Notes:  &req.ApplicationNotes,
-		UserID: userID,
+	application, err := cfg.db.UpdateApplication(r.Context(), database.UpdateApplicationParams{
+		ID:                applicationID,
+		UserID:            userID,
+		Notes:             req.ApplicationNotes,
+		ApplicationStatus: req.ApplicationStatus,
+		AppliedAt:         req.AppliedAt,
+		FollowUpAt:        req.FollowUpAt,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -155,14 +164,14 @@ func (cfg *apiConfig) handlerApplicationUpdateNotes(w http.ResponseWriter, r *ht
 		}
 
 		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
-			httpx.RespondError(w, http.StatusBadRequest, "job not found")
+		if errors.As(err, &pgErr) && pgErr.Code == "23514" {
+			httpx.RespondError(w, http.StatusBadRequest, "invalid application status")
 			return
 		}
 
-		httpx.RespondError(w, http.StatusInternalServerError, "failed to create the application")
+		httpx.RespondError(w, http.StatusInternalServerError, "failed to update application")
 		return
 	}
 
-	httpx.RespondJSON(w, http.StatusCreated, application)
+	httpx.RespondJSON(w, http.StatusOK, application)
 }

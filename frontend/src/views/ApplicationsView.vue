@@ -2,18 +2,17 @@
 import ApplicationDetail from '@/components/ApplicationDetail.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import type { Application } from '@/types/application'
-// import { useAuthStore } from '@/stores/auth'
 import { Clipboard, Plus } from '@lucide/vue'
 import { computed, onMounted, ref } from 'vue'
 import { statusLabels } from '@/constants/applicationStatus'
-
-// const authStore = useAuthStore()
+import { statusOrder } from '@/constants/applicationStatus'
 
 const applications = ref<Application[]>([])
 const selectedApplicationID = ref<string | null>(null)
 const loading = ref(false)
 const error = ref('')
 const headerHeight = ref(53)
+type StatusGroups = Record<string, Application[]>
 
 const selectedApplication = computed(() => {
   if (!selectedApplicationID.value) return null
@@ -60,6 +59,22 @@ function handleApplicationUpdate(updatedApp: Application) {
     }
   }
 }
+
+const applicationByStatus = computed(() => {
+  const seed: StatusGroups = Object.fromEntries(
+    statusOrder.map((status) => [status, [] as Application[]]),
+  )
+
+  return applications.value.reduce((groups, app) => {
+    const status = app.application_status
+    if (status in groups) {
+      groups[status]!.push(app)
+    } else {
+      groups['other']!.push(app)
+    }
+    return groups
+  }, seed)
+})
 </script>
 
 <template>
@@ -321,7 +336,7 @@ function handleApplicationUpdate(updatedApp: Application) {
 .applications-header,
 .application-row {
   display: grid;
-  grid-template-columns: 1fr 1.5fr 1fr 1fr 1fr;
+  grid-template-columns: 2fr 2fr 1fr 1fr 1fr;
   align-items: center;
   gap: var(--spacing-4);
   padding: var(--spacing-3) var(--spacing-4);

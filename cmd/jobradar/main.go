@@ -106,11 +106,10 @@ func main() {
 		r.Group(func(r chi.Router) {
 			r.Use(authHandler.RequireAuth)
 
-
 			r.Get("/applications", cfg.handlerApplicationsGet)
 			r.Post("/applications", cfg.handlerApplicationCreate)
 			r.Get("/applications/{applicationID}", cfg.handlerApplicationGetByID)
-			r.Put("/applications/{id}/notes", cfg.handlerApplicationUpdateNotes)
+			r.Patch("/applications/{id}", cfg.handlerApplicationUpdate)
 
 			r.Post("/saved_jobs", cfg.handlerJobSave)
 			r.Delete("/saved_jobs", cfg.handlerJobUnsave)

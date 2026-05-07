@@ -56,29 +56,23 @@ INNER JOIN jobs AS j ON a.job_id = j.id
 WHERE a.user_id = $1
 ORDER BY a.updated_at DESC;
 
--- name: UpdateApplicationStatus :one
+-- name: UpdateApplication :one
 UPDATE applications
 SET
-    application_status = $2,
-    last_status_changed_at = NOW(),
+    notes = COALESCE(sqlc.narg('notes'), notes),
+    application_status = COALESCE(
+        sqlc.narg('application_status'), application_status
+    ),
+    applied_at = COALESCE(sqlc.narg('applied_at'), applied_at),
+    follow_up_at = COALESCE(sqlc.narg('follow_up_at'), follow_up_at),
+    last_status_changed_at = CASE
+        WHEN
+            sqlc.narg('application_status') IS NOT NULL
+            AND sqlc.narg('application_status') <> application_status THEN NOW()
+        ELSE last_status_changed_at
+    END,
     updated_at = NOW()
-WHERE id = $1 AND user_id = $3
-RETURNING *;
-
--- name: UpdateApplicationNotes :one
-UPDATE applications
-SET
-    notes = $2,
-    updated_at = NOW()
-WHERE id = $1 AND user_id = $3
-RETURNING *;
-
--- name: UpdateApplicationFollowUp :one
-UPDATE applications
-SET
-    follow_up_at = $2,
-    updated_at = NOW()
-WHERE id = $1 AND user_id = $3
+WHERE id = $1 AND user_id = $2
 RETURNING *;
 
 -- name: DeleteApplication :exec
