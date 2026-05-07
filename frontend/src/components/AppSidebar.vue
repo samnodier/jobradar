@@ -1,30 +1,11 @@
-<script setup lang="ts">
-import { RouterLink, useRoute } from 'vue-router'
-import IconGrid from '@/components/icons/IconGrid.vue'
-import { useAuthStore } from '@/stores/auth'
-import { AlertCircle, BarChart3, Bookmark, CheckCircle, User, Zap } from '@lucide/vue'
-import { computed } from 'vue'
-
-const authStore = useAuthStore()
-const route = useRoute()
-
-const isAllJobsActive = computed(() => {
-  return route.path === '/jobs' && !route.query.filter
-})
-
-const isSavedActive = computed(() => {
-  return route.path === '/jobs' && route.query.filter === 'saved'
-})
-</script>
-
 <template>
   <aside class="sidebar-container">
     <nav class="sidebar-nav">
       <div class="nav-section">
-        <h2 class="nav-section-title">Discover</h2>
-        <RouterLink to="/jobs" class="nav-item" :class="{ active: isAllJobsActive }">
+        <h2 class="nav-section-title">Discovery</h2>
+        <RouterLink to="/jobs" class="nav-item">
           <Zap class="nav-icon" />
-          All jobs
+          Browse Roles
         </RouterLink>
 
         <div class="nav-item nav-disabled">
@@ -38,14 +19,10 @@ const isSavedActive = computed(() => {
       </div>
 
       <div class="nav-section">
-        <div class="nav-section-title">Account</div>
+        <div class="nav-section-title">Workspace</div>
         <RouterLink to="/dashboard" class="nav-item">
           <IconGrid class="nav-icon" />
-          Dashboard
-        </RouterLink>
-        <RouterLink to="/profile" class="nav-item">
-          <User class="nav-icon" />
-          Profile
+          Overview
         </RouterLink>
         <RouterLink
           :to="{
@@ -53,51 +30,67 @@ const isSavedActive = computed(() => {
             query: { filter: 'saved' },
           }"
           class="nav-item"
-          :class="{ active: isSavedActive }"
         >
           <Bookmark class="nav-icon" />
-          Saved
+          Saved Jobs
         </RouterLink>
         <RouterLink to="/applications" class="nav-item">
           <CheckCircle class="nav-icon" />
-          Applications
+          Tracker
+        </RouterLink>
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-section-title">Personal</div>
+        <RouterLink to="/profile" class="nav-item">
+          <User class="nav-icon" />
+          Account
         </RouterLink>
       </div>
 
       <div class="nav-section" v-if="authStore.user">
-        <h2 class="nav-section-title">Admin</h2>
-        <div>
-          <RouterLink to="/admin" class="nav-item">
-            <BarChart3 class="nav-icon" />
-            Dashboard
-          </RouterLink>
+        <h2 class="nav-section-title">System</h2>
+        <RouterLink to="/admin" class="nav-item">
+          <BarChart3 class="nav-icon" />
+          Console
+        </RouterLink>
 
-          <RouterLink to="/status" class="nav-item">
-            <AlertCircle class="nav-icon" />
-            System status
-          </RouterLink>
-        </div>
+        <RouterLink to="/status" class="nav-item">
+          <AlertCircle class="nav-icon" />
+          Health
+        </RouterLink>
       </div>
     </nav>
   </aside>
 </template>
 
+<script setup lang="ts">
+import { RouterLink } from 'vue-router'
+import IconGrid from '@/components/icons/IconGrid.vue'
+import { useAuthStore } from '@/stores/auth'
+import { AlertCircle, BarChart3, Bookmark, CheckCircle, User, Zap } from '@lucide/vue'
+
+const authStore = useAuthStore()
+</script>
+
 <style scoped>
 .sidebar-container {
   width: 220px;
   min-width: 220px;
-  background: var(--color-surface);
+  height: 100%;
+  background: var(--color-bg-primary);
   border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   padding: 14px 0;
+  overflow-y: auto;
 }
 
 .sidebar-nav {
   padding: 0 8px;
 }
 
-.nav-item.active {
+.nav-item.router-link-active {
   background-color: var(--color-accent-lighter);
   color: var(--color-accent);
   font-weight: var(--font-weight-semibold);
@@ -111,7 +104,7 @@ const isSavedActive = computed(() => {
   flex-shrink: 0;
 }
 
-.nav-item.active .nav-icon {
+.nav-item.router-link-active .nav-icon {
   opacity: 1;
 }
 

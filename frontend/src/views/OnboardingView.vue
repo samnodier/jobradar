@@ -174,7 +174,7 @@ async function completeOnboarding() {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  flex: 1;
   padding: var(--spacing-8);
   background: linear-gradient(
     135deg,

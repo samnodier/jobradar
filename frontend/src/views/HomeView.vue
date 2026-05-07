@@ -1,111 +1,128 @@
 <template>
-  <section class="home-hero">
-    <div class="hero-copy">
-      <div class="hero-eyebrow">
-        <span class="hero-dot"></span>
-        {{ eyebrowText }}
-      </div>
-
-      <h1>
-        Find remote jobs<br />
-        <span>that match your skills</span>
-      </h1>
-
-      <p class="hero-text">
-        JobRadar scrapes the best remote job boards and surfaces roles matched to your profile — no noise, just signal.
-      </p>
-
-      <div class="search-bar">
-        <Search class="search-icon" />
-        <input v-model="searchTerm" @keyup.enter="goToJobs" type="text" placeholder="Search by title, company, or skill"
-          class="search-input" />
-        <button @click="goToJobs" class="button search-button button-primary">Browse jobs</button>
-      </div>
-
-      <div class="hero-tags">
-        <span class="hero-tag">Go Engineer</span>
-        <span class="hero-tag">Vue Developer</span>
-        <span class="hero-tag">Full Stack</span>
-        <span class="hero-tag">Remote</span>
-      </div>
-    </div>
-  </section>
-
-  <section class="stats-sec">
-    <div class="stats-sub-sec">
-      <div class="stats-row">
-        <div class="stat-card">
-          <div class="stat-label">Jobs tracked</div>
-          <div class="stat-value">{{ jobsTracked }}</div>
-          <div class="stat-sub">+{{ jobsToday }} today</div>
+  <div class="home-page-scroll">
+    <section class="home-hero">
+      <div class="hero-copy">
+        <div class="hero-eyebrow">
+          <span class="hero-dot"></span>
+          {{ eyebrowText }}
         </div>
-        <div class="stat-card">
-          <div class="stat-label">Sources</div>
-          <div class="stat-value">2</div>
-          <div class="stat-sub">RemoteOK · Adzuna</div>
+
+        <h1>
+          Find jobs<br />
+          <span>that match your skills</span>
+        </h1>
+
+        <p class="hero-text">
+          JobRadar scrapes the best job boards and surfaces roles matched to your profile — no
+          noise, just signal.
+        </p>
+
+        <div class="search-bar">
+          <Search class="search-icon" />
+          <input
+            v-model="searchTerm"
+            @keyup.enter="goToJobs"
+            type="text"
+            placeholder="Search by title, company, or skill"
+            class="search-input"
+          />
+          <button @click="goToJobs" class="button search-button button-primary">Search</button>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">Latest scrape</div>
-          <div class="stat-value">{{ latestScrape }}</div>
-          <div class="stat-sub">Fresh data from the feed</div>
+
+        <div class="hero-actions">
+          <RouterLink to="/jobs" class="button button-primary hero-button">
+            Browse All Jobs
+          </RouterLink>
+          <button class="button button-secondary hero-button" @click="goToJobs()">
+            Find Remote Roles
+          </button>
+        </div>
+
+        <div class="hero-tags">
+          <span class="hero-tag">Go Engineer</span>
+          <span class="hero-tag">Vue Developer</span>
+          <span class="hero-tag">Full Stack</span>
+          <span class="hero-tag">Remote</span>
         </div>
       </div>
-      <div v-if="authStore.user">
-        <div class="section-heading">
-          <div>
-            <p class="section-eyebrow">Matched to your skills</p>
-            <h2 class="section-title">Recommended for you</h2>
+    </section>
+
+    <section class="stats-sec">
+      <div class="stats-sub-sec">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-label">Jobs tracked</div>
+            <div class="stat-value">{{ jobsTracked }}</div>
+            <div class="stat-sub">+{{ jobsToday }} today</div>
           </div>
-          <RouterLink to="/jobs" class="section-link">View all matches</RouterLink>
-        </div>
-
-        <div class="recommend-grid">
-          <article v-for="(job, index) in recommendedJobs" :key="job.id" class="recommend-card">
-            <div class="card-top">
-              <h3 class="card-title">{{ job.title }}</h3>
-              <Heart :fill="job.is_saved ? 'currentColor' : 'none'" class="icon-button" />
-
-            </div>
-            <div class="card-match">{{ 92 - index * 4 }}% match</div>
-
-            <p class="card-company">{{ job.company_name }}</p>
-            <div class="card-meta">
-              <span class="meta-pill">{{ job.is_remote ? 'Remote' : job.job_location || 'On-site' }}</span>
-              <span class="meta-pill">{{ job.employment_type || 'Full time' }}</span>
-            </div>
-            <div class="card-footer">
-              <span class="card-salary">{{ formatSalary(job) }}</span>
-              <span class="card-time">{{ formatWhen(job) }}</span>
-            </div>
-          </article>
-        </div>
-      </div>
-
-      <div class="home-section">
-        <div class="section-heading">
-          <div>
-            <p class="section-eyebrow">Latest jobs</p>
+          <div class="stat-card">
+            <div class="stat-label">Sources</div>
+            <div class="stat-value">2</div>
+            <div class="stat-sub">RemoteOK · Adzuna</div>
           </div>
-          <RouterLink to="/jobs" class="section-link">View all jobs</RouterLink>
+          <div class="stat-card">
+            <div class="stat-label">Latest scrape</div>
+            <div class="stat-value">{{ latestScrape }}</div>
+            <div class="stat-sub">Fresh data from the feed</div>
+          </div>
         </div>
+        <div v-if="authStore.user">
+          <div class="section-heading">
+            <div>
+              <p class="section-eyebrow">Matched to your skills</p>
+              <h2 class="section-title">Recommended for you</h2>
+            </div>
+            <RouterLink to="/jobs" class="section-link">View all matches</RouterLink>
+          </div>
 
-        <div class="jobs-table">
-          <div v-for="job in latestJobs" :key="job.id" class="jobs-table-row">
-            <div class="position-cell">
-              <div class="status-dot" :class="statusClass(job)"></div>
-              <div>
-                <a :href="job.source_url" target="_blank" class="job-title">{{ job.title }}</a>
+          <div class="recommend-grid">
+            <article v-for="(job, index) in recommendedJobs" :key="job.id" class="recommend-card">
+              <div class="card-top">
+                <h3 class="card-title">{{ job.title }}</h3>
+                <Heart :fill="job.is_saved ? 'currentColor' : 'none'" class="icon-button" />
               </div>
+              <div class="card-match">{{ 92 - index * 4 }}% match</div>
+
+              <p class="card-company">{{ job.company_name }}</p>
+              <div class="card-meta">
+                <span class="meta-pill">{{
+                  job.is_remote ? 'Remote' : job.job_location || 'On-site'
+                }}</span>
+                <span class="meta-pill">{{ job.employment_type || 'Full time' }}</span>
+              </div>
+              <div class="card-footer">
+                <span class="card-salary">{{ formatSalary(job) }}</span>
+                <span class="card-time">{{ formatWhen(job) }}</span>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <div class="home-section">
+          <div class="section-heading">
+            <div>
+              <p class="section-eyebrow">Latest jobs</p>
             </div>
-            <span class="company-cell">{{ job.company_name }}</span>
-            <span class="type-cell">{{ job.employment_type || 'Full time' }}</span>
-            <span class="when-cell">{{ formatWhen(job) }}</span>
+            <RouterLink to="/jobs" class="section-link">View all jobs</RouterLink>
+          </div>
+
+          <div class="jobs-table">
+            <div v-for="job in latestJobs" :key="job.id" class="jobs-table-row">
+              <div class="position-cell">
+                <div class="status-dot" :class="statusClass(job)"></div>
+                <div>
+                  <a :href="job.source_url" target="_blank" class="job-title">{{ job.title }}</a>
+                </div>
+              </div>
+              <span class="company-cell">{{ job.company_name }}</span>
+              <span class="type-cell">{{ job.employment_type || 'Full time' }}</span>
+              <span class="when-cell">{{ formatWhen(job) }}</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </section>
-
+    </section>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -170,7 +187,9 @@ const latestScrape = computed(() => {
 const latestJobs = computed(() => {
   return [...jobs.value]
     .sort((a, b) => {
-      return (new Date(b.posted_at ?? '').getTime() || 0) - (new Date(a.posted_at ?? '').getTime() || 0)
+      return (
+        (new Date(b.posted_at ?? '').getTime() || 0) - (new Date(a.posted_at ?? '').getTime() || 0)
+      )
     })
     .slice(0, 5)
 })
@@ -207,7 +226,7 @@ function goToJobs() {
   const q = searchTerm.value.trim()
   router.push({
     path: `/jobs`,
-    query: q ? { q } : {}
+    query: q ? { q } : {},
   })
 }
 
@@ -233,6 +252,11 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.home-page-scroll {
+  flex: 1;
+  overflow-y: auto;
+  height: 100%;
+}
 .home-hero {
   text-align: center;
   border-bottom: var(--color-border);
@@ -268,7 +292,15 @@ h1 {
   margin: 0;
   font-size: clamp(2.8rem, 4vw, 3.8rem);
   line-height: 1.05;
-  font-family: Newsreader, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+  font-family:
+    Newsreader,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    'Inter',
+    sans-serif;
 }
 
 h1 span {
@@ -283,6 +315,17 @@ h1 span {
   line-height: 1.75;
 }
 
+.hero-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.hero-button {
+  padding: 0.75rem 2rem;
+  font-size: 0.95rem;
+}
 
 .hero-tags {
   display: flex;
@@ -359,7 +402,6 @@ h1 span {
   padding: 0 2rem;
   gap: 1.5rem;
 }
-
 
 .stats-row {
   display: grid;
@@ -489,7 +531,7 @@ h1 span {
   font-size: var(--text-xs);
   background: var(--color-bg-secondary);
   color: var(--color-text);
-  border: 1px solid var(--color-border)
+  border: 1px solid var(--color-border);
 }
 
 .card-footer {

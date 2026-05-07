@@ -39,14 +39,11 @@ async function logout() {
         </div>
       </RouterLink>
 
-      <nav class="main-nav">
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/jobs">Jobs</RouterLink>
-      </nav>
+      <div class="main-nav-placeholder" style="flex: 1"></div>
 
       <div>
         <div class="action-group" v-if="authStore.user">
-          <RouterLink to="/profile" class="user-chip">
+          <RouterLink :to="'/@' + authStore.user.username" class="user-chip">
             <img
               v-if="authStore.user.avatar_url"
               :src="authStore.user.avatar_url"
@@ -78,13 +75,13 @@ async function logout() {
 html,
 body,
 #app {
-  min-height: 100%;
+  height: 100%;
 }
 
 body {
   margin: 0;
   font-family: var(--font-base);
-  background: var(--color-surface);
+  background: var(--color-by-primary);
   color: var(--color-text);
 }
 
@@ -101,30 +98,36 @@ a {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--color-surface);
+  background: var(--color-bg-primary);
   overflow: hidden;
 }
 
 .content-shell {
   flex: 1;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
 }
 
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-direction: row;
   gap: 1.5rem;
   padding: var(--spacing-1) var(--spacing-4);
   border-bottom: 1px solid rgba(148, 163, 184, 0.18);
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(16px);
   flex-shrink: 0;
-
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  min-height: var(--topbar-height);
   position: sticky;
   top: 0;
   z-index: 100;
-  background-color: var(--color-surface);
+  background-color: var(--color-bg-primary);
 }
 
 .brand-shell {
@@ -136,7 +139,6 @@ a {
 .brand-mark {
   width: 30px;
   height: 30px;
-  border-radius: 100%;
   background: var(--color-accent);
   display: grid;
   place-items: center;
@@ -146,23 +148,6 @@ a {
 .brand-title {
   margin: 0;
   font-size: 1.1rem;
-}
-
-.main-nav {
-  display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-}
-
-.main-nav a {
-  color: var(--muted);
-  padding: 0.6rem 0;
-  transition: color 180ms ease;
-}
-
-.main-nav a.router-link-active,
-.main-nav a:hover {
-  color: var(--text);
 }
 
 .action-group {
@@ -211,14 +196,14 @@ a {
 
 @media (max-width: 820px) {
   .topbar {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    gap: 1rem;
+    padding: 0 1rem;
+    align-items: center;
   }
 
-  .main-nav {
-    justify-content: space-between;
-    width: 100%;
-    gap: 0.75rem;
+  .user-name {
+    display: none;
   }
 
   .action-group {

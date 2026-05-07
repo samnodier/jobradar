@@ -7,6 +7,9 @@ import Jobs from '@/views/JobsView.vue'
 import Onboarding from '@/views/OnboardingView.vue'
 import Profile from '@/views/ProfileView.vue'
 import Applications from '@/views/ApplicationsView.vue'
+import Dashboard from '@/views/DashboardView.vue'
+import Admin from '@/views/AdminView.vue'
+import Status from '@/views/StatusView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -27,6 +30,12 @@ const router = createRouter({
       component: Jobs,
     },
     {
+      path: '/dashboard',
+      name: 'dashboard',
+      component: Dashboard,
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/auth/onboarding',
       name: 'onboarding',
       component: Onboarding,
@@ -43,9 +52,27 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/@:username',
+      name: 'user-profile',
+      component: Profile,
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/applications',
       name: 'applications',
       component: Applications,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/admin',
+      name: 'admin',
+      component: Admin,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/status',
+      name: 'status',
+      component: Status,
       meta: { requiresAuth: true },
     },
   ],

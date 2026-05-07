@@ -11,7 +11,7 @@ const applications = ref<Application[]>([])
 const selectedApplicationID = ref<string | null>(null)
 const loading = ref(false)
 const error = ref('')
-const headerHeight = ref(53)
+
 type StatusGroups = Record<string, Application[]>
 
 const selectedApplication = computed(() => {
@@ -117,48 +117,33 @@ const applicationByStatus = computed(() => {
         <button class="button-primary">Track your first application</button>
       </div>
 
-      <!-- Applications list -->
-      <section class="applications-body">
-        <div class="applications-header">
-          <span>Role</span>
-          <span>Company</span>
-          <span>Status</span>
-          <span>Applied</span>
-          <span>Follow up</span>
-        </div>
-        <div
-          v-for="app in applications"
-          class="application-row"
-          :key="app.id"
-          :class="{ selected: app.id === selectedApplicationID }"
-          @click="selectedApplicationID = app.id"
-        >
-          <div class="app-role">{{ app.job_title }}</div>
-          <div class="app-company">{{ app.company_name }}</div>
-          <div>
-            <span class="status-badge">
-              {{ statusLabels[app.application_status] ?? app.application_status }}
-            </span>
+      <!-- Kanban board -->
+      <div class="kanban-board">
+        <!-- Outer Loop: Create the columns -->
+        <div v-for="status in statusOrder" :key="status" class="kanban-column">
+          <div class="column-header">
+            <span class="column-title">{{ statusLabels[status] }}</span>
+            <span class="column-count">{{ applicationByStatus[status]?.length }}</span>
           </div>
-          <div class="app-date">
-            {{ app.applied_at ? new Date(app.applied_at).toLocaleDateString() : '—' }}
-          </div>
-          <div class="app-date">
-            {{ app.follow_up_at ? new Date(app.follow_up_at).toLocaleDateString() : '—' }}
+          <div class="column-body">
+            <div
+              v-for="app in applicationByStatus[status]"
+              :key="app.id"
+              class="kanban-card"
+              @click="selectedApplicationID = app.id"
+            >
+              <h3 class="card-title">{{ app.job_title }}</h3>
+              <p class="card-company">{{ app.company_name }}</p>
+            </div>
           </div>
         </div>
-      </section>
+      </div>
     </main>
 
     <!-- Details panel - slides in from the right as overlay -->
     <Teleport to="body">
       <Transition name="detail-slide">
-        <div
-          v-if="detailOpen"
-          class="detail-overlay"
-          @click.self="closeDetail"
-          :style="{ top: `${headerHeight}px` }"
-        >
+        <div v-if="detailOpen" class="detail-overlay" @click.self="closeDetail">
           <div class="detail-drawer">
             <div class="detail-back" @click="closeDetail">
               <ArrowLeft />
@@ -180,8 +165,9 @@ const applicationByStatus = computed(() => {
 <style scoped>
 .applications-page {
   display: flex;
-  min-height: 100vh;
+  height: 100%;
   background: var(--color-bg-secondary);
+  overflow: hidden;
 }
 
 .applications-main {
@@ -190,7 +176,8 @@ const applicationByStatus = computed(() => {
   flex-direction: column;
   gap: var(--spacing-6);
   padding: var(--spacing-8);
-  overflow-y: auto;
+  overflow: hidden;
+  min-height: 0;
 }
 
 /* Header */
@@ -199,6 +186,9 @@ const applicationByStatus = computed(() => {
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--spacing-4);
+  padding-bottom: var(--spacing-6);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
 }
 
 .page-title {
@@ -323,60 +313,87 @@ const applicationByStatus = computed(() => {
   padding: var(--spacing-4);
 }
 
-/* Table */
-.application-body {
+/* KanBan */
+
+.kanban-board {
+  display: flex;
+  gap: var(--spacing-4);
+  overflow-x: auto;
+  overflow-y: hidden;
+  align-items: flex-start;
+  flex: 1;
+  min-height: 0;
+}
+
+.kanban-column {
+  flex: 0 0 300px;
+  background: var(--color-bg-secondary);
   display: flex;
   flex-direction: column;
-  background: var(--color-bg-primary);
-  overflow: hidden;
-  border: 1px solid var(--color-border);
-  width: 100%;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2);
+  height: 100%;
+  min-height: 0;
 }
 
-.applications-header,
-.application-row {
-  display: grid;
-  grid-template-columns: 2fr 2fr 1fr 1fr 1fr;
+.column-header {
+  display: flex;
   align-items: center;
-  gap: var(--spacing-4);
-  padding: var(--spacing-3) var(--spacing-4);
+  justify-content: space-between;
+  padding-bottom: var(--spacing-2);
+  flex-shrink: 0;
 }
 
-.applications-header {
-  background: var(--color-bg-secondary);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.applications-header span {
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.application-row {
+.column-title {
   font-size: var(--text-sm);
-  border-bottom: 1px solid var(--color-border);
-  cursor: pointer;
-  transition: background 0.12s ease;
-}
-
-.application-row:last-child {
-  border-bottom: none;
-}
-
-.application-row:hover {
-  background: var(--color-bg-secondary);
-}
-
-.app-role {
   font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
 }
 
-.app-date {
-  color: var(--color-text-secondary);
+.column-count {
   font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  background: var(--color-bg-primary);
+  padding: 2px 8px;
+}
+
+.column-body {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  padding-right: 4px; /* Space for scrollbar */
+}
+
+.kanban-card {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  padding: var(--spacing-3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.1s ease;
+}
+
+.kanban-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+}
+
+.card-title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+  margin: 0 0 var(--spacing-1);
+}
+
+.card-company {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin: 0;
 }
 
 /* Status badges */
@@ -394,6 +411,7 @@ const applicationByStatus = computed(() => {
 /* Detail Overlay */
 .detail-overlay {
   position: fixed;
+  top: var(--topbar-height) !important;
   inset: 0;
   z-index: 100;
   display: flex;

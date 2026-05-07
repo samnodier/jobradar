@@ -18,8 +18,6 @@ const selectedJobId = ref<string | null>(null)
 const sortDirection = ref<'newest' | 'oldest'>('newest')
 const searchTerm = ref<string>('')
 const activeFilter = ref<string>((route.query.filter as string) || 'all')
-const headerHeight = ref(53)
-let resizeObserver: ResizeObserver | null = null
 
 const filters = [
   { label: 'All', value: 'all' },
@@ -214,24 +212,9 @@ function toggleSort() {
 
 onMounted(() => {
   fetchJobs()
-
-  // Find the topbar element dynamically
-  const header = document.querySelector('.topbar')
-  if (header) {
-    // Update height initially and whenever the header resizes
-    resizeObserver = new ResizeObserver(() => {
-      headerHeight.value = header.getBoundingClientRect().height
-    })
-    resizeObserver.observe(header)
-  }
 })
 
-onUnmounted(() => {
-  // Clean up the observer to prevent memory leaks when navigating away
-  if (resizeObserver) {
-    resizeObserver.disconnect()
-  }
-})
+onUnmounted(() => {})
 </script>
 
 <template>
@@ -301,12 +284,7 @@ onUnmounted(() => {
     <!-- Details panel - slides in from the right as overlay -->
     <Teleport to="body">
       <Transition name="detail-slide">
-        <div
-          v-if="detailOpen"
-          class="detail-overlay"
-          @click.self="closeDetail"
-          :style="{ top: `${headerHeight}px` }"
-        >
+        <div v-if="detailOpen" class="detail-overlay" @click.self="closeDetail">
           <div class="detail-drawer">
             <div class="detail-back" @click="closeDetail">
               <ArrowLeft />
@@ -329,7 +307,8 @@ onUnmounted(() => {
 .jobs-shell {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
-  min-height: calc(100vh - 96px);
+  height: 100%;
+  overflow: hidden;
 }
 
 .jobs-main {
@@ -337,6 +316,7 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 1.5rem;
   padding: 24px 28px;
+  min-height: 0;
 }
 
 /* Search */
@@ -347,6 +327,7 @@ onUnmounted(() => {
   padding: var(--spacing-3);
   min-width: 0;
   gap: var(--spacing-2);
+  flex-shrink: 0;
 }
 
 .topbar-actions {
@@ -364,7 +345,9 @@ onUnmounted(() => {
   flex: 1;
   background: var(--color-bg-primary);
   border: 1px solid var(--color-border);
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 /* Filters */
@@ -399,6 +382,7 @@ onUnmounted(() => {
   align-items: center;
   gap: var(--spacing-1);
   font-size: var(--text-sm);
+  flex-shrink: 0;
 }
 
 .count-label {
@@ -417,9 +401,9 @@ onUnmounted(() => {
 }
 
 .job-list-scroll {
+  flex: 1;
   overflow-y: auto;
   min-height: 0;
-  max-height: calc(100vh - 240px);
 }
 
 .job-group {
@@ -437,6 +421,7 @@ onUnmounted(() => {
 /* Detail Overlay */
 .detail-overlay {
   position: fixed;
+  top: var(--topbar-height) !important;
   inset: 0;
   z-index: 100;
   display: flex;
