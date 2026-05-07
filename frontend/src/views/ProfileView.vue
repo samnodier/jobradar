@@ -389,7 +389,8 @@ async function deleteAccount() {
 .profile-container {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
-  min-height: calc(100vh - 96px);
+  height: 100%;
+  overflow: hidden;
 }
 
 .profile-main {
@@ -397,6 +398,8 @@ async function deleteAccount() {
   flex-direction: column;
   gap: 1.5rem;
   background: var(--color-bg-primary);
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .content-area {

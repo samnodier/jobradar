@@ -65,9 +65,10 @@ const githubLoginUrl = '/auth/github/login'
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 5rem;
-  height: 100vh;
+  justify-content: center;
+  flex: 1;
   gap: 2rem;
+  padding: var(--spacing-8) 0;
 }
 
 .card {

@@ -5,6 +5,7 @@
 }
 
 :root {
+  --topbar-height: 53px;
   color-scheme: light;
   --color-bg-primary: #ffffff;
   --color-bg-secondary: #0000000a;
