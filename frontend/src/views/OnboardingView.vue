@@ -8,7 +8,6 @@ const router = useRouter()
 const route = useRoute()
 
 const currentStep = ref(0)
-const totalSteps = 2
 const loading = ref(false)
 const error = ref('')
 
@@ -23,9 +22,7 @@ const form = reactive({
 
 const isFormValid = computed(() => {
   return (
-    form.username.trim().length > 0 &&
-    form.name.trim().length > 0 &&
-    form.email.trim().length > 0
+    form.username.trim().length > 0 && form.name.trim().length > 0 && form.email.trim().length > 0
   )
 })
 
@@ -40,7 +37,7 @@ onMounted(async () => {
 
   try {
     const res = await fetch(`/api/auth/onboarding?token=${token}`, {
-      credentials: 'include'
+      credentials: 'include',
     })
 
     if (!res.ok) {
@@ -97,7 +94,6 @@ async function completeOnboarding() {
     await authStore.fetchMe()
 
     router.push('/')
-
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Something went wrong.'
   } finally {
@@ -112,7 +108,9 @@ async function completeOnboarding() {
       <!-- Progress -->
       <div class="header">
         <h1 class="step-title">Welcome! Let's Get Started</h1>
-        <p class="step-subtitle">Complete your profile information to finish setting up your account.</p>
+        <p class="step-subtitle">
+          Complete your profile information to finish setting up your account.
+        </p>
       </div>
 
       <!-- Steps -->
@@ -120,20 +118,40 @@ async function completeOnboarding() {
         <form @submit.prevent="completeOnboarding">
           <div class="form-group">
             <label class="form-label" for="email">Email</label>
-            <input class="form-input" type="email" id="email" v-model="form.email" required
-              placeholder="john@example.com" />
+            <input
+              class="form-input"
+              type="email"
+              id="email"
+              v-model="form.email"
+              required
+              placeholder="john@example.com"
+            />
           </div>
           <div class="form-group">
             <label class="form-label" for="name">Name</label>
-            <input class="form-input" type="text" id="name" v-model="form.name" required placeholder="John Doe" />
+            <input
+              class="form-input"
+              type="text"
+              id="name"
+              v-model="form.name"
+              required
+              placeholder="John Doe"
+            />
           </div>
           <div class="form-group">
             <label class="form-label" for="username">Username</label>
-            <input class="form-input" type="text" id="username" v-model="form.username" required
-              placeholder="john_doe" />
+            <input
+              class="form-input"
+              type="text"
+              id="username"
+              v-model="form.username"
+              required
+              placeholder="john_doe"
+            />
           </div>
-          <button class="button button-primary" type="submit" :disabled="loading || !isFormValid">{{ loading ?
-            'Saving...' : 'Complete Onboarding' }}</button>
+          <button class="button button-primary" type="submit" :disabled="loading || !isFormValid">
+            {{ loading ? 'Saving...' : 'Complete Onboarding' }}
+          </button>
           <p v-if="error" class="error">{{ error }}</p>
         </form>
       </div>
@@ -144,7 +162,8 @@ async function completeOnboarding() {
         <div class="completion-message">
           <h3>Profile Created</h3>
           <p>Your profile is ready. Redirecting your now...</p>
-        </div>"
+        </div>
+        "
       </div>
     </div>
   </div>
@@ -157,9 +176,11 @@ async function completeOnboarding() {
   justify-content: center;
   min-height: 100vh;
   padding: var(--spacing-8);
-  background: linear-gradient(135deg,
-      var(--color-accent-lighter) 0%,
-      var(--color-bg-secondary) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-accent-lighter) 0%,
+    var(--color-bg-secondary) 100%
+  );
 }
 
 .onboarding-container {
@@ -191,7 +212,7 @@ async function completeOnboarding() {
 }
 
 .header {
-  margin-bottom: var(--spacing-6)
+  margin-bottom: var(--spacing-6);
 }
 
 .step-title {
@@ -203,7 +224,7 @@ async function completeOnboarding() {
 
 .step-subtitle {
   margin-bottom: var(--spacing-6);
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   font-size: var(--text-base);
 }
 
@@ -271,7 +292,7 @@ async function completeOnboarding() {
 }
 
 .completion-message p {
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   font-size: var(--text-base);
 }
 </style>

@@ -467,13 +467,13 @@ async function deleteAccount() {
 
 .profile-email {
   font-size: var(--text-sm);
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   margin-bottom: var(--spacing-3);
 }
 
 .profile-bio {
   font-size: var(--text-base);
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   line-height: 1.5;
 }
 
@@ -543,7 +543,7 @@ async function deleteAccount() {
 
 .page-subtitle {
   font-size: var(--text-base);
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
 }
 
 .settings-grid {
@@ -666,7 +666,7 @@ async function deleteAccount() {
   cursor: pointer;
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   transition: all var(--transition-fast);
   min-width: 50px;
 }

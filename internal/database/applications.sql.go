@@ -246,90 +246,44 @@ func (q *Queries) GetApplicationsByUserID(ctx context.Context, userID uuid.UUID)
 	return items, nil
 }
 
-const updateApplicationFollowUp = `-- name: UpdateApplicationFollowUp :one
+const updateApplication = `-- name: UpdateApplication :one
 UPDATE applications
 SET
-    follow_up_at = $2,
+    notes = COALESCE($3, notes),
+    application_status = COALESCE(
+        $4, application_status
+    ),
+    applied_at = COALESCE($5, applied_at),
+    follow_up_at = COALESCE($6, follow_up_at),
+    last_status_changed_at = CASE
+        WHEN
+            $4 IS NOT NULL
+            AND $4 <> application_status THEN NOW()
+        ELSE last_status_changed_at
+    END,
     updated_at = NOW()
-WHERE id = $1 AND user_id = $3
+WHERE id = $1 AND user_id = $2
 RETURNING id, user_id, job_id, application_status, applied_at, last_status_changed_at, follow_up_at, notes, created_at, updated_at
 `
 
-type UpdateApplicationFollowUpParams struct {
-	ID         uuid.UUID  `json:"id"`
-	FollowUpAt *time.Time `json:"follow_up_at"`
-	UserID     uuid.UUID  `json:"user_id"`
+type UpdateApplicationParams struct {
+	ID                uuid.UUID  `json:"id"`
+	UserID            uuid.UUID  `json:"user_id"`
+	Notes             *string    `json:"notes"`
+	ApplicationStatus *string    `json:"application_status"`
+	AppliedAt         *time.Time `json:"applied_at"`
+	FollowUpAt        *time.Time `json:"follow_up_at"`
 }
 
-func (q *Queries) UpdateApplicationFollowUp(ctx context.Context, arg UpdateApplicationFollowUpParams) (Application, error) {
-	row := q.db.QueryRow(ctx, updateApplicationFollowUp, arg.ID, arg.FollowUpAt, arg.UserID)
-	var i Application
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.JobID,
-		&i.ApplicationStatus,
-		&i.AppliedAt,
-		&i.LastStatusChangedAt,
-		&i.FollowUpAt,
-		&i.Notes,
-		&i.CreatedAt,
-		&i.UpdatedAt,
+func (q *Queries) UpdateApplication(ctx context.Context, arg UpdateApplicationParams) (Application, error) {
+	row := q.db.QueryRow(ctx, updateApplication,
+		arg.ID,
+		arg.UserID,
+		arg.Notes,
+		arg.ApplicationStatus,
+		arg.AppliedAt,
+		arg.FollowUpAt,
 	)
-	return i, err
-}
-
-const updateApplicationNotes = `-- name: UpdateApplicationNotes :one
-UPDATE applications
-SET
-    notes = $2,
-    updated_at = NOW()
-WHERE id = $1 AND user_id = $3
-RETURNING id, user_id, job_id, application_status, applied_at, last_status_changed_at, follow_up_at, notes, created_at, updated_at
-`
-
-type UpdateApplicationNotesParams struct {
-	ID     uuid.UUID `json:"id"`
-	Notes  *string   `json:"notes"`
-	UserID uuid.UUID `json:"user_id"`
-}
-
-func (q *Queries) UpdateApplicationNotes(ctx context.Context, arg UpdateApplicationNotesParams) (Application, error) {
-	row := q.db.QueryRow(ctx, updateApplicationNotes, arg.ID, arg.Notes, arg.UserID)
-	var i Application
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.JobID,
-		&i.ApplicationStatus,
-		&i.AppliedAt,
-		&i.LastStatusChangedAt,
-		&i.FollowUpAt,
-		&i.Notes,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const updateApplicationStatus = `-- name: UpdateApplicationStatus :one
-UPDATE applications
-SET
-    application_status = $2,
-    last_status_changed_at = NOW(),
-    updated_at = NOW()
-WHERE id = $1 AND user_id = $3
-RETURNING id, user_id, job_id, application_status, applied_at, last_status_changed_at, follow_up_at, notes, created_at, updated_at
-`
-
-type UpdateApplicationStatusParams struct {
-	ID                uuid.UUID `json:"id"`
-	ApplicationStatus string    `json:"application_status"`
-	UserID            uuid.UUID `json:"user_id"`
-}
-
-func (q *Queries) UpdateApplicationStatus(ctx context.Context, arg UpdateApplicationStatusParams) (Application, error) {
-	row := q.db.QueryRow(ctx, updateApplicationStatus, arg.ID, arg.ApplicationStatus, arg.UserID)
 	var i Application
 	err := row.Scan(
 		&i.ID,

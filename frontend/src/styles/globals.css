@@ -73,7 +73,7 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   text-decoration: none;
   font-size: var(--text-sm);
   transition: all var(--transition-fast);
@@ -173,4 +173,3 @@
   cursor: pointer;
   flex-shrink: 0;
 }
-
