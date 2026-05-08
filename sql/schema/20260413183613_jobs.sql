@@ -23,6 +23,11 @@ CREATE TABLE IF NOT EXISTS jobs (
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now(),
     logo_url TEXT,
+    -- AI matching fields
+    match_score INTEGER,
+    ai_summary TEXT,
+    matched_skills TEXT [],
+    missing_skills TEXT [],
     UNIQUE (external_id, job_source)
 );
 
