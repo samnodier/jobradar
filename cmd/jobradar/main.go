@@ -111,6 +111,11 @@ func main() {
 			r.Get("/applications/{applicationID}", cfg.handlerApplicationGetByID)
 			r.Patch("/applications/{id}", cfg.handlerApplicationUpdate)
 
+			r.Get("/profile/experiences", cfg.handlerGetExperiences)
+			r.Post("/profile/experiences", cfg.handlerCreateExperience)
+			r.Patch("/profile/experiences/{id}", cfg.handlerUpdateExperience)
+			r.Delete("/profile/experiences/{id}", cfg.handlerDeleteExperience)
+
 			r.Post("/saved_jobs", cfg.handlerJobSave)
 			r.Delete("/saved_jobs", cfg.handlerJobUnsave)
 

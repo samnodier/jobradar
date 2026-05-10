@@ -1,3 +1,100 @@
+<script setup lang="ts">
+import { onMounted, ref } from 'vue'
+import AppSidebar from '@/components/AppSidebar.vue'
+import { useAuthStore } from '@/stores/auth'
+import { useRouter } from 'vue-router'
+import { useProfileStore } from '@/stores/profile'
+import ExperienceCard from '@/components/ExperienceCard.vue'
+
+const router = useRouter()
+
+const authStore = useAuthStore()
+const profileStore = useProfileStore()
+const saved = ref(false)
+
+const isAddingExperience = ref(false)
+
+const savedCount = ref(12)
+
+const preferences = ref({
+  jobTypes: ['Full-time', 'Contract'],
+  location: 'Remote',
+  salaryMin: 150000,
+  salaryMax: 250000,
+  experience: '5-10',
+  skills: ['React', 'TypeScript', 'Node.js'],
+  companyStage: ['Growth', 'Enterprise'],
+  industries: 'SaaS, AI/ML, Developer Tools',
+  notifyJobs: true,
+  visibleToRecruiters: true,
+})
+
+const experiences = profileStore.experiences
+
+const isDeleteConfirmVisible = ref(false)
+const typedEmail = ref('')
+const deleteError = ref('')
+
+onMounted(async () => {
+  await profileStore.fetchExperiences()
+})
+
+const removeSkill = (skill: string) => {
+  const idx = preferences.value.skills.indexOf(skill)
+  if (idx > -1) {
+    preferences.value.skills.splice(idx, 1)
+  }
+}
+
+const addSkill = (e: Event) => {
+  const target = e.target as HTMLInputElement
+  if (target.value && !preferences.value.skills.includes(target.value)) {
+    preferences.value.skills.push(target.value)
+    target.value = ''
+  }
+}
+
+const savePreferences = () => {
+  console.log('[v0] Preferences saved:', preferences.value)
+  saved.value = true
+  setTimeout(() => {
+    saved.value = false
+  }, 3000)
+}
+
+// Cancel delete to void multi-statement
+function cancelDelete() {
+  isDeleteConfirmVisible.value = false
+  typedEmail.value = ''
+  deleteError.value = ''
+}
+
+// Delete account
+async function deleteAccount() {
+  if (typedEmail.value !== authStore.user?.email) {
+    deleteError.value = 'Please enter your email address to confirm account deletion.'
+    return
+  }
+
+  try {
+    // Send a delete request to the backend
+    const response = await fetch('/api/users/me', {
+      method: 'DELETE',
+      credentials: 'include',
+    })
+    if (!response.ok) {
+      deleteError.value = 'Failed to delete account. Please try again.'
+      return
+    }
+    authStore.user = null
+    router.push('/login')
+  } catch (err) {
+    deleteError.value =
+      'Something went wrong. Please try again' + (err instanceof Error ? err.message : String(err))
+    return
+  }
+}
+</script>
 <template>
   <div class="profile-container">
     <AppSidebar />
@@ -157,33 +254,7 @@
 
             <!-- Skills & Experience -->
             <section class="settings-section">
-              <h2 class="section-title">Skills & Experience</h2>
-
-              <div class="setting-group">
-                <label class="setting-label">Years of Experience</label>
-                <select v-model="preferences.experience" class="form-input">
-                  <option value="0-2">0-2 years</option>
-                  <option value="2-5">2-5 years</option>
-                  <option value="5-10">5-10 years</option>
-                  <option value="10+">10+ years</option>
-                </select>
-              </div>
-
-              <div class="setting-group">
-                <label class="setting-label">Primary Skills</label>
-                <div class="skills-tags">
-                  <span v-for="skill in preferences.skills" :key="skill" class="skill-tag">
-                    {{ skill }}
-                    <button @click="removeSkill(skill)" class="tag-close">×</button>
-                  </span>
-                </div>
-                <input
-                  type="text"
-                  placeholder="Add a skill and press Enter"
-                  @keydown.enter="addSkill"
-                  class="form-input"
-                />
-              </div>
+              <p>Experiences {{ experiences.length }}</p>
             </section>
 
             <!-- Company Preferences -->
@@ -297,93 +368,6 @@
     </main>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref } from 'vue'
-import AppSidebar from '@/components/AppSidebar.vue'
-import { useAuthStore } from '@/stores/auth'
-import { useRouter } from 'vue-router'
-
-const router = useRouter()
-
-const authStore = useAuthStore()
-const saved = ref(false)
-
-const savedCount = ref(12)
-
-const preferences = ref({
-  jobTypes: ['Full-time', 'Contract'],
-  location: 'Remote',
-  salaryMin: 150000,
-  salaryMax: 250000,
-  experience: '5-10',
-  skills: ['React', 'TypeScript', 'Node.js'],
-  companyStage: ['Growth', 'Enterprise'],
-  industries: 'SaaS, AI/ML, Developer Tools',
-  notifyJobs: true,
-  visibleToRecruiters: true,
-})
-
-const isDeleteConfirmVisible = ref(false)
-const typedEmail = ref('')
-const deleteError = ref('')
-
-const removeSkill = (skill: string) => {
-  const idx = preferences.value.skills.indexOf(skill)
-  if (idx > -1) {
-    preferences.value.skills.splice(idx, 1)
-  }
-}
-
-const addSkill = (e: Event) => {
-  const target = e.target as HTMLInputElement
-  if (target.value && !preferences.value.skills.includes(target.value)) {
-    preferences.value.skills.push(target.value)
-    target.value = ''
-  }
-}
-
-const savePreferences = () => {
-  console.log('[v0] Preferences saved:', preferences.value)
-  saved.value = true
-  setTimeout(() => {
-    saved.value = false
-  }, 3000)
-}
-
-// Cancel delete to void multi-statement
-function cancelDelete() {
-  isDeleteConfirmVisible.value = false
-  typedEmail.value = ''
-  deleteError.value = ''
-}
-
-// Delete account
-async function deleteAccount() {
-  if (typedEmail.value !== authStore.user?.email) {
-    deleteError.value = 'Please enter your email address to confirm account deletion.'
-    return
-  }
-
-  try {
-    // Send a delete request to the backend
-    const response = await fetch('/api/users/me', {
-      method: 'DELETE',
-      credentials: 'include',
-    })
-    if (!response.ok) {
-      deleteError.value = 'Failed to delete account. Please try again.'
-      return
-    }
-    authStore.user = null
-    router.push('/login')
-  } catch (err) {
-    deleteError.value =
-      'Something went wrong. Please try again' + (err instanceof Error ? err.message : String(err))
-    return
-  }
-}
-</script>
 
 <style scoped>
 .profile-container {

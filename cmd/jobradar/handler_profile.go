@@ -14,26 +14,41 @@ import (
 	"github.com/samnodier/jobradar/internal/httpx"
 )
 
+type experienceCreateRequest struct {
+	UserID         uuid.UUID `json:"user_id"`
+	CompanyName    string    `json:"company_name"`
+	CompanyURL     *string   `json:"company_url"`
+	RoleTitle      string    `json:"role_title"`
+	ExpLocation    *string   `json:"exp_location"`
+	Industry       *string   `json:"industry"`
+	EmploymentType *string   `json:"employment_type"`
+	Description    *string   `json:"description"`
+	Achievements   []string  `json:"achievements"`
+	StartDate      string    `json:"start_date"`
+	EndDate        string    `json:"end_date"`
+	IsCurrent      *bool     `json:"is_current"`
+}
+
+type experienceUpdateRequest struct {
+	UserID         uuid.UUID `json:"user_id"`
+	CompanyName    *string   `json:"company_name"`
+	CompanyURL     *string   `json:"company_url"`
+	RoleTitle      *string   `json:"role_title"`
+	ExpLocation    *string   `json:"exp_location"`
+	Industry       *string   `json:"industry"`
+	EmploymentType *string   `json:"employment_type"`
+	Description    *string   `json:"description"`
+	Achievements   []string  `json:"achievements"`
+	StartDate      string    `json:"start_date"`
+	EndDate        string    `json:"end_date"`
+	IsCurrent      *bool     `json:"is_current"`
+}
+
 func (cfg *apiConfig) handlerCreateExperience(w http.ResponseWriter, r *http.Request) {
 	// User helper function to get the UserID
 	userID, ok := getUserIDFromRequest(w, r)
 	if !ok {
 		return
-	}
-
-	type experienceCreateRequest struct {
-		UserID         uuid.UUID `json:"user_id"`
-		CompanyName    string    `json:"company_name"`
-		CompanyUrl     *string   `json:"company_url"`
-		RoleTitle      string    `json:"role_title"`
-		ExpLocation    *string   `json:"exp_location"`
-		Industry       *string   `json:"industry"`
-		EmploymentType *string   `json:"employment_type"`
-		Description    *string   `json:"description"`
-		Achievements   []string  `json:"achievements"`
-		StartDate      string    `json:"start_date"`
-		EndDate        string    `json:"end_date"`
-		IsCurrent      *bool     `json:"is_current"`
 	}
 
 	var req experienceCreateRequest
@@ -57,7 +72,7 @@ func (cfg *apiConfig) handlerCreateExperience(w http.ResponseWriter, r *http.Req
 	experience, err := cfg.db.CreateUserExperience(r.Context(), database.CreateUserExperienceParams{
 		UserID:         userID,
 		CompanyName:    req.CompanyName,
-		CompanyUrl:     req.CompanyUrl,
+		CompanyUrl:     req.CompanyURL,
 		RoleTitle:      req.RoleTitle,
 		ExpLocation:    req.ExpLocation,
 		Industry:       req.Industry,
@@ -70,7 +85,7 @@ func (cfg *apiConfig) handlerCreateExperience(w http.ResponseWriter, r *http.Req
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			httpx.RespondError(w, http.StatusNotFound, "user not found")
+			httpx.RespondError(w, http.StatusNotFound, "experience not found or unauthorized")
 			return
 		}
 
@@ -79,19 +94,94 @@ func (cfg *apiConfig) handlerCreateExperience(w http.ResponseWriter, r *http.Req
 		if errors.As(err, &pgErr) {
 			switch pgErr.Code {
 			case "23505":
-				httpx.RespondError(w, http.StatusConflict, "you have already recorded this experience")
+				httpx.RespondError(w, http.StatusConflict, "an experience with the details already exists")
 				return
 			case "23503":
-				httpx.RespondError(w, http.StatusBadRequest, "user not found")
+				httpx.RespondError(w, http.StatusBadRequest, "user account not found")
 				return
 			}
 		}
 
-		httpx.RespondError(w, http.StatusInternalServerError, "failed to create exprience")
+		httpx.RespondError(w, http.StatusInternalServerError, "failed to create experience")
 		return
 	}
 
 	httpx.RespondJSON(w, http.StatusCreated, experience)
+}
+
+func (cfg *apiConfig) handlerUpdateExperience(w http.ResponseWriter, r *http.Request) {
+	// User helper function to get the UserID
+	userID, ok := getUserIDFromRequest(w, r)
+	if !ok {
+		return
+	}
+
+	// Get the experience ID from the URL
+	expIDStr := chi.URLParam(r, "id")
+	experienceID, err := uuid.Parse(expIDStr)
+	if err != nil {
+		httpx.RespondError(w, http.StatusBadRequest, "invalid experience ID format")
+		return
+	}
+
+	var req experienceUpdateRequest
+	err = json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		httpx.RespondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	startDate, err := convert.ToDateOptional(req.StartDate)
+	if err != nil {
+		httpx.RespondError(w, http.StatusBadRequest, "invalid start date: "+err.Error())
+		return
+	}
+
+	endDate, err := convert.ToDateOptional(req.EndDate)
+	if err != nil {
+		httpx.RespondError(w, http.StatusBadRequest, "invalid end date: "+err.Error())
+		return
+	}
+
+	experience, err := cfg.db.UpdateUserExperience(r.Context(), database.UpdateUserExperienceParams{
+		ID:             experienceID,
+		UserID:         userID,
+		CompanyName:    req.CompanyName,
+		CompanyUrl:     req.CompanyURL,
+		RoleTitle:      req.RoleTitle,
+		ExpLocation:    req.ExpLocation,
+		Industry:       req.Industry,
+		EmploymentType: req.EmploymentType,
+		Description:    req.Description,
+		Achievements:   req.Achievements,
+		StartDate:      startDate,
+		EndDate:        endDate,
+		IsCurrent:      req.IsCurrent,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			httpx.RespondError(w, http.StatusNotFound, "experience not found or unauthorized")
+			return
+		}
+
+		// check for postgres-specific errors
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			switch pgErr.Code {
+			case "23505":
+				httpx.RespondError(w, http.StatusConflict, "an experience with the details already exists")
+				return
+			case "23503":
+				httpx.RespondError(w, http.StatusBadRequest, "user account not found")
+				return
+			}
+		}
+
+		httpx.RespondError(w, http.StatusInternalServerError, "failed to update experience")
+		return
+	}
+
+	httpx.RespondJSON(w, http.StatusOK, experience)
 }
 
 func (cfg *apiConfig) handlerGetExperiences(w http.ResponseWriter, r *http.Request) {
