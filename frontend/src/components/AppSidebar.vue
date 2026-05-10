@@ -1,3 +1,19 @@
+<script setup lang="ts">
+import { RouterLink } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import {
+  AlertCircle,
+  BarChart3,
+  Bookmark,
+  CheckCircle,
+  LayoutDashboard,
+  User,
+  Zap,
+} from '@lucide/vue'
+
+const authStore = useAuthStore()
+</script>
+
 <template>
   <aside class="sidebar-container">
     <nav class="sidebar-nav">
@@ -21,7 +37,7 @@
       <div class="nav-section">
         <div class="nav-section-title">Workspace</div>
         <RouterLink to="/dashboard" class="nav-item">
-          <IconGrid class="nav-icon" />
+          <LayoutDashboard class="nav-icon" />
           Overview
         </RouterLink>
         <RouterLink
@@ -40,9 +56,9 @@
         </RouterLink>
       </div>
 
-      <div class="nav-section">
+      <div class="nav-section" v-if="authStore.user">
         <div class="nav-section-title">Personal</div>
-        <RouterLink to="/profile" class="nav-item">
+        <RouterLink :to="'/@' + authStore.user?.username" class="nav-item">
           <User class="nav-icon" />
           Account
         </RouterLink>
@@ -63,15 +79,6 @@
     </nav>
   </aside>
 </template>
-
-<script setup lang="ts">
-import { RouterLink } from 'vue-router'
-import IconGrid from '@/components/icons/IconGrid.vue'
-import { useAuthStore } from '@/stores/auth'
-import { AlertCircle, BarChart3, Bookmark, CheckCircle, User, Zap } from '@lucide/vue'
-
-const authStore = useAuthStore()
-</script>
 
 <style scoped>
 .sidebar-container {

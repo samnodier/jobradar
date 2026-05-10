@@ -15,7 +15,7 @@ func ToDateRequired(s string) (pgtype.Date, error) {
 	}
 	t, err := time.Parse("2006-01-02", s)
 	if err != nil {
-		return pgtype.Date{}, fmt.Errorf("invalid start_date format, expected YYYY-MM-DD")
+		return pgtype.Date{Valid: false}, fmt.Errorf("invalid start_date format, expected YYYY-MM-DD")
 	}
 	return pgtype.Date{Time: t, Valid: true}, nil
 }
@@ -28,7 +28,7 @@ func ToDateOptional(s string) (pgtype.Date, error) {
 	}
 	t, err := time.Parse("2006-01-02", s)
 	if err != nil {
-		return pgtype.Date{}, fmt.Errorf("invalid date format, expected YYYY-MM-DD")
+		return pgtype.Date{Valid: false}, fmt.Errorf("invalid date format, expected YYYY-MM-DD")
 	}
 	return pgtype.Date{Time: t, Valid: true}, nil
 }

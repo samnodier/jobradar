@@ -131,7 +131,7 @@ function fetchJobs() {
     })
 }
 
-// Save the job in the system
+// Toggle save and unsave the job in the system
 async function handleSaveJob(job: Job) {
   if (job.is_saved) {
     try {
