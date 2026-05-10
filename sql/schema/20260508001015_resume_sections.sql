@@ -1,7 +1,7 @@
 -- +goose Up
 CREATE TABLE IF NOT EXISTS user_experiences (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    user_id uuid not null references users (id) on delete cascade,
     company_name TEXT NOT NULL,
     company_url TEXT,
     role_title TEXT NOT NULL,

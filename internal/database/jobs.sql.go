@@ -20,7 +20,7 @@ INSERT INTO jobs (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
 )
 ON CONFLICT (external_id, job_source) DO NOTHING
-RETURNING id, external_id, job_source, title, company_name, description, source_url, salary_min, salary_max, currency, job_location, is_remote, job_status, employment_type, experience_level, skills, posted_at, expires_at, created_at, updated_at, logo_url
+RETURNING id, external_id, job_source, title, company_name, description, source_url, salary_min, salary_max, currency, job_location, is_remote, job_status, employment_type, experience_level, skills, posted_at, expires_at, created_at, updated_at, logo_url, match_score, ai_summary, matched_skills, missing_skills
 `
 
 type CreateJobParams struct {
@@ -78,6 +78,10 @@ func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, erro
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.LogoUrl,
+		&i.MatchScore,
+		&i.AiSummary,
+		&i.MatchedSkills,
+		&i.MissingSkills,
 	)
 	return i, err
 }

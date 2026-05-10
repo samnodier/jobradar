@@ -24,6 +24,13 @@ type Application struct {
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 }
 
+type ExperienceSkill struct {
+	ExperienceID uuid.UUID  `json:"experience_id"`
+	SkillID      uuid.UUID  `json:"skill_id"`
+	CreatedAt    *time.Time `json:"created_at"`
+	UpdatedAt    *time.Time `json:"updated_at"`
+}
+
 type Job struct {
 	ID              uuid.UUID  `json:"id"`
 	ExternalID      string     `json:"external_id"`
@@ -46,6 +53,17 @@ type Job struct {
 	CreatedAt       *time.Time `json:"created_at"`
 	UpdatedAt       *time.Time `json:"updated_at"`
 	LogoUrl         *string    `json:"logo_url"`
+	MatchScore      *int32     `json:"match_score"`
+	AiSummary       *string    `json:"ai_summary"`
+	MatchedSkills   []string   `json:"matched_skills"`
+	MissingSkills   []string   `json:"missing_skills"`
+}
+
+type ProjectSkill struct {
+	ProjectID uuid.UUID  `json:"project_id"`
+	SkillID   uuid.UUID  `json:"skill_id"`
+	CreatedAt *time.Time `json:"created_at"`
+	UpdatedAt *time.Time `json:"updated_at"`
 }
 
 type SavedJob struct {
@@ -66,15 +84,35 @@ type ServiceHealth struct {
 	UpdatedAt       *time.Time         `json:"updated_at"`
 }
 
-type User struct {
+type Skill struct {
 	ID        uuid.UUID  `json:"id"`
-	Email     string     `json:"email"`
-	Username  *string    `json:"username"`
-	FullName  *string    `json:"full_name"`
-	AvatarUrl *string    `json:"avatar_url"`
-	IsAdmin   *bool      `json:"is_admin"`
+	Name      string     `json:"name"`
+	Category  *string    `json:"category"`
 	CreatedAt *time.Time `json:"created_at"`
 	UpdatedAt *time.Time `json:"updated_at"`
+}
+
+type User struct {
+	ID                uuid.UUID  `json:"id"`
+	Email             string     `json:"email"`
+	Username          *string    `json:"username"`
+	FullName          *string    `json:"full_name"`
+	AvatarUrl         *string    `json:"avatar_url"`
+	Phone             *string    `json:"phone"`
+	UserLocation      *string    `json:"user_location"`
+	WebsiteUrl        *string    `json:"website_url"`
+	LinkedinUrl       *string    `json:"linkedin_url"`
+	GithubUrl         *string    `json:"github_url"`
+	Headline          *string    `json:"headline"`
+	UserSummary       *string    `json:"user_summary"`
+	Availability      *string    `json:"availability"`
+	MinSalary         *int32     `json:"min_salary"`
+	MaxSalary         *int32     `json:"max_salary"`
+	SalaryCurrency    *string    `json:"salary_currency"`
+	YearsOfExperience *int32     `json:"years_of_experience"`
+	IsAdmin           *bool      `json:"is_admin"`
+	CreatedAt         *time.Time `json:"created_at"`
+	UpdatedAt         *time.Time `json:"updated_at"`
 }
 
 type UserAccount struct {
@@ -88,4 +126,104 @@ type UserAccount struct {
 	RevokedAt      *time.Time `json:"revoked_at"`
 	CreatedAt      *time.Time `json:"created_at"`
 	UpdatedAt      *time.Time `json:"updated_at"`
+}
+
+type UserCertification struct {
+	ID                  uuid.UUID   `json:"id"`
+	UserID              uuid.UUID   `json:"user_id"`
+	Name                string      `json:"name"`
+	IssuingOrganization string      `json:"issuing_organization"`
+	IssueDate           pgtype.Date `json:"issue_date"`
+	ExpirationDate      pgtype.Date `json:"expiration_date"`
+	DoesNotExpire       *bool       `json:"does_not_expire"`
+	CredentialID        *string     `json:"credential_id"`
+	CredentialUrl       *string     `json:"credential_url"`
+	IsInProgress        *bool       `json:"is_in_progress"`
+	Location            *string     `json:"location"`
+	CreatedAt           *time.Time  `json:"created_at"`
+	UpdatedAt           *time.Time  `json:"updated_at"`
+}
+
+type UserDesiredLocation struct {
+	UserID       uuid.UUID `json:"user_id"`
+	LocationName string    `json:"location_name"`
+	IsRemote     *bool     `json:"is_remote"`
+	Priority     *int32    `json:"priority"`
+}
+
+type UserDesiredRole struct {
+	UserID    uuid.UUID `json:"user_id"`
+	RoleTitle string    `json:"role_title"`
+	Priority  *int32    `json:"priority"`
+}
+
+type UserEducation struct {
+	ID              uuid.UUID   `json:"id"`
+	UserID          uuid.UUID   `json:"user_id"`
+	InstitutionName string      `json:"institution_name"`
+	DegreeType      *string     `json:"degree_type"`
+	DegreeName      *string     `json:"degree_name"`
+	FieldOfStudy    *string     `json:"field_of_study"`
+	StartDate       pgtype.Date `json:"start_date"`
+	EndDate         pgtype.Date `json:"end_date"`
+	IsCurrent       *bool       `json:"is_current"`
+	Description     *string     `json:"description"`
+	IsHighlighted   *bool       `json:"is_highlighted"`
+	CreatedAt       *time.Time  `json:"created_at"`
+	UpdatedAt       *time.Time  `json:"updated_at"`
+}
+
+type UserExperience struct {
+	ID             uuid.UUID   `json:"id"`
+	UserID         uuid.UUID   `json:"user_id"`
+	CompanyName    string      `json:"company_name"`
+	CompanyUrl     *string     `json:"company_url"`
+	RoleTitle      string      `json:"role_title"`
+	ExpLocation    *string     `json:"exp_location"`
+	Industry       *string     `json:"industry"`
+	EmploymentType *string     `json:"employment_type"`
+	Description    *string     `json:"description"`
+	Achievements   []string    `json:"achievements"`
+	StartDate      pgtype.Date `json:"start_date"`
+	EndDate        pgtype.Date `json:"end_date"`
+	IsCurrent      *bool       `json:"is_current"`
+	CreatedAt      *time.Time  `json:"created_at"`
+	UpdatedAt      *time.Time  `json:"updated_at"`
+}
+
+type UserLanguage struct {
+	UserID      uuid.UUID  `json:"user_id"`
+	Language    string     `json:"language"`
+	Proficiency *string    `json:"proficiency"`
+	CreatedAt   *time.Time `json:"created_at"`
+	UpdatedAt   *time.Time `json:"updated_at"`
+}
+
+type UserProject struct {
+	ID            uuid.UUID   `json:"id"`
+	UserID        uuid.UUID   `json:"user_id"`
+	Title         string      `json:"title"`
+	RoleTitle     *string     `json:"role_title"`
+	Description   *string     `json:"description"`
+	Impact        *string     `json:"impact"`
+	ProjectUrl    *string     `json:"project_url"`
+	RepositoryUrl *string     `json:"repository_url"`
+	StartDate     pgtype.Date `json:"start_date"`
+	EndDate       pgtype.Date `json:"end_date"`
+	IsCurrent     *bool       `json:"is_current"`
+	IsFeatured    *bool       `json:"is_featured"`
+	CreatedAt     *time.Time  `json:"created_at"`
+	UpdatedAt     *time.Time  `json:"updated_at"`
+}
+
+type UserSkill struct {
+	UserID          uuid.UUID  `json:"user_id"`
+	SkillID         uuid.UUID  `json:"skill_id"`
+	Proficiency     *string    `json:"proficiency"`
+	YearsExperience *int32     `json:"years_experience"`
+	IsFeatured      *bool      `json:"is_featured"`
+	EndorsedByAi    *bool      `json:"endorsed_by_ai"`
+	DisplayOrder    *int32     `json:"display_order"`
+	CreatedAt       *time.Time `json:"created_at"`
+	UpdatedAt       *time.Time `json:"updated_at"`
 }

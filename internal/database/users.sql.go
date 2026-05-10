@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -17,7 +18,7 @@ INSERT INTO users (
 ) VALUES (
     $1, $2, $3, $4
 )
-RETURNING id, email, username, full_name, avatar_url, is_admin, created_at, updated_at
+RETURNING id, email, username, full_name, avatar_url, phone, user_location, website_url, linkedin_url, github_url, headline, user_summary, availability, min_salary, max_salary, salary_currency, years_of_experience, is_admin, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -41,6 +42,18 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Username,
 		&i.FullName,
 		&i.AvatarUrl,
+		&i.Phone,
+		&i.UserLocation,
+		&i.WebsiteUrl,
+		&i.LinkedinUrl,
+		&i.GithubUrl,
+		&i.Headline,
+		&i.UserSummary,
+		&i.Availability,
+		&i.MinSalary,
+		&i.MaxSalary,
+		&i.SalaryCurrency,
+		&i.YearsOfExperience,
 		&i.IsAdmin,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -74,9 +87,20 @@ ORDER BY id
 LIMIT 1
 `
 
-func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
+type GetUserByIDRow struct {
+	ID        uuid.UUID  `json:"id"`
+	Email     string     `json:"email"`
+	Username  *string    `json:"username"`
+	FullName  *string    `json:"full_name"`
+	AvatarUrl *string    `json:"avatar_url"`
+	IsAdmin   *bool      `json:"is_admin"`
+	CreatedAt *time.Time `json:"created_at"`
+	UpdatedAt *time.Time `json:"updated_at"`
+}
+
+func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (GetUserByIDRow, error) {
 	row := q.db.QueryRow(ctx, getUserByID, id)
-	var i User
+	var i GetUserByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
@@ -112,9 +136,20 @@ type GetUserByProviderIdentityParams struct {
 	AuthProviderID string `json:"auth_provider_id"`
 }
 
-func (q *Queries) GetUserByProviderIdentity(ctx context.Context, arg GetUserByProviderIdentityParams) (User, error) {
+type GetUserByProviderIdentityRow struct {
+	ID        uuid.UUID  `json:"id"`
+	Email     string     `json:"email"`
+	Username  *string    `json:"username"`
+	FullName  *string    `json:"full_name"`
+	AvatarUrl *string    `json:"avatar_url"`
+	IsAdmin   *bool      `json:"is_admin"`
+	CreatedAt *time.Time `json:"created_at"`
+	UpdatedAt *time.Time `json:"updated_at"`
+}
+
+func (q *Queries) GetUserByProviderIdentity(ctx context.Context, arg GetUserByProviderIdentityParams) (GetUserByProviderIdentityRow, error) {
 	row := q.db.QueryRow(ctx, getUserByProviderIdentity, arg.AuthProvider, arg.AuthProviderID)
-	var i User
+	var i GetUserByProviderIdentityRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
