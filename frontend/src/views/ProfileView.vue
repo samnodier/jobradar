@@ -1,20 +1,35 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import AppSidebar from '@/components/AppSidebar.vue'
+import { Plus, SquarePen, ArrowLeft } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { useProfileStore } from '@/stores/profile'
 import ExperienceCard from '@/components/ExperienceCard.vue'
+import ExperienceForm from '@/components/ExperienceForm.vue'
+import type { Experience } from '@/types/experience'
+import { storeToRefs } from 'pinia'
+
+type ProfileTab = 'overview' | 'experience' | 'preferences' | 'settings'
 
 const router = useRouter()
-
 const authStore = useAuthStore()
 const profileStore = useProfileStore()
+const { experiences } = storeToRefs(profileStore)
+
+const activeTab = ref<ProfileTab>('overview')
 const saved = ref(false)
-
-const isAddingExperience = ref(false)
-
 const savedCount = ref(12)
+const isDeleteConfirmVisible = ref(false)
+const typedEmail = ref('')
+const deleteError = ref('')
+const isFormOpen = ref(false)
+const selectedExperience = ref<Experience | undefined>(undefined)
+const selectedExperienceID = ref<string | null>(null)
+const detailOpen = computed(() => !!selectedExperienceID.value)
+function closeDetail() {
+  selectedExperienceID.value = null
+}
 
 const preferences = ref({
   jobTypes: ['Full-time', 'Contract'],
@@ -29,15 +44,37 @@ const preferences = ref({
   visibleToRecruiters: true,
 })
 
-const experiences = profileStore.experiences
+const tabs: Array<{ key: ProfileTab; label: string }> = [
+  { key: 'overview', label: 'Overview' },
+  { key: 'experience', label: 'Experience' },
+  { key: 'preferences', label: 'Preferences' },
+  { key: 'settings', label: 'Settings' },
+]
 
-const isDeleteConfirmVisible = ref(false)
-const typedEmail = ref('')
-const deleteError = ref('')
+function openAddForm() {
+  selectedExperience.value = undefined
+  isFormOpen.value = true
+}
 
-onMounted(async () => {
-  await profileStore.fetchExperiences()
-})
+function openEditForm(exp: Experience) {
+  selectedExperience.value = exp
+  isFormOpen.value = true
+}
+
+async function handleSaveExperience(payload: Experience) {
+  if (selectedExperience.value) {
+    await profileStore.updateExperience(selectedExperience.value.id, payload)
+  } else {
+    await profileStore.addExperience(payload)
+  }
+  isFormOpen.value = false
+}
+
+async function handleDeleteExperience(id: string) {
+  if (confirm('Are you sure you want to delete this experience?')) {
+    await profileStore.deleteExperience(id)
+  }
+}
 
 const removeSkill = (skill: string) => {
   const idx = preferences.value.skills.indexOf(skill)
@@ -54,12 +91,11 @@ const addSkill = (e: Event) => {
   }
 }
 
-const savePreferences = () => {
-  console.log('[v0] Preferences saved:', preferences.value)
+function savePreferences() {
   saved.value = true
   setTimeout(() => {
     saved.value = false
-  }, 3000)
+  }, 2500)
 }
 
 // Cancel delete to void multi-statement
@@ -94,6 +130,10 @@ async function deleteAccount() {
     return
   }
 }
+
+onMounted(async () => {
+  await profileStore.fetchExperiences()
+})
 </script>
 <template>
   <div class="profile-container">
@@ -117,259 +157,371 @@ async function deleteAccount() {
                   }}</span>
                 </div>
               </div>
-              <div style="flex: 1">
-                <h1 class="profile-name">{{ authStore.user?.name || authStore.user?.username }}</h1>
-                <p class="profile-email">{{ authStore.user?.email }}</p>
+
+              <div class="profile-copy">
+                <h1 class="profile-name">
+                  {{ authStore.user?.full_name || authStore.user?.username }}
+                </h1>
+                <p class="profile-email">
+                  {{ authStore.user?.email }}
+                  <span v-if="authStore.user?.username"> • {{ authStore.user.username }}</span>
+                </p>
                 <p class="profile-bio">
-                  Senior Full Stack Engineer with 8 years of experience. Passionate about building
-                  scalable applications.
+                  {{ authStore.user?.user_summary || 'Add a summary to your profile.' }}
                 </p>
               </div>
             </div>
-            <button class="button button-primary">Edit Profile</button>
+
+            <button class="button button-primary button-edit">
+              <SquarePen :size="16" />
+              Edit Profile
+            </button>
+          </div>
+
+          <div class="profile-stats">
+            <div class="stat-item">
+              <span class="stat-num">{{ savedCount }}</span>
+              <span class="stat-label">Saved jobs</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-num">4</span>
+              <span class="stat-label">Applications</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-num">{{ experiences?.length || 0 }}</span>
+              <span class="stat-label">Experiences</span>
+            </div>
           </div>
         </div>
+      </div>
+
+      <!-- Tabs-->
+      <div class="content-area">
         <!-- Profile Sections -->
-        <div class="profile-sections">
-          <!-- About Section -->
-          <section class="profile-section">
-            <h2 class="section-heading">About</h2>
-            <div class="info-grid">
-              <div class="info-item">
-                <span class="info-label">Experience</span>
-                <span class="info-value">8 years</span>
+        <div class="profile-max-width tab-layout">
+          <nav class="tabs" aria-label="Profile sections">
+            <button
+              v-for="tab in tabs"
+              :key="tab.key"
+              type="button"
+              class="tab-btn"
+              :class="{ 'tab-btn--active': activeTab === tab.key }"
+              @click="activeTab = tab.key"
+            >
+              {{ tab.label }}
+            </button>
+          </nav>
+
+          <!-- Overview -->
+          <section v-if="activeTab === 'overview'" class="tab-panel">
+            <section class="profile-section">
+              <h2 class="section-heading">About</h2>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="info-label">Years of experience</span>
+                  <span class="info-value">{{
+                    authStore.user?.years_of_experience ?? 'Not set'
+                  }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Location</span>
+                  <span class="info-value">{{ authStore.user?.user_location || 'Not set' }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Headline</span>
+                  <span class="info-value">{{ authStore.user?.headline || 'Not set' }}</span>
+                </div>
               </div>
+            </section>
+
+            <section class="profile-section">
+              <h2 class="section-heading">Activity</h2>
               <div class="info-item">
-                <span class="info-label">Location</span>
-                <span class="info-value">San Francisco, CA</span>
+                <span class="info-label">Saved Jobs</span>
+                <span class="info-value">{{ savedCount }} jobs</span>
               </div>
-              <div class="info-item">
-                <span class="info-label">Skills</span>
-                <span class="info-value">React, TypeScript, Node.js, Python, AWS</span>
+            </section>
+          </section>
+
+          <!-- Experience -->
+          <section v-if="activeTab === 'experience'" class="tab-panel">
+            <section class="profile-section">
+              <div class="section-header">
+                <h2 class="section-heading">Work history</h2>
+                <button class="button button-primary button-add" @click="openAddForm">
+                  <Plus /> Add Experience
+                </button>
               </div>
-            </div>
+              <p v-if="!experiences?.length" class="empty-state">No experience added yet.</p>
+              <div v-else class="experience-list">
+                <ExperienceCard
+                  v-for="exp in experiences"
+                  :key="exp.id"
+                  :exp="exp"
+                  @edit="openEditForm(exp)"
+                  @delete="handleDeleteExperience(exp.id)"
+                />
+              </div>
+            </section>
           </section>
 
           <!-- Preferences Section -->
-          <section class="profile-section">
-            <h2 class="section-heading">Job Preferences</h2>
-            <div class="info-grid">
-              <div class="info-item">
-                <span class="info-label">Job Type</span>
-                <span class="info-value">Full-time, Remote</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">Salary Range</span>
-                <span class="info-value">$150k - $200k</span>
-              </div>
+          <section v-if="activeTab === 'preferences'" class="tab-panel">
+            <!-- Header -->
+            <div class="page-header">
+              <h1 class="page-title">Preferences & Settings</h1>
+              <p class="page-subtitle">
+                Fine-tune your job recommendations and notification preferences
+              </p>
+            </div>
+
+            <div class="settings-grid">
+              <section class="settings-section">
+                <h2 class="section-title">Job Preferences</h2>
+
+                <div class="setting-group">
+                  <label class="setting-label">Preferred Job Types</label>
+                  <div class="checkbox-group">
+                    <div class="checkbox-item">
+                      <input
+                        id="ft"
+                        v-model="preferences.jobTypes"
+                        type="checkbox"
+                        value="Full-time"
+                      />
+                      <label for="ft">Full-time</label>
+                    </div>
+                    <div class="checkbox-item">
+                      <input
+                        id="pt"
+                        v-model="preferences.jobTypes"
+                        type="checkbox"
+                        value="Part-time"
+                      />
+                      <label for="pt">Part-time</label>
+                    </div>
+                    <div class="checkbox-item">
+                      <input
+                        id="contract"
+                        v-model="preferences.jobTypes"
+                        type="checkbox"
+                        value="Contract"
+                      />
+                      <label for="contract">Contract</label>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="setting-group">
+                  <label class="setting-label">Work Location</label>
+                  <select v-model="preferences.location" class="form-input">
+                    <option>Remote</option>
+                    <option>On-site</option>
+                    <option>Hybrid</option>
+                    <option>Any</option>
+                  </select>
+                </div>
+
+                <div class="setting-group salary-inputs">
+                  <div class="settings-label">
+                    <label class="setting-label">Min Salary</label>
+                    <input
+                      v-model="preferences.salaryMin"
+                      type="number"
+                      placeholder="Min"
+                      class="form-input"
+                    />
+                  </div>
+                  <div class="settings-label">
+                    <label class="setting-label">Max Salary</label>
+                    <input
+                      v-model="preferences.salaryMax"
+                      type="number"
+                      placeholder="Max"
+                      class="form-input"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <!-- Company Preferences -->
+              <section class="settings-section">
+                <h2 class="section-title">Company Preferences</h2>
+
+                <div class="setting-group">
+                  <label class="setting-label">Company Stage</label>
+                  <div class="checkbox-group">
+                    <div class="checkbox-item">
+                      <input
+                        id="startup"
+                        v-model="preferences.companyStage"
+                        type="checkbox"
+                        value="Startup"
+                      />
+                      <label for="startup">Startup</label>
+                    </div>
+                    <div class="checkbox-item">
+                      <input
+                        id="growth"
+                        v-model="preferences.companyStage"
+                        type="checkbox"
+                        value="Growth"
+                      />
+                      <label for="growth">Growth Stage</label>
+                    </div>
+                    <div class="checkbox-item">
+                      <input
+                        id="enterprise"
+                        v-model="preferences.companyStage"
+                        type="checkbox"
+                        value="Enterprise"
+                      />
+                      <label for="enterprise">Enterprise</label>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="setting-group">
+                  <label class="setting-label">Industries of Interest</label>
+                  <input
+                    v-model="preferences.industries"
+                    type="text"
+                    placeholder="e.g., SaaS, AI/ML, FinTech"
+                    class="form-input"
+                  />
+                </div>
+
+                <div class="setting-group">
+                  <label class="setting-label">Skills</label>
+                  <div class="skills-tags">
+                    <span v-for="skill in preferences.skills" :key="skill" class="skill-tag">
+                      {{ skill }}
+                      <button type="button" class="tag-close" @click="removeSkill(skill)">x</button>
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Type a skill and press Enter"
+                    class="form-input"
+                    @keydown.enter.prevent="addSkill($event)"
+                  />
+                </div>
+              </section>
+            </div>
+
+            <div class="save-section">
+              <button class="button button-primary" @click="savePreferences">Save Changes</button>
+              <p v-if="saved" class="save-message">Preferences saved successfully</p>
             </div>
           </section>
 
-          <!-- Saved Jobs Section -->
-          <section class="profile-section">
-            <h2 class="section-heading">Activity</h2>
-            <div class="info-item">
-              <span class="info-label">Saved Jobs</span>
-              <span class="info-value">{{ savedCount }} jobs</span>
-            </div>
-          </section>
-        </div>
-      </div>
+          <!-- Settings -->
+          <section v-if="activeTab === 'settings'" class="tab-panel">
+            <div class="settings-grid">
+              <p>Experiences {{ experiences?.length }}</p>
 
-      <div class="content-area preferences-page">
-        <div class="preferences-container profile-max-width">
-          <!-- Header -->
-          <div class="page-header">
-            <h1 class="page-title">Preferences & Settings</h1>
-            <p class="page-subtitle">
-              Fine-tune your job recommendations and notification preferences
-            </p>
-          </div>
-
-          <!-- Settings Sections -->
-          <div class="settings-grid">
-            <!-- Job Preferences -->
-            <section class="settings-section">
-              <h2 class="section-title">Job Preferences</h2>
-
-              <div class="setting-group">
-                <label class="setting-label">Preferred Job Types</label>
-                <div class="checkbox-group">
-                  <div class="checkbox-item">
-                    <input
-                      id="ft"
-                      v-model="preferences.jobTypes"
-                      type="checkbox"
-                      value="Full-time"
-                    />
-                    <label for="ft">Full-time</label>
-                  </div>
-                  <div class="checkbox-item">
-                    <input
-                      id="pt"
-                      v-model="preferences.jobTypes"
-                      type="checkbox"
-                      value="Part-time"
-                    />
-                    <label for="pt">Part-time</label>
-                  </div>
-                  <div class="checkbox-item">
-                    <input
-                      id="contract"
-                      v-model="preferences.jobTypes"
-                      type="checkbox"
-                      value="Contract"
-                    />
-                    <label for="contract">Contract</label>
-                  </div>
-                </div>
-              </div>
-
-              <div class="setting-group">
-                <label class="setting-label">Work Location</label>
-                <select v-model="preferences.location" class="form-input">
-                  <option>Remote</option>
-                  <option>On-site</option>
-                  <option>Hybrid</option>
-                  <option>Any</option>
-                </select>
-              </div>
-
-              <div class="setting-group">
-                <label class="setting-label">Salary Range</label>
-                <input
-                  v-model="preferences.salaryMin"
-                  type="number"
-                  placeholder="Min"
-                  class="form-input"
-                />
-                <input
-                  v-model="preferences.salaryMax"
-                  type="number"
-                  placeholder="Max"
-                  class="form-input"
-                />
-              </div>
-            </section>
-
-            <!-- Skills & Experience -->
-            <section class="settings-section">
-              <p>Experiences {{ experiences.length }}</p>
-            </section>
-
-            <!-- Company Preferences -->
-            <section class="settings-section">
-              <h2 class="section-title">Company Preferences</h2>
-
-              <div class="setting-group">
-                <label class="setting-label">Company Stage</label>
-                <div class="checkbox-group">
-                  <div class="checkbox-item">
-                    <input
-                      id="startup"
-                      v-model="preferences.companyStage"
-                      type="checkbox"
-                      value="Startup"
-                    />
-                    <label for="startup">Startup</label>
-                  </div>
-                  <div class="checkbox-item">
-                    <input
-                      id="growth"
-                      v-model="preferences.companyStage"
-                      type="checkbox"
-                      value="Growth"
-                    />
-                    <label for="growth">Growth Stage</label>
-                  </div>
-                  <div class="checkbox-item">
-                    <input
-                      id="enterprise"
-                      v-model="preferences.companyStage"
-                      type="checkbox"
-                      value="Enterprise"
-                    />
-                    <label for="enterprise">Enterprise</label>
-                  </div>
-                </div>
-              </div>
-
-              <div class="setting-group">
-                <label class="setting-label">Industries of Interest</label>
-                <input
-                  v-model="preferences.industries"
-                  type="text"
-                  placeholder="e.g., SaaS, AI/ML, FinTech"
-                  class="form-input"
-                />
-              </div>
-            </section>
-
-            <!-- Notifications -->
-            <section class="settings-section">
-              <h2 class="section-title">Notifications</h2>
-
-              <div class="setting-group toggle-group">
-                <label class="setting-label">Job Recommendations</label>
-                <button
-                  :class="['toggle-btn', { 'toggle-active': preferences.notifyJobs }]"
-                  @click="preferences.notifyJobs = !preferences.notifyJobs"
-                >
-                  {{ preferences.notifyJobs ? 'On' : 'Off' }}
-                </button>
-              </div>
-            </section>
-
-            <!-- Privacy & Account -->
-            <section class="settings-section">
-              <h2 class="section-title">Privacy & Account</h2>
-
-              <div class="setting-group">
-                <button class="button button-secondary">Download My Data</button>
-              </div>
-              <div class="setting-group" v-if="!isDeleteConfirmVisible">
-                <button @click="isDeleteConfirmVisible = true" class="button button-secondary">
-                  Delete My Account
-                </button>
-              </div>
-              <div class="setting-group" v-else>
-                <p style="font-size: var(--text-xs); color: var(--color-accent)">
-                  This action is permanent and cannot be undone.
-                </p>
-                <label class="setting-label">Type your email to confirm</label>
-                <input
-                  v-model="typedEmail"
-                  type="email"
-                  placeholder="your@email.com"
-                  class="form-input"
-                />
-                <p v-if="deleteError" class="delete-error">{{ deleteError }}</p>
-                <div class="delete-actions">
-                  <button class="button button-secondary" @click="cancelDelete">Cancel</button>
+              <section class="settings-section">
+                <h2 class="section-title">Notifications</h2>
+                <div class="setting-group toggle-group">
+                  <label class="setting-label">Job Recommendations</label>
                   <button
-                    class="button button-primary"
-                    :disabled="typedEmail !== authStore.user?.email"
-                    @click="deleteAccount"
+                    :class="['toggle-btn', { 'toggle-active': preferences.notifyJobs }]"
+                    @click="preferences.notifyJobs = !preferences.notifyJobs"
                   >
-                    Confirm Delete
+                    {{ preferences.notifyJobs ? 'On' : 'Off' }}
                   </button>
                 </div>
-              </div>
-            </section>
-          </div>
+              </section>
 
-          <!-- Save Button -->
-          <div class="save-section">
-            <button class="button button-primary" @click="savePreferences">Save Changes</button>
-            <p class="save-message" v-if="saved">✓ Preferences saved successfully</p>
-          </div>
+              <section class="settings-section">
+                <h2 class="section-title">Privacy & Account</h2>
+
+                <div class="setting-group">
+                  <button class="button button-secondary">Download My Data</button>
+                </div>
+
+                <div class="setting-group" v-if="!isDeleteConfirmVisible">
+                  <button @click="isDeleteConfirmVisible = true" class="button button-secondary">
+                    Delete My Account
+                  </button>
+                </div>
+
+                <div class="setting-group" v-else>
+                  <p style="font-size: var(--text-xs); color: var(--color-accent)">
+                    This action is permanent and cannot be undone.
+                  </p>
+                  <label class="setting-label">Type your email to confirm</label>
+                  <input
+                    v-model="typedEmail"
+                    type="email"
+                    placeholder="your@email.com"
+                    class="form-input"
+                  />
+                  <p v-if="deleteError" class="delete-error">{{ deleteError }}</p>
+                  <div class="delete-actions">
+                    <button class="button button-secondary" @click="cancelDelete">Cancel</button>
+                    <button
+                      class="button button-primary"
+                      :disabled="typedEmail !== authStore.user?.email"
+                      @click="deleteAccount"
+                    >
+                      Confirm Delete
+                    </button>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </section>
         </div>
       </div>
     </main>
+
+    <Teleport to="body">
+      <Transition name="detail-slide">
+        <div v-if="detailOpen" class="detail-overlay" @click.self="closeDetail">
+          <div class="detail-drawer">
+            <div class="detail-back" @click="closeDetail">
+              <ArrowLeft />
+              Back to jobs
+            </div>
+            <ExperienceForm
+              :open="isFormOpen"
+              :experience="selectedExperience"
+              @close="isFormOpen = false"
+              @save="handleSaveExperience"
+            />
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <style scoped>
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-4);
+}
+
+.button-sm {
+  padding: var(--spacing-1) var(--spacing-3);
+  font-size: var(--text-xs);
+}
+
+.experience-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.empty-state {
+  text-align: center;
+  padding: var(--spacing-8);
+  color: var(--color-text-muted);
+  border: 1px dashed var(--color-border);
+}
 .profile-container {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
@@ -422,6 +574,8 @@ async function deleteAccount() {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-8);
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--spacing-6);
 }
 
 .profile-header {
@@ -429,8 +583,6 @@ async function deleteAccount() {
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--spacing-6);
-  padding-bottom: var(--spacing-6);
-  border-bottom: 1px solid var(--color-border);
 }
 
 .profile-info {
@@ -464,12 +616,31 @@ async function deleteAccount() {
   line-height: 1.5;
 }
 
-.profile-sections {
+.profile-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: var(--spacing-6);
-  margin-top: var(--spacing-6);
-  margin-bottom: var(--spacing-6);
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-2);
+}
+
+.stat-item {
+  background: var(--color-bg-secondary);
+  padding: var(--spacing-4);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+}
+
+.stat-num {
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+}
+
+.stat-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-normal);
+  margin-top: var(--spacing-3);
 }
 
 .profile-section {
@@ -533,7 +704,7 @@ async function deleteAccount() {
   color: var(--color-text-muted);
 }
 
-.settings-grid {
+.settings-tab {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: var(--spacing-6);
@@ -683,7 +854,7 @@ async function deleteAccount() {
 }
 
 @media (max-width: 768px) {
-  .settings-grid {
+  .settings-tab {
     grid-template-columns: 1fr;
   }
 

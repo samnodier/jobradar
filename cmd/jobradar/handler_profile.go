@@ -25,7 +25,7 @@ type experienceCreateRequest struct {
 	Description    *string   `json:"description"`
 	Achievements   []string  `json:"achievements"`
 	StartDate      string    `json:"start_date"`
-	EndDate        string    `json:"end_date"`
+	EndDate        *string   `json:"end_date"`
 	IsCurrent      *bool     `json:"is_current"`
 }
 
@@ -39,8 +39,8 @@ type experienceUpdateRequest struct {
 	EmploymentType *string   `json:"employment_type"`
 	Description    *string   `json:"description"`
 	Achievements   []string  `json:"achievements"`
-	StartDate      string    `json:"start_date"`
-	EndDate        string    `json:"end_date"`
+	StartDate      *string   `json:"start_date"`
+	EndDate        *string   `json:"end_date"`
 	IsCurrent      *bool     `json:"is_current"`
 }
 
@@ -63,7 +63,11 @@ func (cfg *apiConfig) handlerCreateExperience(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	endDate, err := convert.ToDateOptional(req.EndDate)
+	var endDateStr string
+	if req.EndDate != nil {
+		endDateStr = *req.EndDate
+	}
+	endDate, err := convert.ToDateOptional(endDateStr)
 	if err != nil {
 		httpx.RespondError(w, http.StatusBadRequest, "invalid end date: "+err.Error())
 		return
@@ -131,13 +135,21 @@ func (cfg *apiConfig) handlerUpdateExperience(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	startDate, err := convert.ToDateOptional(req.StartDate)
+	var startDateStr string
+	if req.StartDate != nil {
+		startDateStr = *req.StartDate
+	}
+	startDate, err := convert.ToDateOptional(startDateStr)
 	if err != nil {
 		httpx.RespondError(w, http.StatusBadRequest, "invalid start date: "+err.Error())
 		return
 	}
 
-	endDate, err := convert.ToDateOptional(req.EndDate)
+	var endDateStr string
+	if req.EndDate != nil {
+		endDateStr = *req.EndDate
+	}
+	endDate, err := convert.ToDateOptional(endDateStr)
 	if err != nil {
 		httpx.RespondError(w, http.StatusBadRequest, "invalid end date: "+err.Error())
 		return

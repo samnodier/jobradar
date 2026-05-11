@@ -58,7 +58,10 @@ SET
     description = COALESCE(sqlc.narg('description'), description),
     achievements = COALESCE(sqlc.narg('achievements'), achievements),
     start_date = COALESCE(sqlc.narg('start_date'), start_date),
-    end_date = COALESCE(sqlc.narg('end_date'), end_date),
+    end_date = CASE
+        WHEN sqlc.narg('is_current') = TRUE THEN NULL
+        ELSE COALESCE(sqlc.narg('end_date'), end_date)
+    END,
     is_current = COALESCE(sqlc.narg('is_current'), is_current),
     updated_at = NOW()
 WHERE id = $1 AND user_id = $2

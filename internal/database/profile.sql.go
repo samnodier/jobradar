@@ -238,8 +238,11 @@ SET
     description = COALESCE($9, description),
     achievements = COALESCE($10, achievements),
     start_date = COALESCE($11, start_date),
-    end_date = COALESCE($12, end_date),
-    is_current = COALESCE($13, is_current),
+    end_date = CASE
+        WHEN $12 = TRUE THEN NULL
+        ELSE COALESCE($13, end_date)
+    END,
+    is_current = COALESCE($12, is_current),
     updated_at = NOW()
 WHERE id = $1 AND user_id = $2
 RETURNING id, user_id, company_name, company_url, role_title, exp_location, industry, employment_type, description, achievements, start_date, end_date, is_current, created_at, updated_at
@@ -257,8 +260,8 @@ type UpdateUserExperienceParams struct {
 	Description    *string     `json:"description"`
 	Achievements   []string    `json:"achievements"`
 	StartDate      pgtype.Date `json:"start_date"`
+	IsCurrent      interface{} `json:"is_current"`
 	EndDate        pgtype.Date `json:"end_date"`
-	IsCurrent      *bool       `json:"is_current"`
 }
 
 func (q *Queries) UpdateUserExperience(ctx context.Context, arg UpdateUserExperienceParams) (UserExperience, error) {
@@ -274,8 +277,8 @@ func (q *Queries) UpdateUserExperience(ctx context.Context, arg UpdateUserExperi
 		arg.Description,
 		arg.Achievements,
 		arg.StartDate,
-		arg.EndDate,
 		arg.IsCurrent,
+		arg.EndDate,
 	)
 	var i UserExperience
 	err := row.Scan(
