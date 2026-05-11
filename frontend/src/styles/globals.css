@@ -107,6 +107,7 @@
   flex-shrink: 0;
 }
 
+/* Buttons */
 .button {
   font-family: var(--font-base);
   border: 1px solid transparent;
@@ -130,6 +131,22 @@
   background: var(--color-accent-soft);
   color: var(--color-text);
   border: 1px solid var(--color-border);
+}
+
+.button-edit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-3);
+  white-space: nowrap;
+}
+
+.button-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-3);
+  white-space: nowrap;
 }
 
 .button:hover {

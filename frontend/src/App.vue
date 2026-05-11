@@ -50,7 +50,7 @@ async function logout() {
               alt="User avatar"
               class="avatar"
             />
-            <span class="user-name">{{ authStore.user.name }}</span>
+            <span class="user-name">{{ authStore.user.full_name}}</span>
           </RouterLink>
           <button class="button button-secondary" @click="logout">Logout</button>
         </div>

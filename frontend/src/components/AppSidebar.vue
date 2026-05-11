@@ -60,7 +60,7 @@ const authStore = useAuthStore()
         <div class="nav-section-title">Personal</div>
         <RouterLink :to="'/@' + authStore.user?.username" class="nav-item">
           <User class="nav-icon" />
-          Account
+          Profile
         </RouterLink>
       </div>
 
