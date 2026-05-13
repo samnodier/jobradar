@@ -426,7 +426,7 @@ function handleClose() {
 .overlay {
   position: fixed;
   inset: 0;
-  background: oklch(0 0 0 / 0.45);
+  background: rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: flex-start;
   justify-content: flex-end;
