@@ -25,10 +25,9 @@ const typedEmail = ref('')
 const deleteError = ref('')
 const isFormOpen = ref(false)
 const selectedExperience = ref<Experience | undefined>(undefined)
-const selectedExperienceID = ref<string | null>(null)
-const detailOpen = computed(() => !!selectedExperienceID.value)
+const detailOpen = computed(() => isFormOpen.value)
 function closeDetail() {
-  selectedExperienceID.value = null
+  isFormOpen.value = false
 }
 
 const preferences = ref({
@@ -61,9 +60,9 @@ function openEditForm(exp: Experience) {
   isFormOpen.value = true
 }
 
-async function handleSaveExperience(payload: Experience) {
+async function handleSaveExperience(payload: Omit<Experience, 'id' | 'user_id' | 'created_at' | 'updated_at'>) {
   if (selectedExperience.value) {
-    await profileStore.updateExperience(selectedExperience.value.id, payload)
+    await profileStore.updateExperience(selectedExperience.value.id, payload as Partial<Experience>)
   } else {
     await profileStore.addExperience(payload)
   }

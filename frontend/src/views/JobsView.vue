@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
 import AppSidebar from '@/components/AppSidebar.vue'
 import JobRow from '@/components/JobRow.vue'
+import { ArrowLeft } from '@lucide/vue'
 import JobDetail from '@/components/JobDetail.vue'
 import type { Job } from '@/types/job'
 

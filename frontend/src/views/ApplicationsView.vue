@@ -2,7 +2,7 @@
 import ApplicationDetail from '@/components/ApplicationDetail.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import type { Application } from '@/types/application'
-import { Clipboard, Plus } from '@lucide/vue'
+import { ArrowLeft, Clipboard, Plus } from '@lucide/vue'
 import { computed, onMounted, ref } from 'vue'
 import { statusLabels } from '@/constants/applicationStatus'
 import { statusOrder } from '@/constants/applicationStatus'
