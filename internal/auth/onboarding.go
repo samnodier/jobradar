@@ -103,7 +103,7 @@ func (h *Handler) HandleOnboardingComplete(w http.ResponseWriter, r *http.Reques
 	// Attempt to create the local user
 	user, err := qtx.CreateUser(ctx, database.CreateUserParams{
 		Email:     req.Email,
-		Username:  convert.ToNullString(req.Username),
+		Username:  req.Username,
 		FullName:  convert.ToNullString(req.Name),
 		AvatarUrl: convert.ToNullString(pending.AvatarURL),
 	})
@@ -148,5 +148,7 @@ func (h *Handler) HandleOnboardingComplete(w http.ResponseWriter, r *http.Reques
 	}
 
 	h.setSessionCookie(w, sessionID)
-	http.Redirect(w, r, h.cfg.AppBaseURL, http.StatusFound)
+	httpx.RespondJSON(w, http.StatusOK, map[string]any{
+		"redirect_to": h.cfg.AppBaseURL,
+	})
 }

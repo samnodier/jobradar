@@ -32,15 +32,22 @@ const formatDateForInput = (date: string | null | undefined) => {
   return new Date(date).toISOString().split('T')[0]
 }
 
-async function updateApplication(payload: Partial<Application>) {
+async function updateApplication(
+  payload: Partial<Application> & {
+    clear_applied_at?: boolean
+    clear_follow_up_at?: boolean
+  },
+) {
   isSaving.value = true
 
   // Map frontend field names to backend JSON names (pointers)
   const body = {
-    application_notes: payload.notes,
+    notes: payload.notes,
     application_status: payload.application_status,
     applied_at: payload.applied_at,
+    clear_applied_at: payload.clear_applied_at ?? false,
     follow_up_at: payload.follow_up_at,
+    clear_follow_up_at: payload.clear_follow_up_at ?? false,
   }
 
   try {
@@ -93,7 +100,11 @@ function handleStatusChange(event: Event) {
 
 function handleDateChange(field: 'applied_at' | 'follow_up_at', event: Event) {
   const val = (event.target as HTMLInputElement).value
-  updateApplication({ [field]: val ? new Date(val).toISOString() : null })
+  if (val) {
+    updateApplication({ [field]: new Date(val).toISOString() })
+  } else {
+    updateApplication({ [field]: null, [`clear_${field}`]: true })
+  }
 }
 
 function formatDate(date: string | null | undefined): string {

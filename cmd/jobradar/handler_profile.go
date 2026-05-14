@@ -15,33 +15,35 @@ import (
 )
 
 type experienceCreateRequest struct {
-	UserID         uuid.UUID `json:"user_id"`
-	CompanyName    string    `json:"company_name"`
-	CompanyURL     *string   `json:"company_url"`
-	RoleTitle      string    `json:"role_title"`
-	ExpLocation    *string   `json:"exp_location"`
-	Industry       *string   `json:"industry"`
-	EmploymentType *string   `json:"employment_type"`
-	Description    *string   `json:"description"`
-	Achievements   []string  `json:"achievements"`
-	StartDate      string    `json:"start_date"`
-	EndDate        *string   `json:"end_date"`
-	IsCurrent      *bool     `json:"is_current"`
+	UserID         uuid.UUID               `json:"user_id"`
+	CompanyName    string                  `json:"company_name"`
+	CompanyURL     *string                 `json:"company_url"`
+	RoleTitle      string                  `json:"role_title"`
+	ExpLocation    *string                 `json:"exp_location"`
+	Industry       *string                 `json:"industry"`
+	EmploymentType *string                 `json:"employment_type"`
+	Description    *string                 `json:"description"`
+	Achievements   []string                `json:"achievements"`
+	StartDate      string                  `json:"start_date"`
+	EndDate        *string                 `json:"end_date"`
+	IsCurrent      *bool                   `json:"is_current"`
+	Skills         []struct{ Name string } `json:"skills"`
 }
 
 type experienceUpdateRequest struct {
-	UserID         uuid.UUID `json:"user_id"`
-	CompanyName    *string   `json:"company_name"`
-	CompanyURL     *string   `json:"company_url"`
-	RoleTitle      *string   `json:"role_title"`
-	ExpLocation    *string   `json:"exp_location"`
-	Industry       *string   `json:"industry"`
-	EmploymentType *string   `json:"employment_type"`
-	Description    *string   `json:"description"`
-	Achievements   []string  `json:"achievements"`
-	StartDate      *string   `json:"start_date"`
-	EndDate        *string   `json:"end_date"`
-	IsCurrent      *bool     `json:"is_current"`
+	UserID         uuid.UUID               `json:"user_id"`
+	CompanyName    *string                 `json:"company_name"`
+	CompanyURL     *string                 `json:"company_url"`
+	RoleTitle      *string                 `json:"role_title"`
+	ExpLocation    *string                 `json:"exp_location"`
+	Industry       *string                 `json:"industry"`
+	EmploymentType *string                 `json:"employment_type"`
+	Description    *string                 `json:"description"`
+	Achievements   []string                `json:"achievements"`
+	StartDate      *string                 `json:"start_date"`
+	EndDate        *string                 `json:"end_date"`
+	IsCurrent      *bool                   `json:"is_current"`
+	Skills         []struct{ Name string } `json:"skills"`
 }
 
 func (cfg *apiConfig) handlerCreateExperience(w http.ResponseWriter, r *http.Request) {
@@ -108,6 +110,39 @@ func (cfg *apiConfig) handlerCreateExperience(w http.ResponseWriter, r *http.Req
 
 		httpx.RespondError(w, http.StatusInternalServerError, "failed to create experience")
 		return
+	}
+
+	// After creating the experience, attach the skills
+	for _, skill := range req.Skills {
+		skillID, err := cfg.db.GetOrCreateSkill(r.Context(), skill.Name)
+		if err != nil {
+			continue
+		}
+		_, err = cfg.db.AddSkillToExperience(r.Context(), database.AddSkillToExperienceParams{
+			ExperienceID: experience.ID,
+			SkillID:      skillID,
+		})
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				httpx.RespondError(w, http.StatusNotFound, "experience or skill not found or unauthorized")
+				return
+			}
+
+			// check for postgres-specific errors
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) {
+				switch pgErr.Code {
+				case "23505":
+					continue // Skill already linked
+				case "23503":
+					httpx.RespondError(w, http.StatusBadRequest, "user account not found")
+					return
+				}
+			}
+
+			httpx.RespondError(w, http.StatusInternalServerError, "failed to update experience and skill union")
+			return
+		}
 	}
 
 	httpx.RespondJSON(w, http.StatusCreated, experience)
@@ -193,6 +228,45 @@ func (cfg *apiConfig) handlerUpdateExperience(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// Sync skills: wipe old links, re-attach from payload
+	if err := cfg.db.DeleteSkillsByExperienceID(r.Context(), experience.ID); err != nil {
+		httpx.RespondError(w, http.StatusInternalServerError, "failed to sync skills")
+		return
+	}
+	// After creating the experience, attach the skills
+	for _, skill := range req.Skills {
+		skillID, err := cfg.db.GetOrCreateSkill(r.Context(), skill.Name)
+		if err != nil {
+			continue
+		}
+		_, err = cfg.db.AddSkillToExperience(r.Context(), database.AddSkillToExperienceParams{
+			ExperienceID: experience.ID,
+			SkillID:      skillID,
+		})
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				httpx.RespondError(w, http.StatusNotFound, "experience or skill not found or unauthorized")
+				return
+			}
+
+			// check for postgres-specific errors
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) {
+				switch pgErr.Code {
+				case "23505":
+					httpx.RespondError(w, http.StatusConflict, "an experience and skill with the details already exists")
+					return
+				case "23503":
+					httpx.RespondError(w, http.StatusBadRequest, "user account not found")
+					return
+				}
+			}
+
+			httpx.RespondError(w, http.StatusInternalServerError, "failed to update experience and skill union")
+			return
+		}
+	}
+
 	httpx.RespondJSON(w, http.StatusOK, experience)
 }
 
@@ -203,17 +277,16 @@ func (cfg *apiConfig) handlerGetExperiences(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	experience, err := cfg.db.GetExperiencesByUserID(r.Context(), userID)
+	experiences, err := cfg.db.GetExperiencesByUserID(r.Context(), userID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			httpx.RespondError(w, http.StatusNotFound, "experience not found")
-			return
-		}
 		httpx.RespondError(w, http.StatusInternalServerError, "failed to retrieve experience")
 		return
 	}
+	if experiences == nil {
+		experiences = []database.GetExperiencesByUserIDRow{}
+	}
 
-	httpx.RespondJSON(w, http.StatusOK, experience)
+	httpx.RespondJSON(w, http.StatusOK, experiences)
 }
 
 func (cfg *apiConfig) handlerDeleteExperience(w http.ResponseWriter, r *http.Request) {

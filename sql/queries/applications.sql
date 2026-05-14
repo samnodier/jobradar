@@ -63,8 +63,17 @@ SET
     application_status = COALESCE(
         sqlc.narg('application_status'), application_status
     ),
-    applied_at = COALESCE(sqlc.narg('applied_at'), applied_at),
-    follow_up_at = COALESCE(sqlc.narg('follow_up_at'), follow_up_at),
+    applied_at = CASE
+        WHEN sqlc.narg('clear_applied_at')::boolean = true THEN NULL
+        WHEN sqlc.narg('applied_at') IS NOT NULL THEN sqlc.narg('applied_at')
+        ELSE applied_at
+    END,
+    follow_up_at = CASE
+        WHEN sqlc.narg('clear_follow_up_at')::boolean = true THEN NULL
+        WHEN sqlc.narg('follow_up_at') IS NOT NULL THEN sqlc.narg('follow_up_at')
+        ELSE follow_up_at
+    
+    END,
     last_status_changed_at = CASE
         WHEN
             sqlc.narg('application_status') IS NOT NULL

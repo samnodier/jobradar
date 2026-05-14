@@ -95,7 +95,7 @@ type Skill struct {
 type User struct {
 	ID                uuid.UUID  `json:"id"`
 	Email             string     `json:"email"`
-	Username          *string    `json:"username"`
+	Username          string     `json:"username"`
 	FullName          *string    `json:"full_name"`
 	AvatarUrl         *string    `json:"avatar_url"`
 	Phone             *string    `json:"phone"`

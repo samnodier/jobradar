@@ -136,10 +136,12 @@ func (cfg *apiConfig) handlerApplicationUpdate(w http.ResponseWriter, r *http.Re
 
 	// Decode the JSON body
 	type applicationUpdateRequest struct {
-		ApplicationNotes  *string    `json:"application_notes"`
+		ApplicationNotes  *string    `json:"notes"`
 		ApplicationStatus *string    `json:"application_status"`
 		AppliedAt         *time.Time `json:"applied_at"`
+		ClearAppliedAt    bool       `json:"clear_applied_at"`
 		FollowUpAt        *time.Time `json:"follow_up_at"`
+		ClearFollowUpAt   bool       `json:"clear_follow_up_at"`
 	}
 
 	var req applicationUpdateRequest
@@ -154,9 +156,12 @@ func (cfg *apiConfig) handlerApplicationUpdate(w http.ResponseWriter, r *http.Re
 		UserID:            userID,
 		Notes:             req.ApplicationNotes,
 		ApplicationStatus: req.ApplicationStatus,
+		ClearAppliedAt:    &req.ClearAppliedAt,
 		AppliedAt:         req.AppliedAt,
+		ClearFollowUpAt:   &req.ClearFollowUpAt,
 		FollowUpAt:        req.FollowUpAt,
 	})
+
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			httpx.RespondError(w, http.StatusNotFound, "application not found")

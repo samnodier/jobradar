@@ -108,6 +108,16 @@ func (q *Queries) CreateUserExperience(ctx context.Context, arg CreateUserExperi
 	return i, err
 }
 
+const deleteSkillsByExperienceID = `-- name: DeleteSkillsByExperienceID :exec
+DELETE FROM experience_skills
+WHERE experience_id = $1
+`
+
+func (q *Queries) DeleteSkillsByExperienceID(ctx context.Context, experienceID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteSkillsByExperienceID, experienceID)
+	return err
+}
+
 const deleteUserExperience = `-- name: DeleteUserExperience :exec
 DELETE FROM user_experiences
 WHERE id = $1 AND user_id = $2

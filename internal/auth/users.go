@@ -11,11 +11,25 @@ import (
 
 // UserResponse for the frontend communication
 type UserResponse struct {
-	ID        string `json:"id"`
-	Username  string `json:"username"`
-	Email     string `json:"email"`
-	Name      string `json:"name"`
-	AvatarURL string `json:"avatar_url"`
+	ID                string `json:"id"`
+	Username          string `json:"username"`
+	Email             string `json:"email"`
+	FullName          string `json:"full_name"`
+	AvatarURL         string `json:"avatar_url"`
+	Phone             string `json:"phone"`
+	UserLocation      string `json:"user_location"`
+	WebsiteURL        string `json:"website_url"`
+	LinkedInURL       string `json:"linkedin_url"`
+	GitHubURL         string `json:"github_url"`
+	Headline          string `json:"headline"`
+	UserSummary       string `json:"user_summary"`
+	Availability      string `json:"availability"`
+	MinSalary         int32  `json:"min_salary"`
+	MaxSalary         int32  `json:"max_salary"`
+	SalaryCurrency    string `json:"salary_currency"`
+	YearsOfExperience int32  `json:"years_of_experience"`
+	IsAdmin           bool   `json:"is_admin"`
+	CreatedAt         string `json:"created_at"`
 }
 
 func (h *Handler) HandlerUserGet(w http.ResponseWriter, r *http.Request) {
@@ -39,11 +53,25 @@ func (h *Handler) HandlerUserGet(w http.ResponseWriter, r *http.Request) {
 
 	// 3. Map the database model to our UserResponse
 	resp := UserResponse{
-		ID:        user.ID.String(),
-		Email:     user.Email,
-		Username:  convert.FromNullString(user.Username),
-		Name:      convert.FromNullString(user.FullName),
-		AvatarURL: convert.FromNullString(user.AvatarUrl),
+		ID:                user.ID.String(),
+		Email:             user.Email,
+		Username:          user.Username,
+		FullName:          convert.FromNullString(user.FullName),
+		AvatarURL:         convert.FromNullString(user.AvatarUrl),
+		Phone:             convert.FromNullString(user.Phone),
+		UserLocation:      convert.FromNullString(user.UserLocation),
+		WebsiteURL:        convert.FromNullString(user.WebsiteUrl),
+		LinkedInURL:       convert.FromNullString(user.LinkedinUrl),
+		GitHubURL:         convert.FromNullString(user.GithubUrl),
+		Headline:          convert.FromNullString(user.Headline),
+		UserSummary:       convert.FromNullString(user.UserSummary),
+		Availability:      convert.FromNullString(user.Availability),
+		MinSalary:         convert.FromNullInt32(user.MinSalary),
+		MaxSalary:         convert.FromNullInt32(user.MaxSalary),
+		SalaryCurrency:    convert.FromNullString(user.SalaryCurrency),
+		YearsOfExperience: convert.FromNullInt32(user.YearsOfExperience),
+		IsAdmin:           user.IsAdmin != nil && *user.IsAdmin,
+		CreatedAt:         convert.FromNullTime(user.CreatedAt),
 	}
 
 	httpx.RespondJSON(w, http.StatusOK, resp)

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import AppSidebar from '@/components/AppSidebar.vue'
-import { Plus, SquarePen, ArrowLeft } from '@lucide/vue'
+import { Plus, SquarePen } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { useProfileStore } from '@/stores/profile'
@@ -25,10 +25,6 @@ const typedEmail = ref('')
 const deleteError = ref('')
 const isFormOpen = ref(false)
 const selectedExperience = ref<Experience | undefined>(undefined)
-const detailOpen = computed(() => isFormOpen.value)
-function closeDetail() {
-  isFormOpen.value = false
-}
 
 const preferences = ref({
   jobTypes: ['Full-time', 'Contract'],
@@ -60,7 +56,9 @@ function openEditForm(exp: Experience) {
   isFormOpen.value = true
 }
 
-async function handleSaveExperience(payload: Omit<Experience, 'id' | 'user_id' | 'created_at' | 'updated_at'>) {
+async function handleSaveExperience(
+  payload: Omit<Experience, 'id' | 'user_id' | 'created_at' | 'updated_at'>,
+) {
   if (selectedExperience.value) {
     await profileStore.updateExperience(selectedExperience.value.id, payload as Partial<Experience>)
   } else {
@@ -171,10 +169,13 @@ onMounted(async () => {
               </div>
             </div>
 
-            <button class="button button-primary button-edit">
-              <SquarePen :size="16" />
-              Edit Profile
-            </button>
+            <div class="profile-actions">
+              <button class="button button-primary button-edit">
+                <SquarePen :size="16" />
+                Edit Profile
+              </button>
+              <button class="button button-secondary">Export To PDF</button>
+            </div>
           </div>
 
           <div class="profile-stats">
@@ -477,20 +478,12 @@ onMounted(async () => {
 
     <Teleport to="body">
       <Transition name="detail-slide">
-        <div v-if="detailOpen" class="detail-overlay" @click.self="closeDetail">
-          <div class="detail-drawer">
-            <div class="detail-back" @click="closeDetail">
-              <ArrowLeft />
-              Back to jobs
-            </div>
-            <ExperienceForm
-              :open="isFormOpen"
-              :experience="selectedExperience"
-              @close="isFormOpen = false"
-              @save="handleSaveExperience"
-            />
-          </div>
-        </div>
+        <ExperienceForm
+          :open="isFormOpen"
+          :experience="selectedExperience"
+          @close="isFormOpen = false"
+          @save="handleSaveExperience"
+        />
       </Transition>
     </Teleport>
   </div>
@@ -620,6 +613,14 @@ onMounted(async () => {
   grid-template-columns: repeat(3, 1fr);
   gap: var(--spacing-4);
   margin-bottom: var(--spacing-2);
+}
+
+.profile-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-3);
 }
 
 .stat-item {
