@@ -253,8 +253,17 @@ SET
     application_status = COALESCE(
         $4, application_status
     ),
-    applied_at = COALESCE($5, applied_at),
-    follow_up_at = COALESCE($6, follow_up_at),
+    applied_at = CASE
+        WHEN $5::boolean = true THEN NULL
+        WHEN $6 IS NOT NULL THEN $6
+        ELSE applied_at
+    END,
+    follow_up_at = CASE
+        WHEN $7::boolean = true THEN NULL
+        WHEN $8 IS NOT NULL THEN $8
+        ELSE follow_up_at
+    
+    END,
     last_status_changed_at = CASE
         WHEN
             $4 IS NOT NULL
@@ -271,7 +280,9 @@ type UpdateApplicationParams struct {
 	UserID            uuid.UUID  `json:"user_id"`
 	Notes             *string    `json:"notes"`
 	ApplicationStatus *string    `json:"application_status"`
+	ClearAppliedAt    *bool      `json:"clear_applied_at"`
 	AppliedAt         *time.Time `json:"applied_at"`
+	ClearFollowUpAt   *bool      `json:"clear_follow_up_at"`
 	FollowUpAt        *time.Time `json:"follow_up_at"`
 }
 
@@ -281,7 +292,9 @@ func (q *Queries) UpdateApplication(ctx context.Context, arg UpdateApplicationPa
 		arg.UserID,
 		arg.Notes,
 		arg.ApplicationStatus,
+		arg.ClearAppliedAt,
 		arg.AppliedAt,
+		arg.ClearFollowUpAt,
 		arg.FollowUpAt,
 	)
 	var i Application

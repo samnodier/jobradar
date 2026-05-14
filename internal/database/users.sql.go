@@ -7,7 +7,6 @@ package database
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -23,7 +22,7 @@ RETURNING id, email, username, full_name, avatar_url, phone, user_location, webs
 
 type CreateUserParams struct {
 	Email     string  `json:"email"`
-	Username  *string `json:"username"`
+	Username  string  `json:"username"`
 	FullName  *string `json:"full_name"`
 	AvatarUrl *string `json:"avatar_url"`
 }
@@ -78,35 +77,46 @@ SELECT
     username,
     full_name,
     avatar_url,
+    phone,
+    user_location,
+    website_url,
+    linkedin_url,
+    github_url,
+    headline,
+    user_summary,
+    availability,
+    min_salary,
+    max_salary,
+    salary_currency,
+    years_of_experience,
     is_admin,
     created_at,
     updated_at
 FROM users
 WHERE id = $1
-ORDER BY id
-LIMIT 1
 `
 
-type GetUserByIDRow struct {
-	ID        uuid.UUID  `json:"id"`
-	Email     string     `json:"email"`
-	Username  *string    `json:"username"`
-	FullName  *string    `json:"full_name"`
-	AvatarUrl *string    `json:"avatar_url"`
-	IsAdmin   *bool      `json:"is_admin"`
-	CreatedAt *time.Time `json:"created_at"`
-	UpdatedAt *time.Time `json:"updated_at"`
-}
-
-func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (GetUserByIDRow, error) {
+func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 	row := q.db.QueryRow(ctx, getUserByID, id)
-	var i GetUserByIDRow
+	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
 		&i.Username,
 		&i.FullName,
 		&i.AvatarUrl,
+		&i.Phone,
+		&i.UserLocation,
+		&i.WebsiteUrl,
+		&i.LinkedinUrl,
+		&i.GithubUrl,
+		&i.Headline,
+		&i.UserSummary,
+		&i.Availability,
+		&i.MinSalary,
+		&i.MaxSalary,
+		&i.SalaryCurrency,
+		&i.YearsOfExperience,
 		&i.IsAdmin,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -121,14 +131,24 @@ SELECT
     u.username,
     u.full_name,
     u.avatar_url,
+    u.phone,
+    u.user_location,
+    u.website_url,
+    u.linkedin_url,
+    u.github_url,
+    u.headline,
+    u.user_summary,
+    u.availability,
+    u.min_salary,
+    u.max_salary,
+    u.salary_currency,
+    u.years_of_experience,
     u.is_admin,
     u.created_at,
     u.updated_at
 FROM users AS u
 INNER JOIN user_accounts AS ua ON u.id = ua.user_id
 WHERE ua.auth_provider = $1 AND ua.auth_provider_id = $2
-ORDER BY u.id
-LIMIT 1
 `
 
 type GetUserByProviderIdentityParams struct {
@@ -136,26 +156,114 @@ type GetUserByProviderIdentityParams struct {
 	AuthProviderID string `json:"auth_provider_id"`
 }
 
-type GetUserByProviderIdentityRow struct {
-	ID        uuid.UUID  `json:"id"`
-	Email     string     `json:"email"`
-	Username  *string    `json:"username"`
-	FullName  *string    `json:"full_name"`
-	AvatarUrl *string    `json:"avatar_url"`
-	IsAdmin   *bool      `json:"is_admin"`
-	CreatedAt *time.Time `json:"created_at"`
-	UpdatedAt *time.Time `json:"updated_at"`
-}
-
-func (q *Queries) GetUserByProviderIdentity(ctx context.Context, arg GetUserByProviderIdentityParams) (GetUserByProviderIdentityRow, error) {
+func (q *Queries) GetUserByProviderIdentity(ctx context.Context, arg GetUserByProviderIdentityParams) (User, error) {
 	row := q.db.QueryRow(ctx, getUserByProviderIdentity, arg.AuthProvider, arg.AuthProviderID)
-	var i GetUserByProviderIdentityRow
+	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
 		&i.Username,
 		&i.FullName,
 		&i.AvatarUrl,
+		&i.Phone,
+		&i.UserLocation,
+		&i.WebsiteUrl,
+		&i.LinkedinUrl,
+		&i.GithubUrl,
+		&i.Headline,
+		&i.UserSummary,
+		&i.Availability,
+		&i.MinSalary,
+		&i.MaxSalary,
+		&i.SalaryCurrency,
+		&i.YearsOfExperience,
+		&i.IsAdmin,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateUser = `-- name: UpdateUser :one
+UPDATE users
+SET
+    username = COALESCE($2, username),
+    full_name = COALESCE($3, full_name),
+    phone = COALESCE($4, phone),
+    user_location = COALESCE($5, user_location),
+    website_url = COALESCE($6, website_url),
+    linkedin_url = COALESCE($7, linkedin_url),
+    github_url = COALESCE($8, github_url),
+    -- Identity
+    headline = COALESCE($9, headline),
+    user_summary = COALESCE($10, user_summary),
+    -- Career Preferences
+    availability = COALESCE($11, availability),
+    min_salary = COALESCE($12, min_salary),
+    max_salary = COALESCE($13, max_salary),
+    salary_currency = COALESCE($14, salary_currency),
+    years_of_experience
+    = COALESCE($15, years_of_experience),
+    updated_at = NOW()
+WHERE id = $1
+RETURNING id, email, username, full_name, avatar_url, phone, user_location, website_url, linkedin_url, github_url, headline, user_summary, availability, min_salary, max_salary, salary_currency, years_of_experience, is_admin, created_at, updated_at
+`
+
+type UpdateUserParams struct {
+	ID                uuid.UUID `json:"id"`
+	Username          string    `json:"username"`
+	FullName          *string   `json:"full_name"`
+	Phone             *string   `json:"phone"`
+	UserLocation      *string   `json:"user_location"`
+	WebsiteUrl        *string   `json:"website_url"`
+	LinkedinUrl       *string   `json:"linkedin_url"`
+	GithubUrl         *string   `json:"github_url"`
+	Headline          *string   `json:"headline"`
+	UserSummary       *string   `json:"user_summary"`
+	Availability      *string   `json:"availability"`
+	MinSalary         *int32    `json:"min_salary"`
+	MaxSalary         *int32    `json:"max_salary"`
+	SalaryCurrency    *string   `json:"salary_currency"`
+	YearsOfExperience *int32    `json:"years_of_experience"`
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUser,
+		arg.ID,
+		arg.Username,
+		arg.FullName,
+		arg.Phone,
+		arg.UserLocation,
+		arg.WebsiteUrl,
+		arg.LinkedinUrl,
+		arg.GithubUrl,
+		arg.Headline,
+		arg.UserSummary,
+		arg.Availability,
+		arg.MinSalary,
+		arg.MaxSalary,
+		arg.SalaryCurrency,
+		arg.YearsOfExperience,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Username,
+		&i.FullName,
+		&i.AvatarUrl,
+		&i.Phone,
+		&i.UserLocation,
+		&i.WebsiteUrl,
+		&i.LinkedinUrl,
+		&i.GithubUrl,
+		&i.Headline,
+		&i.UserSummary,
+		&i.Availability,
+		&i.MinSalary,
+		&i.MaxSalary,
+		&i.SalaryCurrency,
+		&i.YearsOfExperience,
 		&i.IsAdmin,
 		&i.CreatedAt,
 		&i.UpdatedAt,

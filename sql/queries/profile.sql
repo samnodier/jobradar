@@ -85,3 +85,7 @@ ON CONFLICT (name)
 -- This is a "fake" update just to get the id back
 DO UPDATE SET name = excluded.name
 RETURNING id;
+
+-- name: DeleteSkillsByExperienceID :exec
+DELETE FROM experience_skills
+WHERE experience_id = $1;

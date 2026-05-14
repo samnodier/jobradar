@@ -198,7 +198,7 @@ function handleClose() {
     aria-modal="true"
     :aria-label="isEditing ? 'Edit experience' : 'Add experience'"
   >
-    <div v-if="open" class="panel">
+    <div class="panel">
       <!-- Header -->
       <div class="panel-header">
         <h2 class="panel-title">{{ isEditing ? 'Edit experience' : 'Add experience' }}</h2>
@@ -293,7 +293,13 @@ function handleClose() {
             <label class="field-label" for="start_date">
               Start date <span class="required">*</span>
             </label>
-            <input id="start_date" v-model="form.start_date" type="month" class="form-input" />
+            <input
+              id="start_date"
+              v-model="form.start_date"
+              type="month"
+              class="form-input"
+              :max="new Date().toISOString().substring(0, 7)"
+            />
             <p v-if="errors.start_date" class="field-error">{{ errors.start_date }}</p>
           </div>
 
@@ -305,6 +311,8 @@ function handleClose() {
               type="month"
               class="form-input"
               :disabled="endDateDisabled"
+              :min="form.start_date || undefined"
+              :max="form.is_current ? undefined : new Date().toISOString().substring(0, 7)"
             />
             <p v-if="errors.end_date" class="field-error">{{ errors.end_date }}</p>
           </div>
