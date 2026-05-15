@@ -119,6 +119,8 @@ func main() {
 			r.Post("/saved_jobs", cfg.handlerJobSave)
 			r.Delete("/saved_jobs", cfg.handlerJobUnsave)
 
+			r.Get("/users/me", cfg.handlerUserGet)
+			r.Patch("/users/me", cfg.handlerUserUpdate)
 			r.Delete("/users/me", cfg.HandleDeleteAccount)
 		})
 	})

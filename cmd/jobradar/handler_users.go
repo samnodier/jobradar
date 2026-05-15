@@ -7,6 +7,12 @@ import (
 	"github.com/samnodier/jobradar/internal/httpx"
 )
 
+func (cfg *apiConfig) handlerUserGet(w http.ResponseWriter, r *http.Request) {
+}
+
+func (cfg *apiConfig) handlerUserUpdate(w http.ResponseWriter, r *http.Request) {
+}
+
 func (cfg *apiConfig) HandleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 	// 1. Extract session from the context (validated by @RequireAuth)
 	session, ok := auth.SessionFromContext(r.Context())
@@ -44,7 +50,7 @@ func (cfg *apiConfig) HandleDeleteAccount(w http.ResponseWriter, r *http.Request
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	// Respond with success	
+	// Respond with success
 	httpx.RespondJSON(w, http.StatusOK, map[string]string{
 		"message": "account deleted successfully",
 	})
