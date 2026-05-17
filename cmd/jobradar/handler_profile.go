@@ -174,6 +174,13 @@ func (cfg *apiConfig) handlerUpdateExperience(w http.ResponseWriter, r *http.Req
 	if req.StartDate != nil {
 		startDateStr = *req.StartDate
 	}
+
+	// If is_current switched off, end_date must be provided
+	if req.IsCurrent != nil && !*req.IsCurrent && (req.EndDate == nil || *req.EndDate == "") {
+		httpx.RespondError(w, http.StatusBadRequest, "end_date is required and is_current is false")
+		return
+	}
+
 	startDate, err := convert.ToDateOptional(startDateStr)
 	if err != nil {
 		httpx.RespondError(w, http.StatusBadRequest, "invalid start date: "+err.Error())

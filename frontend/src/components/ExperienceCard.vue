@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Experience } from '@/types/experience'
 import { Pencil, Trash2 } from '@lucide/vue'
+import { computed } from 'vue'
 
 const props = defineProps<{ exp: Experience }>()
 const emit = defineEmits<{
@@ -8,7 +9,7 @@ const emit = defineEmits<{
   (e: 'delete'): void
 }>()
 
-const experience = props.exp
+const experience = computed(() => props.exp)
 
 const formatDate = (dateStr: string | null) => {
   if (!dateStr) return ''
@@ -34,7 +35,11 @@ const formatDate = (dateStr: string | null) => {
         <button class="action-btn edit-btn" @click="emit('edit')" aria-label="Edit experience">
           <Pencil :size="14" />
         </button>
-        <button class="action-btn delete-btn" @click="emit('delete')" aria-label="Delete experience">
+        <button
+          class="action-btn delete-btn"
+          @click="emit('delete')"
+          aria-label="Delete experience"
+        >
           <Trash2 :size="14" />
         </button>
       </div>
