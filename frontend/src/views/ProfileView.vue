@@ -7,7 +7,9 @@ import { useRouter } from 'vue-router'
 import { useProfileStore } from '@/stores/profile'
 import ExperienceCard from '@/components/ExperienceCard.vue'
 import ExperienceForm from '@/components/ExperienceForm.vue'
+import EditProfileForm from '@/components/EditProfileForm.vue'
 import type { Experience } from '@/types/experience'
+import type { User } from '@/types/user'
 import { storeToRefs } from 'pinia'
 
 type ProfileTab = 'overview' | 'experience' | 'preferences' | 'settings'
@@ -23,8 +25,10 @@ const savedCount = ref(12)
 const isDeleteConfirmVisible = ref(false)
 const typedEmail = ref('')
 const deleteError = ref('')
-const isFormOpen = ref(false)
+const isEditExperienceOpen = ref(false)
+const isEditProfileOpen = ref(false)
 const selectedExperience = ref<Experience | undefined>(undefined)
+const profile = ref<User | undefined>(undefined)
 
 const preferences = ref({
   jobTypes: ['Full-time', 'Contract'],
@@ -46,14 +50,19 @@ const tabs: Array<{ key: ProfileTab; label: string }> = [
   { key: 'settings', label: 'Settings' },
 ]
 
-function openAddForm() {
+function openExperienceAddForm() {
   selectedExperience.value = undefined
-  isFormOpen.value = true
+  isEditExperienceOpen.value = true
 }
 
-function openEditForm(exp: Experience) {
+function openExperienceEditForm(exp: Experience) {
   selectedExperience.value = exp
-  isFormOpen.value = true
+  isEditExperienceOpen.value = true
+}
+
+function openProfileEditForm(user: User) {
+  profile.value = user
+  isEditProfileOpen.value = true
 }
 
 async function handleSaveExperience(
@@ -64,7 +73,7 @@ async function handleSaveExperience(
   } else {
     await profileStore.addExperience(payload)
   }
-  isFormOpen.value = false
+  isEditExperienceOpen.value = false
 }
 
 async function handleDeleteExperience(id: string) {
@@ -170,7 +179,10 @@ onMounted(async () => {
             </div>
 
             <div class="profile-actions">
-              <button class="button button-primary button-edit">
+              <button
+                class="button button-primary button-edit"
+                @click="authStore.user && openProfileEditForm(authStore.user)"
+              >
                 <SquarePen :size="16" />
                 Edit Profile
               </button>
@@ -248,7 +260,7 @@ onMounted(async () => {
             <section class="profile-section">
               <div class="section-header">
                 <h2 class="section-heading">Work history</h2>
-                <button class="button button-primary button-add" @click="openAddForm">
+                <button class="button button-primary button-add" @click="openExperienceAddForm">
                   <Plus /> Add Experience
                 </button>
               </div>
@@ -258,7 +270,7 @@ onMounted(async () => {
                   v-for="exp in experiences"
                   :key="exp.id"
                   :exp="exp"
-                  @edit="openEditForm(exp)"
+                  @edit="openExperienceEditForm(exp)"
                   @delete="handleDeleteExperience(exp.id)"
                 />
               </div>
@@ -479,11 +491,16 @@ onMounted(async () => {
     <Teleport to="body">
       <Transition name="detail-slide">
         <ExperienceForm
-          :open="isFormOpen"
+          :open="isEditExperienceOpen"
           :experience="selectedExperience"
-          @close="isFormOpen = false"
+          @close="isEditExperienceOpen = false"
           @save="handleSaveExperience"
         />
+      </Transition>
+    </Teleport>
+    <Teleport to="body">
+      <Transition name="detail-slide">
+        <EditProfileForm :open="isEditProfileOpen" @close="isEditProfileOpen = false" />
       </Transition>
     </Teleport>
   </div>

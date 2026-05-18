@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -62,6 +63,16 @@ func (cfg *apiConfig) handlerUserUpdate(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	if req.Username == nil || strings.TrimSpace(*req.Username) == "" {
+		httpx.RespondError(w, http.StatusBadRequest, "username is required")
+		return
+	}
+
+	if req.FullName == nil || strings.TrimSpace(*req.FullName) == "" {
+		httpx.RespondError(w, http.StatusBadRequest, "full name is required")
+		return
+	}
+
 	user, err := cfg.db.UpdateUser(r.Context(), database.UpdateUserParams{
 		ID:                userID,
 		Username:          *req.Username,
@@ -87,7 +98,7 @@ func (cfg *apiConfig) handlerUserUpdate(w http.ResponseWriter, r *http.Request) 
 
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			httpx.RespondError(w, http.StatusBadRequest, "invalid user information")
+			httpx.RespondError(w, http.StatusBadRequest, "username already taken")
 			return
 		}
 

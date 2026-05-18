@@ -3,6 +3,7 @@ import type { User } from '@/types/user'
 
 interface AuthState {
   user: User | null
+  isSaving: boolean
   loading: boolean
   error: string | null
 }
@@ -10,6 +11,7 @@ interface AuthState {
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
     user: null,
+    isSaving: false,
     loading: false,
     error: null,
   }),
@@ -34,6 +36,34 @@ export const useAuthStore = defineStore('auth', {
         this.user = null
       } finally {
         this.loading = false
+      }
+    },
+
+    async editProfile(user: Partial<User>) {
+      this.isSaving = true
+      this.error = null
+
+      try {
+        const response = await fetch(`/api/users/me`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify(user),
+        })
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => null)
+          throw new Error(data?.error ?? 'Failed to updated the user profile')
+        }
+
+        const updatedUser = await response.json()
+        this.user = updatedUser
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to update user profile'
+      } finally {
+        this.isSaving = false
       }
     },
 
