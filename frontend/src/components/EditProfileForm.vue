@@ -1,5 +1,4 @@
 <script setup lang="ts">
-// NEW FILE: src/components/EditProfileForm.vue
 import { ref, watch } from 'vue'
 import { X } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth'
@@ -78,50 +77,30 @@ function validate(): boolean {
 async function handleSubmit() {
   if (!validate()) return
   saving.value = true
-  try {
-    const res = await fetch('/api/users/me', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        ...form.value,
-        // Send null for empty strings on optional fields
-        phone: form.value.phone || null,
-        website_url: form.value.website_url || null,
-        linkedin_url: form.value.linkedin_url || null,
-        github_url: form.value.github_url || null,
-        user_location: form.value.user_location || null,
-        headline: form.value.headline || null,
-        user_summary: form.value.user_summary || null,
-        full_name: form.value.full_name || null,
-        years_of_experience: form.value.years_of_experience
-          ? Number(form.value.years_of_experience)
-          : null,
-        min_salary: form.value.min_salary ? Number(form.value.min_salary) : null,
-        max_salary: form.value.max_salary ? Number(form.value.max_salary) : null,
-      }),
-    })
+  const body = {
+    ...form.value,
+    // Send null for empty strings on optional fields
+    phone: form.value.phone || null,
+    website_url: form.value.website_url || null,
+    linkedin_url: form.value.linkedin_url || null,
+    github_url: form.value.github_url || null,
+    user_location: form.value.user_location || null,
+    headline: form.value.headline || null,
+    user_summary: form.value.user_summary || null,
+    full_name: form.value.full_name || null,
+    years_of_experience: form.value.years_of_experience
+      ? Number(form.value.years_of_experience)
+      : null,
+    min_salary: form.value.min_salary ? Number(form.value.min_salary) : null,
+    max_salary: form.value.max_salary ? Number(form.value.max_salary) : null,
+  }
+  await authStore.editProfile(body)
 
-    if (!res.ok) {
-      const data = await res.json().catch(() => null)
-      if (res.status === 409) {
-        errors.value.username = 'Username already taken.'
-        activeSection.value = 'identity' // Switch back to show the error
-      } else {
-        toast.error(data?.error ?? 'Failed to save profile.')
-      }
-      return
-    }
-
-    const updated = await res.json()
-    // ADDED: update the auth store so ProfileView re-renders immediately
-    authStore.user = updated
-    toast.success('Profile updated.')
+  if (authStore.error) {
+    toast.error(authStore.error)
+  } else {
+    toast.success('User updated successfully')
     emit('close')
-  } catch {
-    toast.error('Something went wrong.')
-  } finally {
-    saving.value = false
   }
 }
 </script>
