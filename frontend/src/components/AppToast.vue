@@ -5,63 +5,28 @@ const { toasts } = useToast()
 
 <template>
   <Teleport to="body">
-    <div class="toast-stack">
-      <TransitionGroup name="toast">
-        <div v-for="toast in toasts" :key="toast.id" class="toast" :class="`toast--${toast.type}`">
+    <div class="fixed bottom-6 right-6 z-999 flex flex-col gap-2 pointer-events-none">
+      <TransitionGroup 
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0 translate-y-2"
+        enter-to-class="opacity-100 translate-y-0"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100 scale-100"
+        leave-to-class="opacity-0 scale-95"
+      >
+        <div 
+          v-for="toast in toasts" 
+          :key="toast.id" 
+          class="px-4 py-3 text-sm font-semibold border shadow-lg max-w-[320px] pointer-events-auto rounded-lg"
+          :class="{
+            'border-green-200 bg-green-50 text-green-800': toast.type === 'success',
+            'border-red-200 bg-red-50 text-red-800': toast.type === 'error',
+            'border-ui-border bg-white text-gray-900': toast.type === 'info' || !toast.type,
+          }"
+        >
           {{ toast.message }}
         </div>
       </TransitionGroup>
     </div>
   </Teleport>
 </template>
-
-<style scoped>
-.toast-stack {
-  position: fixed;
-  bottom: var(--spacing-6);
-  right: var(--spacing-6);
-  z-index: 999;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2);
-  pointer-events: none;
-}
-
-.toast {
-  padding: var(--spacing-3) var(--spacing-4);
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  color: var(--color-text-primary);
-  max-width: 320px;
-}
-
-.toast--success {
-  border-color: #86efac;
-  background: #f0fdf4;
-  color: #15803d;
-}
-.toast--error {
-  border-color: #fca5a5;
-  background: #fef2f2;
-  color: #b91c1c;
-}
-.toast--info {
-  border-color: var(--color-border);
-}
-
-.toast-enter-active,
-.toast-leave-active {
-  transition: all 0.2s ease;
-}
-.toast-enter-from {
-  opacity: 0;
-  transform: translateY(8px);
-}
-.toast-leave-to {
-  opacity: 0;
-  transform: translateY(8px);
-}
-</style>

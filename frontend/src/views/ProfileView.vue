@@ -84,9 +84,7 @@ async function handleDeleteExperience(id: string) {
 
 const removeSkill = (skill: string) => {
   const idx = preferences.value.skills.indexOf(skill)
-  if (idx > -1) {
-    preferences.value.skills.splice(idx, 1)
-  }
+  if (idx > -1) preferences.value.skills.splice(idx, 1)
 }
 
 const addSkill = (e: Event) => {
@@ -99,31 +97,22 @@ const addSkill = (e: Event) => {
 
 function savePreferences() {
   saved.value = true
-  setTimeout(() => {
-    saved.value = false
-  }, 2500)
+  setTimeout(() => { saved.value = false }, 2500)
 }
 
-// Cancel delete to void multi-statement
 function cancelDelete() {
   isDeleteConfirmVisible.value = false
   typedEmail.value = ''
   deleteError.value = ''
 }
 
-// Delete account
 async function deleteAccount() {
   if (typedEmail.value !== authStore.user?.email) {
     deleteError.value = 'Please enter your email address to confirm account deletion.'
     return
   }
-
   try {
-    // Send a delete request to the backend
-    const response = await fetch('/api/users/me', {
-      method: 'DELETE',
-      credentials: 'include',
-    })
+    const response = await fetch('/api/users/me', { method: 'DELETE', credentials: 'include' })
     if (!response.ok) {
       deleteError.value = 'Failed to delete account. Please try again.'
       return
@@ -133,7 +122,6 @@ async function deleteAccount() {
   } catch (err) {
     deleteError.value =
       'Something went wrong. Please try again' + (err instanceof Error ? err.message : String(err))
-    return
   }
 }
 
@@ -141,46 +129,57 @@ onMounted(async () => {
   await profileStore.fetchExperiences()
 })
 </script>
+
 <template>
-  <div class="profile-container">
+  <div class="grid h-full overflow-hidden" style="grid-template-columns: 220px minmax(0, 1fr)">
     <AppSidebar />
 
-    <main class="profile-main">
-      <div class="content-area profile-page">
-        <div class="profile-max-width">
-          <!-- Profile Header -->
-          <div class="profile-header">
-            <div class="profile-info">
-              <div class="profile-avatar">
-                <div class="avatar-shell">
+    <main class="flex flex-col gap-6 bg-white overflow-y-auto min-h-0">
+
+      <!-- Profile Header area -->
+      <div class="w-full mx-auto px-8 py-8">
+        <div class="flex flex-col gap-8 border-b border-gray-200 pb-6">
+
+          <!-- Header -->
+          <div class="flex items-start justify-between gap-6">
+            <div class="flex items-start gap-4 flex-1">
+              <!-- Avatar -->
+              <div class="shrink-0">
+                <div
+                  class="w-20 h-20 rounded-full bg-black/[0.04] border border-gray-200 grid place-items-center overflow-hidden"
+                  style="box-shadow: 0 0 0 4px white, 0 0 0 5px #e5e7eb"
+                >
                   <img
                     v-if="authStore.user?.avatar_url"
                     :src="authStore.user.avatar_url"
                     alt="Profile avatar"
+                    class="w-full h-full object-cover"
                   />
-                  <span v-else class="avatar-fallback">{{
-                    authStore.user?.username?.[0]?.toUpperCase() || 'U'
-                  }}</span>
+                  <span v-else class="text-gray-900 font-bold text-2xl">
+                    {{ authStore.user?.username?.[0]?.toUpperCase() || 'U' }}
+                  </span>
                 </div>
               </div>
 
-              <div class="profile-copy">
-                <h1 class="profile-name">
+              <!-- Copy -->
+              <div>
+                <h1 class="text-2xl font-bold text-gray-900 mb-1 tracking-tight">
                   {{ authStore.user?.full_name || authStore.user?.username }}
                 </h1>
-                <p class="profile-email">
+                <p class="text-sm text-gray-500 mb-3">
                   {{ authStore.user?.email }}
                   <span v-if="authStore.user?.username"> • {{ authStore.user.username }}</span>
                 </p>
-                <p class="profile-bio">
+                <p class="text-base text-gray-500 leading-relaxed">
                   {{ authStore.user?.user_summary || 'Add a summary to your profile.' }}
                 </p>
               </div>
             </div>
 
-            <div class="profile-actions">
+            <!-- Actions -->
+            <div class="flex flex-row items-center justify-center gap-3">
               <button
-                class="button button-primary button-edit"
+                class="button button-primary"
                 @click="authStore.user && openProfileEditForm(authStore.user)"
               >
                 <SquarePen :size="16" />
@@ -190,34 +189,39 @@ onMounted(async () => {
             </div>
           </div>
 
-          <div class="profile-stats">
-            <div class="stat-item">
-              <span class="stat-num">{{ savedCount }}</span>
-              <span class="stat-label">Saved jobs</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-num">4</span>
-              <span class="stat-label">Applications</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-num">{{ experiences?.length || 0 }}</span>
-              <span class="stat-label">Experiences</span>
+          <!-- Stats -->
+          <div class="grid grid-cols-3 gap-4 mb-2">
+            <div
+              v-for="stat in [
+                { num: savedCount, label: 'Saved jobs' },
+                { num: 4, label: 'Applications' },
+                { num: experiences?.length || 0, label: 'Experiences' },
+              ]"
+              :key="stat.label"
+              class="bg-black/[0.04] border border-gray-200 p-4 text-center flex flex-col"
+            >
+              <span class="text-3xl font-bold text-gray-900">{{ stat.num }}</span>
+              <span class="text-sm font-normal text-gray-500 mt-3">{{ stat.label }}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Tabs-->
-      <div class="content-area">
-        <!-- Profile Sections -->
-        <div class="profile-max-width tab-layout">
-          <nav class="tabs" aria-label="Profile sections">
+      <!-- Tabs + content -->
+      <div class="w-full mx-auto px-8 pb-8">
+        <div class="flex flex-col gap-8 border-b border-gray-200 pb-6">
+
+          <!-- Tab nav -->
+          <nav class="flex gap-0 border-b border-gray-200" aria-label="Profile sections">
             <button
               v-for="tab in tabs"
               :key="tab.key"
               type="button"
-              class="tab-btn"
-              :class="{ 'tab-btn--active': activeTab === tab.key }"
+              class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-all cursor-pointer"
+              :class="activeTab === tab.key
+                ? 'border-b-2 text-[var(--color-accent)]'
+                : 'border-transparent text-gray-500 hover:text-gray-900'"
+              :style="activeTab === tab.key ? { borderBottomColor: 'var(--color-accent)' } : {}"
               @click="activeTab = tab.key"
             >
               {{ tab.label }}
@@ -225,47 +229,50 @@ onMounted(async () => {
           </nav>
 
           <!-- Overview -->
-          <section v-if="activeTab === 'overview'" class="tab-panel">
-            <section class="profile-section">
-              <h2 class="section-heading">About</h2>
-              <div class="info-grid">
-                <div class="info-item">
-                  <span class="info-label">Years of experience</span>
-                  <span class="info-value">{{
-                    authStore.user?.years_of_experience ?? 'Not set'
-                  }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">Location</span>
-                  <span class="info-value">{{ authStore.user?.user_location || 'Not set' }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">Headline</span>
-                  <span class="info-value">{{ authStore.user?.headline || 'Not set' }}</span>
+          <section v-if="activeTab === 'overview'" class="flex flex-col">
+            <div class="p-6 border border-gray-200 mb-4 last:mb-0">
+              <h2 class="text-lg font-semibold text-gray-900 mb-4 tracking-tight">About</h2>
+              <div class="flex flex-col gap-4">
+                <div
+                  v-for="item in [
+                    { label: 'Years of experience', value: authStore.user?.years_of_experience ?? 'Not set' },
+                    { label: 'Location', value: authStore.user?.user_location || 'Not set' },
+                    { label: 'Headline', value: authStore.user?.headline || 'Not set' },
+                  ]"
+                  :key="item.label"
+                  class="flex flex-col gap-1"
+                >
+                  <span class="text-xs font-semibold uppercase text-gray-400 tracking-wide">{{ item.label }}</span>
+                  <span class="text-sm text-gray-900">{{ item.value }}</span>
                 </div>
               </div>
-            </section>
+            </div>
 
-            <section class="profile-section">
-              <h2 class="section-heading">Activity</h2>
-              <div class="info-item">
-                <span class="info-label">Saved Jobs</span>
-                <span class="info-value">{{ savedCount }} jobs</span>
+            <div class="p-6 border border-gray-200">
+              <h2 class="text-lg font-semibold text-gray-900 mb-4 tracking-tight">Activity</h2>
+              <div class="flex flex-col gap-1">
+                <span class="text-xs font-semibold uppercase text-gray-400 tracking-wide">Saved Jobs</span>
+                <span class="text-sm text-gray-900">{{ savedCount }} jobs</span>
               </div>
-            </section>
+            </div>
           </section>
 
           <!-- Experience -->
-          <section v-if="activeTab === 'experience'" class="tab-panel">
-            <section class="profile-section">
-              <div class="section-header">
-                <h2 class="section-heading">Work history</h2>
-                <button class="button button-primary button-add" @click="openExperienceAddForm">
+          <section v-if="activeTab === 'experience'" class="flex flex-col">
+            <div class="p-6 border border-gray-200">
+              <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold text-gray-900 tracking-tight">Work history</h2>
+                <button class="button button-primary" @click="openExperienceAddForm">
                   <Plus /> Add Experience
                 </button>
               </div>
-              <p v-if="!experiences?.length" class="empty-state">No experience added yet.</p>
-              <div v-else class="experience-list">
+              <p
+                v-if="!experiences?.length"
+                class="text-center py-8 text-gray-400 border border-dashed border-gray-200"
+              >
+                No experience added yet.
+              </p>
+              <div v-else class="flex flex-col gap-4">
                 <ExperienceCard
                   v-for="exp in experiences"
                   :key="exp.id"
@@ -274,59 +281,46 @@ onMounted(async () => {
                   @delete="handleDeleteExperience(exp.id)"
                 />
               </div>
-            </section>
+            </div>
           </section>
 
-          <!-- Preferences Section -->
-          <section v-if="activeTab === 'preferences'" class="tab-panel">
-            <!-- Header -->
-            <div class="page-header">
-              <h1 class="page-title">Preferences & Settings</h1>
-              <p class="page-subtitle">
+          <!-- Preferences -->
+          <section v-if="activeTab === 'preferences'" class="flex flex-col gap-6">
+            <div class="pb-6 border-b border-gray-200">
+              <h1 class="text-2xl font-bold text-gray-900 mb-2">Preferences & Settings</h1>
+              <p class="text-base text-gray-500">
                 Fine-tune your job recommendations and notification preferences
               </p>
             </div>
 
-            <div class="settings-grid">
-              <section class="settings-section">
-                <h2 class="section-title">Job Preferences</h2>
+            <div class="grid gap-6" style="grid-template-columns: repeat(auto-fit, minmax(400px, 1fr))">
+              <!-- Job Preferences -->
+              <section class="p-6 bg-black/[0.04] border border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Job Preferences</h2>
 
-                <div class="setting-group">
-                  <label class="setting-label">Preferred Job Types</label>
-                  <div class="checkbox-group">
-                    <div class="checkbox-item">
+                <div class="flex flex-col gap-2 mb-4">
+                  <label class="text-sm font-semibold text-gray-900">Preferred Job Types</label>
+                  <div class="flex flex-col gap-2">
+                    <div v-for="type in ['Full-time', 'Part-time', 'Contract']" :key="type" class="flex items-center gap-2">
                       <input
-                        id="ft"
+                        :id="type"
                         v-model="preferences.jobTypes"
                         type="checkbox"
-                        value="Full-time"
+                        :value="type"
+                        class="w-4 h-4 cursor-pointer"
+                        :style="{ accentColor: 'var(--color-accent)' }"
                       />
-                      <label for="ft">Full-time</label>
-                    </div>
-                    <div class="checkbox-item">
-                      <input
-                        id="pt"
-                        v-model="preferences.jobTypes"
-                        type="checkbox"
-                        value="Part-time"
-                      />
-                      <label for="pt">Part-time</label>
-                    </div>
-                    <div class="checkbox-item">
-                      <input
-                        id="contract"
-                        v-model="preferences.jobTypes"
-                        type="checkbox"
-                        value="Contract"
-                      />
-                      <label for="contract">Contract</label>
+                      <label :for="type" class="cursor-pointer text-sm text-gray-900">{{ type }}</label>
                     </div>
                   </div>
                 </div>
 
-                <div class="setting-group">
-                  <label class="setting-label">Work Location</label>
-                  <select v-model="preferences.location" class="form-input">
+                <div class="flex flex-col gap-2 mb-4">
+                  <label class="text-sm font-semibold text-gray-900">Work Location</label>
+                  <select
+                    v-model="preferences.location"
+                    class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
+                  >
                     <option>Remote</option>
                     <option>On-site</option>
                     <option>Hybrid</option>
@@ -334,110 +328,117 @@ onMounted(async () => {
                   </select>
                 </div>
 
-                <div class="setting-group salary-inputs">
-                  <div class="settings-label">
-                    <label class="setting-label">Min Salary</label>
+                <div class="flex gap-4">
+                  <div class="flex flex-col gap-2 flex-1">
+                    <label class="text-sm font-semibold text-gray-900">Min Salary</label>
                     <input
                       v-model="preferences.salaryMin"
                       type="number"
                       placeholder="Min"
-                      class="form-input"
+                      class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
                     />
                   </div>
-                  <div class="settings-label">
-                    <label class="setting-label">Max Salary</label>
+                  <div class="flex flex-col gap-2 flex-1">
+                    <label class="text-sm font-semibold text-gray-900">Max Salary</label>
                     <input
                       v-model="preferences.salaryMax"
                       type="number"
                       placeholder="Max"
-                      class="form-input"
+                      class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
                     />
                   </div>
                 </div>
               </section>
 
               <!-- Company Preferences -->
-              <section class="settings-section">
-                <h2 class="section-title">Company Preferences</h2>
+              <section class="p-6 bg-black/[0.04] border border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Company Preferences</h2>
 
-                <div class="setting-group">
-                  <label class="setting-label">Company Stage</label>
-                  <div class="checkbox-group">
-                    <div class="checkbox-item">
+                <div class="flex flex-col gap-2 mb-4">
+                  <label class="text-sm font-semibold text-gray-900">Company Stage</label>
+                  <div class="flex flex-col gap-2">
+                    <div
+                      v-for="stage in [{ id: 'startup', value: 'Startup', label: 'Startup' }, { id: 'growth', value: 'Growth', label: 'Growth Stage' }, { id: 'enterprise', value: 'Enterprise', label: 'Enterprise' }]"
+                      :key="stage.id"
+                      class="flex items-center gap-2"
+                    >
                       <input
-                        id="startup"
+                        :id="stage.id"
                         v-model="preferences.companyStage"
                         type="checkbox"
-                        value="Startup"
+                        :value="stage.value"
+                        class="w-4 h-4 cursor-pointer"
+                        :style="{ accentColor: 'var(--color-accent)' }"
                       />
-                      <label for="startup">Startup</label>
-                    </div>
-                    <div class="checkbox-item">
-                      <input
-                        id="growth"
-                        v-model="preferences.companyStage"
-                        type="checkbox"
-                        value="Growth"
-                      />
-                      <label for="growth">Growth Stage</label>
-                    </div>
-                    <div class="checkbox-item">
-                      <input
-                        id="enterprise"
-                        v-model="preferences.companyStage"
-                        type="checkbox"
-                        value="Enterprise"
-                      />
-                      <label for="enterprise">Enterprise</label>
+                      <label :for="stage.id" class="cursor-pointer text-sm text-gray-900">{{ stage.label }}</label>
                     </div>
                   </div>
                 </div>
 
-                <div class="setting-group">
-                  <label class="setting-label">Industries of Interest</label>
+                <div class="flex flex-col gap-2 mb-4">
+                  <label class="text-sm font-semibold text-gray-900">Industries of Interest</label>
                   <input
                     v-model="preferences.industries"
                     type="text"
                     placeholder="e.g., SaaS, AI/ML, FinTech"
-                    class="form-input"
+                    class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
                   />
                 </div>
 
-                <div class="setting-group">
-                  <label class="setting-label">Skills</label>
-                  <div class="skills-tags">
-                    <span v-for="skill in preferences.skills" :key="skill" class="skill-tag">
+                <div class="flex flex-col gap-2">
+                  <label class="text-sm font-semibold text-gray-900">Skills</label>
+                  <div class="flex flex-wrap gap-2 mb-2">
+                    <span
+                      v-for="skill in preferences.skills"
+                      :key="skill"
+                      class="flex items-center gap-1 px-2 py-1 bg-white border text-xs font-medium"
+                      :style="{ borderColor: 'var(--color-accent)', color: 'var(--color-accent)' }"
+                    >
                       {{ skill }}
-                      <button type="button" class="tag-close" @click="removeSkill(skill)">x</button>
+                      <button
+                        type="button"
+                        class="bg-transparent border-none cursor-pointer text-sm p-0 leading-none"
+                        :style="{ color: 'var(--color-accent)' }"
+                        @click="removeSkill(skill)"
+                      >x</button>
                     </span>
                   </div>
                   <input
                     type="text"
                     placeholder="Type a skill and press Enter"
-                    class="form-input"
+                    class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
                     @keydown.enter.prevent="addSkill($event)"
                   />
                 </div>
               </section>
             </div>
 
-            <div class="save-section">
+            <div class="text-center p-6 bg-black/[0.04] border border-gray-200">
               <button class="button button-primary" @click="savePreferences">Save Changes</button>
-              <p v-if="saved" class="save-message">Preferences saved successfully</p>
+              <p v-if="saved" class="mt-3 text-sm font-medium text-green-600">
+                Preferences saved successfully
+              </p>
             </div>
           </section>
 
           <!-- Settings -->
-          <section v-if="activeTab === 'settings'" class="tab-panel">
-            <div class="settings-grid">
-              <p>Experiences {{ experiences?.length }}</p>
+          <section v-if="activeTab === 'settings'" class="flex flex-col gap-6">
+            <div class="grid gap-6" style="grid-template-columns: repeat(auto-fit, minmax(400px, 1fr))">
+              <p class="text-sm text-gray-500">Experiences {{ experiences?.length }}</p>
 
-              <section class="settings-section">
-                <h2 class="section-title">Notifications</h2>
-                <div class="setting-group toggle-group">
-                  <label class="setting-label">Job Recommendations</label>
+              <!-- Notifications -->
+              <section class="p-6 bg-black/[0.04] border border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Notifications</h2>
+                <div class="flex flex-row justify-between items-center gap-2 mb-4">
+                  <label class="text-sm font-semibold text-gray-900">Job Recommendations</label>
                   <button
-                    :class="['toggle-btn', { 'toggle-active': preferences.notifyJobs }]"
+                    class="px-2 py-1 border text-xs font-semibold cursor-pointer transition-all min-w-[50px]"
+                    :class="preferences.notifyJobs
+                      ? 'text-white border-transparent'
+                      : 'bg-white border-gray-200 text-gray-500 hover:border-[var(--color-accent)]'"
+                    :style="preferences.notifyJobs
+                      ? { background: 'var(--color-accent)', borderColor: 'var(--color-accent)' }
+                      : {}"
                     @click="preferences.notifyJobs = !preferences.notifyJobs"
                   >
                     {{ preferences.notifyJobs ? 'On' : 'Off' }}
@@ -445,35 +446,36 @@ onMounted(async () => {
                 </div>
               </section>
 
-              <section class="settings-section">
-                <h2 class="section-title">Privacy & Account</h2>
+              <!-- Privacy & Account -->
+              <section class="p-6 bg-black/[0.04] border border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Privacy & Account</h2>
 
-                <div class="setting-group">
+                <div class="flex flex-col gap-2 mb-4">
                   <button class="button button-secondary">Download My Data</button>
                 </div>
 
-                <div class="setting-group" v-if="!isDeleteConfirmVisible">
-                  <button @click="isDeleteConfirmVisible = true" class="button button-secondary">
+                <div v-if="!isDeleteConfirmVisible" class="flex flex-col gap-2">
+                  <button class="button button-secondary" @click="isDeleteConfirmVisible = true">
                     Delete My Account
                   </button>
                 </div>
 
-                <div class="setting-group" v-else>
-                  <p style="font-size: var(--text-xs); color: var(--color-accent)">
+                <div v-else class="flex flex-col gap-2">
+                  <p class="text-xs" :style="{ color: 'var(--color-accent)' }">
                     This action is permanent and cannot be undone.
                   </p>
-                  <label class="setting-label">Type your email to confirm</label>
+                  <label class="text-sm font-semibold text-gray-900">Type your email to confirm</label>
                   <input
                     v-model="typedEmail"
                     type="email"
                     placeholder="your@email.com"
-                    class="form-input"
+                    class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
                   />
-                  <p v-if="deleteError" class="delete-error">{{ deleteError }}</p>
-                  <div class="delete-actions">
+                  <p v-if="deleteError" class="text-xs text-red-600">{{ deleteError }}</p>
+                  <div class="flex gap-2 mt-1">
                     <button class="button button-secondary" @click="cancelDelete">Cancel</button>
                     <button
-                      class="button button-primary"
+                      class="button button-primary disabled:opacity-50"
                       :disabled="typedEmail !== authStore.user?.email"
                       @click="deleteAccount"
                     >
@@ -484,6 +486,7 @@ onMounted(async () => {
               </section>
             </div>
           </section>
+
         </div>
       </div>
     </main>
@@ -507,378 +510,15 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-4);
-}
-
-.button-sm {
-  padding: var(--spacing-1) var(--spacing-3);
-  font-size: var(--text-xs);
-}
-
-.experience-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-4);
-}
-
-.empty-state {
-  text-align: center;
-  padding: var(--spacing-8);
-  color: var(--color-text-muted);
-  border: 1px dashed var(--color-border);
-}
-.profile-container {
-  display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  height: 100%;
-  overflow: hidden;
-}
-
-.profile-main {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  background: var(--color-bg-primary);
-  overflow-y: auto;
-  min-height: 0;
-}
-
-.content-area {
-  margin: 0 auto;
-  padding: var(--spacing-8);
-  width: 100%;
-}
-
-.avatar-shell {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  box-shadow:
-    0 0 0 4px var(--color-bg-primary),
-    0 0 0 5px var(--color-border);
-}
-
-.avatar-shell img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.avatar-fallback {
-  color: var(--color-text-primary);
-  font-weight: var(--font-bold);
-  font-size: var(--text-2xl);
-}
-
-.profile-max-width {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-8);
-  border-bottom: 1px solid var(--color-border);
-  padding-bottom: var(--spacing-6);
-}
-
-.profile-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--spacing-6);
-}
-
-.profile-info {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-4);
-  flex: 1;
-}
-
-.profile-avatar {
-  flex-shrink: 0;
-}
-
-.profile-name {
-  font-size: var(--text-2xl);
-  font-weight: var(--font-bold);
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-1);
-  letter-spacing: -0.3px;
-}
-
-.profile-email {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  margin-bottom: var(--spacing-3);
-}
-
-.profile-bio {
-  font-size: var(--text-base);
-  color: var(--color-text-muted);
-  line-height: 1.5;
-}
-
-.profile-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--spacing-4);
-  margin-bottom: var(--spacing-2);
-}
-
-.profile-actions {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-3);
-}
-
-.stat-item {
-  background: var(--color-bg-secondary);
-  padding: var(--spacing-4);
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--color-border);
-}
-
-.stat-num {
-  font-size: var(--text-3xl);
-  font-weight: var(--font-bold);
-}
-
-.stat-label {
-  font-size: var(--text-sm);
-  font-weight: var(--font-normal);
-  margin-top: var(--spacing-3);
-}
-
-.profile-section {
-  padding: var(--spacing-6);
-  border: 1px solid var(--color-border);
-  margin-bottom: var(--spacing-4);
-}
-
-.profile-section:last-child {
-  margin-bottom: unset;
-}
-
-.section-heading {
-  font-size: var(--text-lg);
-  font-weight: var(--font-semibold);
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-4);
-  letter-spacing: -0.2px;
-}
-
-.info-grid {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-4);
-}
-
-.info-item {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-1);
-}
-
-.info-label {
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  text-transform: uppercase;
-  color: var(--color-text-tertiary);
-  letter-spacing: 0.5px;
-}
-
-.info-value {
-  font-size: var(--text-sm);
-  color: var(--color-text-primary);
-  font-weight: var(--font-normal);
-}
-
-.page-header {
-  padding-bottom: var(--spacing-6);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.page-title {
-  font-size: 24px;
-  font-weight: var(--font-bold);
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-2);
-}
-
-.page-subtitle {
-  font-size: var(--text-base);
-  color: var(--color-text-muted);
-}
-
-.settings-tab {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: var(--spacing-6);
-  margin-bottom: var(--spacing-8);
-}
-
-.settings-section {
-  padding: var(--spacing-6);
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-}
-
-.section-title {
-  font-size: var(--text-lg);
-  font-weight: var(--font-semibold);
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-4);
-}
-
-.setting-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2);
-  margin-bottom: var(--spacing-4);
-}
-
-.setting-group:last-child {
-  margin-bottom: 0;
-}
-
-.setting-label {
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  color: var(--color-text-primary);
-}
-
-.form-input {
-  padding: var(--spacing-2) var(--spacing-3);
-  border: 1px solid var(--color-border);
-  font-size: var(--text-sm);
-  background: var(--color-bg-primary);
-  color: var(--color-text-primary);
-  transition: all var(--transition-fast);
-  width: 100%;
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 1px var(--color-accent);
-}
-
-.checkbox-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2);
-}
-
-.checkbox-item {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-}
-
-.checkbox-item input[type='checkbox'] {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-  accent-color: var(--color-accent);
-}
-
-.checkbox-item label {
-  cursor: pointer;
-  font-size: var(--text-sm);
-  color: var(--color-text-primary);
-}
-
-.skills-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-2);
-  margin-bottom: var(--spacing-2);
-}
-
-.skill-tag {
-  padding: var(--spacing-1) var(--spacing-2);
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-accent);
-  font-size: var(--text-xs);
-  color: var(--color-accent);
-  font-weight: var(--font-medium);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-1);
-}
-
-.tag-close {
-  background: none;
-  border: none;
-  color: var(--color-accent);
-  cursor: pointer;
-  font-size: var(--text-sm);
-  padding: 0;
-  line-height: 1;
-}
-
-.toggle-group {
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.toggle-btn {
-  padding: var(--spacing-1) var(--spacing-2);
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  cursor: pointer;
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  color: var(--color-text-muted);
-  transition: all var(--transition-fast);
-  min-width: 50px;
-}
-
-.toggle-btn:hover {
-  border-color: var(--color-accent);
-}
-
-.toggle-active {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-  color: white;
-}
-
-.save-section {
-  text-align: center;
-  padding: var(--spacing-6);
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-}
-
-.save-message {
-  margin-top: var(--spacing-3);
-  font-size: var(--text-sm);
-  color: var(--color-success);
-  font-weight: var(--font-medium);
-}
-
+/* Only kept for grid breakpoints — Tailwind can't conditionally swap auto-fit minmax */
 @media (max-width: 768px) {
-  .settings-tab {
-    grid-template-columns: 1fr;
+  div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
   }
 
   .toggle-group {
     flex-direction: column;
     align-items: flex-start;
-    gap: var(--spacing-2);
   }
 }
 </style>
