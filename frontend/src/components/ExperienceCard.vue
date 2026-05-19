@@ -39,7 +39,7 @@ const formatDate = (dateStr: string | null) => {
 
       <div class="flex gap-2">
         <button
-          class="border border-gray-200 text-gray-500 p-1 cursor-pointer grid place-items-center transition-all hover:text-[var(--color-accent)] hover:border-[var(--color-accent)]"
+          class="border border-gray-200 text-gray-500 p-1 cursor-pointer grid place-items-center transition-all hover:text-accent hover:border-accent"
           @click="emit('edit')"
           aria-label="Edit experience"
         >
@@ -89,7 +89,7 @@ const formatDate = (dateStr: string | null) => {
       <span
         v-for="skill in experience.skills"
         :key="skill.id"
-        class="text-[11px] px-2 py-0.5 bg-black/[0.04] border border-gray-200 text-gray-500 font-medium"
+        class="text-[11px] px-2 py-0.5 bg-black/4 border border-gray-200 text-gray-500 font-medium"
       >
         {{ skill.name }}
       </span>

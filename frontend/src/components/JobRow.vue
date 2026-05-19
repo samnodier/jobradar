@@ -1,30 +1,55 @@
 <template>
-  <div class="job-row" :class="{ selected }" @click="$emit('click')">
+  <div
+    class="flex items-center px-5 h-11 border-b border-[#f0f0ec] gap-3 transition-colors cursor-pointer"
+    :class="selected ? 'bg-[#f0f1fb]' : 'bg-white hover:bg-[#fafaf8]'"
+    @click="$emit('click')"
+  >
     <span
       v-if="job.is_saved || job.is_applied"
-      class="status-dot"
-      style="background: var(--color-accent)"
+      class="w-1.75 h-1.75 rounded-full shrink-0"
+      :style="{ background: 'var(--color-accent)' }"
     />
-    <div v-else style="width: 7px; flex-shrink: 0" />
-    <span class="job-title">{{ job.title }}</span>
-    <span class="job-company">{{ job.company_name }}</span>
-    <span class="job-tag">{{ job.is_remote ? 'Remote' : 'On-site' }}</span>
-    <span class="job-meta">{{ timeAgo(job.posted_at) }}</span>
-    <span class="job-actions">
-      <button @click="saveJob" :class="{ 'is-saved': job.is_saved }">
+    <div v-else class="w-1.75 shrink-0" />
+
+    <span class="text-[13.5px] text-[#1a1a1a] flex-1 truncate min-w-0 cursor-pointer">
+      {{ job.title }}
+    </span>
+
+    <span class="text-xs text-[#888] w-32.5 shrink-0 truncate">
+      {{ job.company_name }}
+    </span>
+
+    <span
+      class="h-5 px-1.75 rounded text-[11px] bg-[#f5f5f3] text-[#888] border border-[#e8e8e4] flex items-center shrink-0"
+    >
+      {{ job.is_remote ? 'Remote' : 'On-site' }}
+    </span>
+
+    <span class="text-xs text-[#bbb] w-17.5 text-right shrink-0">
+      {{ timeAgo(job.posted_at) }}
+    </span>
+
+    <span class="flex gap-4 text-gray-400">
+      <button
+        class="cursor-pointer border-none bg-transparent transition-colors hover:text-accent"
+        :class="{ 'text-accent': job.is_saved }"
+        @click="saveJob"
+      >
         <HeartIcon
           :fill="job.is_saved ? 'var(--color-accent)' : 'none'"
           :color="job.is_saved ? 'var(--color-accent)' : 'currentColor'"
         />
       </button>
       <button
+        class="cursor-pointer border-none bg-transparent transition-colors hover:text-accent disabled:opacity-50 disabled:cursor-not-allowed"
+        :class="{ 'text-accent': job.is_applied }"
+        :disabled="job.is_applied"
         @mouseenter="isHovered = true"
         @mouseleave="isHovered = false"
         @click="addToApplications"
-        :disabled="job.is_applied"
       >
         <ListPlus v-if="!job.is_applied" />
-        <ListX v-else-if="isHovered && job.is_applied" :class="{ 'is-applied': job.is_applied }" />
+        <ListX v-else-if="isHovered && job.is_applied" />
         <ListCheck v-if="!isHovered && job.is_applied" color="currentColor" />
       </button>
     </span>
@@ -51,7 +76,6 @@ function timeAgo(dateStr: string | null | undefined): string {
   return `${days}d ago`
 }
 
-// Add job to the application job
 function addToApplications(event: MouseEvent) {
   event.stopPropagation()
   emit('apply', props.job)
@@ -62,99 +86,3 @@ function saveJob(event: MouseEvent) {
   emit('save', props.job)
 }
 </script>
-
-<style scoped>
-.job-row {
-  display: flex;
-  align-items: center;
-  padding: 0 20px;
-  height: 44px;
-  border-bottom: 1px solid #f0f0ec;
-  gap: 12px;
-  transition: background 0.08s;
-  background: #fff;
-}
-
-.job-row:hover {
-  background: #fafaf8;
-}
-
-.job-row.selected {
-  background: #f0f1fb;
-}
-
-.status-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.status-new {
-  background: #5e6ad2;
-}
-.status-saved {
-  background: #26c6a6;
-}
-.status-applied {
-  background: #f5a623;
-}
-
-.job-title {
-  font-size: 13.5px;
-  color: #1a1a1a;
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  cursor: pointer;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
-.job-company {
-  font-size: 12px;
-  color: #888;
-  width: 130px;
-  flex-shrink: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.job-tag {
-  height: 20px;
-  padding: 0 7px;
-  border-radius: 4px;
-  font-size: 11px;
-  background: #f5f5f3;
-  color: #888;
-  border: 1px solid #e8e8e4;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.job-meta {
-  font-size: 12px;
-  color: #bbb;
-  width: 70px;
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.job-actions {
-  display: flex;
-  column-gap: 1rem;
-  color: var(--color-text-muted);
-}
-
-.job-actions button {
-  cursor: pointer;
-  border: none;
-  background: transparent;
-}
-
-.job-actions button:hover {
-  color: var(--color-accent);
-}
-</style>

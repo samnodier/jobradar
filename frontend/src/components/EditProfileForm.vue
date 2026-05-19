@@ -248,7 +248,7 @@ async function handleSubmit() {
                 v-model="form.website_url"
                 type="url"
                 placeholder="https://yoursite.com"
-                class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+                class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
               />
             </div>
 
@@ -259,7 +259,7 @@ async function handleSubmit() {
                 v-model="form.linkedin_url"
                 type="url"
                 placeholder="https://linkedin.com/in/..."
-                class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+                class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
               />
             </div>
           </div>
@@ -272,7 +272,7 @@ async function handleSubmit() {
               v-model="form.github_url"
               type="url"
               placeholder="https://github.com/..."
-              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
             />
           </div>
         </template>
@@ -292,7 +292,7 @@ async function handleSubmit() {
                 min="0"
                 max="50"
                 placeholder="e.g. 5"
-                class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+                class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
               />
             </div>
 
@@ -303,7 +303,7 @@ async function handleSubmit() {
               <select
                 id="ep_availability"
                 v-model="form.availability"
-                class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+                class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
               >
                 <option v-for="opt in availabilityOptions" :key="opt" :value="opt">
                   {{ availabilityLabels[opt] }}
@@ -324,7 +324,7 @@ async function handleSubmit() {
                 type="number"
                 min="0"
                 placeholder="e.g. 80000"
-                class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+                class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
               />
             </div>
 
@@ -338,7 +338,7 @@ async function handleSubmit() {
                 type="number"
                 min="0"
                 placeholder="e.g. 150000"
-                class="px-3 py-2 border text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+                class="px-3 py-2 border text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
                 :class="errors.max_salary ? 'border-red-600' : 'border-gray-200'"
               />
               <p v-if="errors.max_salary" class="text-xs text-red-600">{{ errors.max_salary }}</p>
@@ -353,7 +353,7 @@ async function handleSubmit() {
             <select
               id="ep_currency"
               v-model="form.salary_currency"
-              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
             >
               <option value="USD">USD</option>
               <option value="EUR">EUR</option>
@@ -374,7 +374,7 @@ async function handleSubmit() {
           </button>
           <button
             type="submit"
-            class="bg-(--color-accent) px-4 py-2 disabled:opacity-50"
+            class="bg-accent px-4 py-2 disabled:opacity-50"
             :disabled="saving"
           >
             {{ saving ? 'Saving…' : 'Save changes' }}

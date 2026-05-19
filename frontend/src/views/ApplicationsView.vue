@@ -30,16 +30,9 @@ function closeDetail() {
 onMounted(async () => {
   loading.value = true
   error.value = ''
-
   try {
-    const res = await fetch('/api/applications', {
-      credentials: 'include',
-    })
-
-    if (!res.ok) {
-      error.value = 'Failed to fetch applications'
-    }
-
+    const res = await fetch('/api/applications', { credentials: 'include' })
+    if (!res.ok) error.value = 'Failed to fetch applications'
     applications.value = (await res.json()) ?? []
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Something went wrong.'
@@ -53,10 +46,7 @@ const hasApplications = computed(() => applications.value.length > 0)
 function handleApplicationUpdate(updatedApp: Application) {
   const index = applications.value.findIndex((a) => a.id === updatedApp.id)
   if (index !== -1) {
-    applications.value[index] = {
-      ...applications.value[index],
-      ...updatedApp,
-    }
+    applications.value[index] = { ...applications.value[index], ...updatedApp }
   }
 }
 
@@ -64,89 +54,112 @@ const applicationByStatus = computed(() => {
   const seed: StatusGroups = Object.fromEntries(
     statusOrder.map((status) => [status, [] as Application[]]),
   )
-
   return applications.value.reduce((groups, app) => {
     const status = app.application_status
-    if (status in groups) {
-      groups[status]!.push(app)
-    } else {
-      groups['other']!.push(app)
-    }
+    if (status in groups) groups[status]!.push(app)
+    else groups['other']!.push(app)
     return groups
   }, seed)
 })
 </script>
 
 <template>
-  <div class="applications-page">
+  <div class="flex h-full bg-black/4 overflow-hidden">
     <AppSidebar />
 
-    <main class="applications-main">
-      <header class="page-header">
+    <main class="flex-1 flex flex-col gap-6 p-8 overflow-hidden min-h-0">
+      <!-- Header -->
+      <header class="flex items-start justify-between gap-4 pb-6 border-b border-gray-200 shrink-0">
         <div>
-          <h1 class="page-title">Applications</h1>
-          <p class="page-subtitle">Track every job you've applied to</p>
+          <h1 class="text-2xl font-bold text-gray-900 leading-tight">Applications</h1>
+          <p class="text-sm text-gray-500 mt-1">Track every job you've applied to</p>
         </div>
-
-        <button class="button button-primary"><Plus /> Track Application</button>
+        <button class="button button-primary">
+          <Plus />
+          Track Application
+        </button>
       </header>
 
-      <!-- Loading -->
-      <div v-if="loading" class="state-container">
-        <div class="skeleton-list">
-          <div v-for="n in 4" :key="n" class="skeleton-row">
-            <div class="skeleton skeleton-text-lg"></div>
-            <div class="skeleton skeleton-text-sm"></div>
-            <div class="skeleton skeleton-badge"></div>
+      <!-- Loading skeletons -->
+      <div v-if="loading" class="flex-1">
+        <div class="flex flex-col gap-3">
+          <div v-for="n in 4" :key="n" class="flex items-center gap-4 p-4 bg-white rounded-md">
+            <div class="h-4 w-180px bg-black/0.04 rounded animate-pulse"></div>
+            <div class="h-14px flex-1 bg-black/0.04 rounded animate-pulse"></div>
+            <div class="h-22px w-72px bg-black/0.04 rounded-full animate-pulse"></div>
           </div>
         </div>
       </div>
 
       <!-- Error -->
-      <div v-else-if="error" class="state-container">
-        <p class="error-text">{{ error }}</p>
+      <div v-else-if="error" class="flex-1">
+        <p class="text-sm text-red-600 p-4">{{ error }}</p>
       </div>
 
       <!-- Empty state -->
-      <div v-else-if="!hasApplications" class="empty-state">
-        <div class="empty-icon"><Clipboard /></div>
-        <h2 class="empty-title">No applications yet</h2>
-        <p class="empty-subtitle">
+      <div
+        v-else-if="!hasApplications"
+        class="flex-1 flex flex-col items-center justify-center text-center px-8 py-16 gap-4"
+      >
+        <div class="text-[2.5rem] text-gray-400">
+          <Clipboard />
+        </div>
+        <h2 class="text-xl font-semibold text-gray-900">No applications yet</h2>
+        <p class="text-sm text-gray-500 max-w-95">
           Start tracking jobs you've applied to and follow up at the right time.
         </p>
-        <button class="button-primary">Track your first application</button>
+        <button class="button button-primary">Track your first application</button>
       </div>
 
       <!-- Kanban board -->
-      <div class="kanban-board">
-        <!-- Outer Loop: Create the columns -->
-        <div v-for="status in statusOrder" :key="status" class="kanban-column">
-          <div class="column-header">
-            <span class="column-title">{{ statusLabels[status] }}</span>
-            <span class="column-count">{{ applicationByStatus[status]?.length }}</span>
+      <div class="flex gap-4 overflow-x-auto overflow-y-hidden items-start flex-1 min-h-0">
+        <div
+          v-for="status in statusOrder"
+          :key="status"
+          class="shrink-0 w-75 bg-black/4 flex flex-col gap-2 p-2 h-full min-h-0"
+        >
+          <!-- Column header -->
+          <div class="flex items-center justify-between pb-2 shrink-0">
+            <span class="text-sm font-semibold text-gray-900">{{ statusLabels[status] }}</span>
+            <span class="text-xs text-gray-400 bg-white px-2 py-0.5">
+              {{ applicationByStatus[status]?.length }}
+            </span>
           </div>
-          <div class="column-body">
+
+          <!-- Column cards -->
+          <div class="flex-1 overflow-y-auto flex flex-col gap-2 pr-1">
             <div
               v-for="app in applicationByStatus[status]"
               :key="app.id"
-              class="kanban-card"
+              class="bg-white border border-gray-200 p-3 shadow-[0_1px_3px_rgba(0,0,0,0.08)] cursor-pointer shrink-0 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-px"
               @click="selectedApplicationID = app.id"
             >
-              <h3 class="card-title">{{ app.job_title }}</h3>
-              <p class="card-company">{{ app.company_name }}</p>
+              <h3 class="text-sm font-semibold text-gray-900 mb-1">{{ app.job_title }}</h3>
+              <p class="text-xs text-gray-400 m-0">{{ app.company_name }}</p>
             </div>
           </div>
         </div>
       </div>
     </main>
 
-    <!-- Details panel - slides in from the right as overlay -->
+    <!-- Detail overlay -->
     <Teleport to="body">
       <Transition name="detail-slide">
-        <div v-if="detailOpen" class="detail-overlay" @click.self="closeDetail">
-          <div class="detail-drawer">
-            <div class="detail-back" @click="closeDetail">
-              <ArrowLeft />
+        <div
+          v-if="detailOpen"
+          class="fixed inset-0 z-100 flex justify-end pointer-events-none"
+          style="top: var(--topbar-height)"
+          @click.self="closeDetail"
+        >
+          <div
+            class="w-[50vw] min-w-140 max-w-full h-full bg-white flex flex-col overflow-y-auto pointer-events-auto shadow-[-4px_0_12px_rgba(0,0,0,0.1)]"
+          >
+            <!-- Back: hidden on desktop, shown on mobile -->
+            <div
+              class="hidden items-center gap-2 p-3 border-b border-gray-200 text-gray-400 cursor-pointer text-sm shrink-0"
+              @click="closeDetail"
+            >
+              <ArrowLeft class="w-4 h-4" />
               Back to jobs
             </div>
             <ApplicationDetail
@@ -161,291 +174,3 @@ const applicationByStatus = computed(() => {
     </Teleport>
   </div>
 </template>
-
-<style scoped>
-.applications-page {
-  display: flex;
-  height: 100%;
-  background: var(--color-bg-secondary);
-  overflow: hidden;
-}
-
-.applications-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-6);
-  padding: var(--spacing-8);
-  overflow: hidden;
-  min-height: 0;
-}
-
-/* Header */
-.page-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--spacing-4);
-  padding-bottom: var(--spacing-6);
-  border-bottom: 1px solid var(--color-border);
-  flex-shrink: 0;
-}
-
-.page-title {
-  font-size: var(--text-2xl);
-  font-weight: var(--font-bold);
-  color: var(--color-text-primary);
-  line-height: 1.2;
-}
-
-.page-subtitle {
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  margin-top: var(--spacing-1);
-}
-
-/* Button */
-.button-primary {
-  padding: var(--spacing-2) var(--spacing-4);
-  background: var(--color-accent);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: opacity 0.15s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.button-primary:hover {
-  opacity: 0.88;
-}
-
-/* Loading skeletons */
-.state-container {
-  flex: 1;
-}
-
-.skeleton-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-3);
-}
-
-.skeleton-row {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-4);
-  padding: var(--spacing-4);
-  background: var(--color-bg-primary);
-  border-radius: var(--radius-md);
-}
-
-@keyframes shimmer {
-  0% {
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.5;
-  }
-}
-
-.skeleton {
-  background: var(--color-bg-secondary);
-  border-radius: var(--radius-sm);
-  animation: shimmer 1.5s ease-in-out infinite;
-}
-
-.skeleton-text-lg {
-  height: 16px;
-  width: 180px;
-}
-.skeleton-text-sm {
-  height: 14px;
-  width: 120px;
-  flex: 1;
-}
-.skeleton-badge {
-  height: 22px;
-  width: 72px;
-  border-radius: 999px;
-}
-
-/* Empty state */
-.empty-state {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: var(--spacing-16) var(--spacing-8);
-  gap: var(--spacing-4);
-}
-
-.empty-icon {
-  font-size: 2.5rem;
-}
-
-.empty-title {
-  font-size: var(--text-xl);
-  font-weight: var(--font-semibold);
-  color: var(--color-text-primary);
-}
-
-.empty-subtitle {
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  max-width: 380px;
-}
-
-/* Error */
-.error-text {
-  color: var(--color-danger, #dc2626);
-  font-size: var(--text-sm);
-  padding: var(--spacing-4);
-}
-
-/* KanBan */
-
-.kanban-board {
-  display: flex;
-  gap: var(--spacing-4);
-  overflow-x: auto;
-  overflow-y: hidden;
-  align-items: flex-start;
-  flex: 1;
-  min-height: 0;
-}
-
-.kanban-column {
-  flex: 0 0 300px;
-  background: var(--color-bg-secondary);
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2);
-  padding: var(--spacing-2);
-  height: 100%;
-  min-height: 0;
-}
-
-.column-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: var(--spacing-2);
-  flex-shrink: 0;
-}
-
-.column-title {
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  color: var(--color-text-primary);
-}
-
-.column-count {
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-  background: var(--color-bg-primary);
-  padding: 2px 8px;
-}
-
-.column-body {
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2);
-  padding-right: 4px; /* Space for scrollbar */
-}
-
-.kanban-card {
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  padding: var(--spacing-3);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition:
-    box-shadow 0.15s ease,
-    transform 0.1s ease;
-}
-
-.kanban-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-  transform: translateY(-1px);
-}
-
-.card-title {
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  color: var(--color-text-primary);
-  margin: 0 0 var(--spacing-1);
-}
-
-.card-company {
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-  margin: 0;
-}
-
-/* Status badges */
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px var(--spacing-2);
-  border-radius: 999px;
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  background: var(--color-bg-secondary);
-  color: var(--color-text-secondary);
-}
-
-/* Detail Overlay */
-.detail-overlay {
-  position: fixed;
-  top: var(--topbar-height) !important;
-  inset: 0;
-  z-index: 100;
-  display: flex;
-  justify-content: flex-end;
-  pointer-events: none;
-}
-
-.detail-drawer {
-  width: 50vw;
-  min-width: 560px;
-  max-width: 100%;
-  height: 100%;
-  background: var(--color-bg-primary);
-  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  pointer-events: auto;
-}
-
-/* hide on desktop, show on mobile */
-.detail-back {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  padding: var(--spacing-3);
-  border-bottom: 1px solid var(--color-border);
-  color: var(--muted);
-  cursor: pointer;
-  height: 0;
-  padding: 0;
-  overflow: hidden;
-  visibility: hidden;
-  flex-shrink: 0;
-  font-size: var(--text-sm);
-}
-</style>

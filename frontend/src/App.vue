@@ -18,10 +18,17 @@ async function logout() {
 </script>
 
 <template>
-  <div class="app-shell">
-    <header class="topbar">
-      <RouterLink to="/" class="brand-shell">
-        <div class="brand-mark">
+  <div class="h-screen flex flex-col bg-white overflow-hidden">
+    <!-- Topbar -->
+    <header
+      class="flex items-center justify-between flex-row gap-6 px-4 py-1 border-b border-slate-400/20 bg-white/90 backdrop-blur-md shrink-0 flex-nowrap whitespace-nowrap min-h-(--topbar-height) sticky top-0 z-100"
+    >
+      <!-- Brand -->
+      <RouterLink to="/" class="flex items-center gap-4">
+        <div
+          class="w-7.5 h-7.5 grid place-items-center text-white"
+          :style="{ background: 'var(--color-accent)' }"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             height="24px"
@@ -34,23 +41,27 @@ async function logout() {
             />
           </svg>
         </div>
-        <div>
-          <p class="brand-title">JobRadar</p>
-        </div>
+        <p class="m-0 text-[1.1rem] font-medium">JobRadar</p>
       </RouterLink>
 
-      <div class="main-nav-placeholder" style="flex: 1"></div>
+      <div style="flex: 1" />
 
+      <!-- Auth actions -->
       <div>
-        <div class="action-group" v-if="authStore.user">
-          <RouterLink :to="'/@' + authStore.user.username" class="user-chip">
+        <div v-if="authStore.user" class="flex items-center gap-4">
+          <RouterLink
+            :to="'/@' + authStore.user.username"
+            class="inline-flex items-center gap-[0.85rem] px-2 py-1 bg-white/80"
+          >
             <img
               v-if="authStore.user.avatar_url"
               :src="authStore.user.avatar_url"
               alt="User avatar"
-              class="avatar"
+              class="w-8.5 h-8.5 rounded-full"
             />
-            <span class="user-name">{{ authStore.user.full_name}}</span>
+            <span class="font-semibold text-gray-900 max-[820px]:hidden">
+              {{ authStore.user.full_name }}
+            </span>
           </RouterLink>
           <button class="button button-secondary" @click="logout">Logout</button>
         </div>
@@ -60,14 +71,24 @@ async function logout() {
       </div>
     </header>
 
-    <main class="content-shell">
-      <div v-if="authStore.loading" class="status-banner">Loading auth state…</div>
-      <div v-else-if="authStore.error" class="status-banner status-error">
+    <!-- Content -->
+    <main class="flex-1 flex flex-col min-h-0 relative">
+      <div
+        v-if="authStore.loading"
+        class="p-4 px-5 rounded-[18px] bg-indigo-500/6 text-gray-900 border border-indigo-500/12"
+      >
+        Loading auth state…
+      </div>
+      <div
+        v-else-if="authStore.error"
+        class="p-4 px-5 rounded-[18px] bg-red-400/8 text-red-700 border border-red-400/18"
+      >
         Error: {{ authStore.error }}
       </div>
       <RouterView v-else />
     </main>
   </div>
+
   <AppToast />
 </template>
 
@@ -77,138 +98,16 @@ body,
 #app {
   height: 100%;
 }
-
 body {
   margin: 0;
   font-family: var(--font-base);
-  background: var(--color-by-primary);
-  color: var(--color-text);
+  color: #111827;
 }
-
 * {
   box-sizing: border-box;
 }
-
 a {
   text-decoration: none;
   color: inherit;
-}
-
-.app-shell {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--color-bg-primary);
-  overflow: hidden;
-}
-
-.content-shell {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  position: relative;
-}
-
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-direction: row;
-  gap: 1.5rem;
-  padding: var(--spacing-1) var(--spacing-4);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(16px);
-  flex-shrink: 0;
-  flex-wrap: nowrap;
-  white-space: nowrap;
-  min-height: var(--topbar-height);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background-color: var(--color-bg-primary);
-}
-
-.brand-shell {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.brand-mark {
-  width: 30px;
-  height: 30px;
-  background: var(--color-accent);
-  display: grid;
-  place-items: center;
-  color: white;
-}
-
-.brand-title {
-  margin: 0;
-  font-size: 1.1rem;
-}
-
-.action-group {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.user-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.85rem;
-  padding: var(--spacing-1) var(--spacing-2);
-  background: rgba(255, 255, 255, 0.8);
-}
-
-.avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: var(--accent-soft);
-  color: var(--accent);
-  display: grid;
-  place-items: center;
-  font-weight: 700;
-}
-
-.user-name {
-  font-weight: 600;
-  color: var(--text);
-}
-
-.status-banner {
-  padding: 1rem 1.25rem;
-  border-radius: 18px;
-  background: rgba(79, 70, 229, 0.06);
-  color: var(--text);
-  border: 1px solid rgba(79, 70, 229, 0.12);
-}
-
-.status-error {
-  background: rgba(244, 63, 94, 0.08);
-  color: #b91c1c;
-  border-color: rgba(244, 63, 94, 0.18);
-}
-
-@media (max-width: 820px) {
-  .topbar {
-    flex-direction: row;
-    gap: 1rem;
-    padding: 0 1rem;
-    align-items: center;
-  }
-
-  .user-name {
-    display: none;
-  }
-
-  .action-group {
-    justify-content: space-between;
-    width: 100%;
-  }
 }
 </style>

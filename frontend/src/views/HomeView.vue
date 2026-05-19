@@ -1,9 +1,9 @@
 <template>
   <div class="flex-1 overflow-y-auto h-full">
     <section class="text-center px-8 py-10 mx-auto">
-      <div class="max-w-[40rem] mx-auto text-center">
+      <div class="max-w-160 mx-auto text-center">
         <div class="inline-flex items-center gap-2.5 px-4 py-2 bg-[rgba(94,106,210,0.12)] text-accent text-[0.8rem] mb-5">
-          <span class="w-[7px] h-[7px] bg-accent"></span>
+          <span class="w-1.75 h-1.75 bg-accent"></span>
           {{ eyebrowText }}
         </div>
 
@@ -12,13 +12,13 @@
           <span class="text-accent">that match your skills</span>
         </h1>
 
-        <p class="mt-6 mb-8 max-w-[42rem] text-gray-700 text-[1.05rem] leading-[1.75] mx-auto">
+        <p class="mt-6 mb-8 max-w-2xl text-gray-700 text-[1.05rem] leading-[1.75] mx-auto">
           JobRadar scrapes the best job boards and surfaces roles matched to your profile — no
           noise, just signal.
         </p>
 
         <!-- Search Bar -->
-        <div class="flex items-center max-w-[520px] mx-auto border border-ui-border pl-2.5 h-11 gap-2 whitespace-nowrap cursor-pointer shrink-0">
+        <div class="flex items-center max-w-130 mx-auto border border-ui-border pl-2.5 h-11 gap-2 whitespace-nowrap cursor-pointer shrink-0">
           <Search class="w-4 h-4 text-gray-400" />
           <input
             v-model="searchTerm"
@@ -51,7 +51,7 @@
     </section>
 
     <section class="flex flex-col bg-bg-secondary px-8 pb-12">
-      <div class="flex flex-col mt-10 w-full max-w-[1200px] mx-auto gap-6">
+      <div class="flex flex-col mt-10 w-full max-w-300 mx-auto gap-6">
         <!-- Stats Row -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
           <div class="bg-white p-6 border border-ui-border">

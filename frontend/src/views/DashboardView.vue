@@ -1,13 +1,14 @@
 <template>
-  <div class="mock-view">
+  <div class="flex h-full bg-black/4">
     <AppSidebar />
-    <main class="mock-main">
-      <header class="page-header">
-        <h1 class="page-title">Dashboard</h1>
-        <p class="page-subtitle">Your personalized overview is coming soon.</p>
+    <main class="flex-1 p-8 flex flex-col gap-6 overflow-y-auto">
+      <header class="border-b border-gray-200 pb-4">
+        <h1 class="text-2xl font-bold">Dashboard</h1>
+        <p class="text-sm text-gray-500 mt-1">Your personalized overview is coming soon.</p>
       </header>
-      <div class="mock-content">
-        <div class="placeholder-card" v-for="i in 3" :key="i"></div>
+
+      <div class="grid gap-4" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr))">
+        <div v-for="i in 3" :key="i" class="h-50 bg-white border border-gray-200 rounded-md" />
       </div>
     </main>
   </div>
@@ -16,43 +17,3 @@
 <script setup lang="ts">
 import AppSidebar from '@/components/AppSidebar.vue'
 </script>
-
-<style scoped>
-.mock-view {
-  display: flex;
-  height: 100%;
-  background: var(--color-bg-secondary);
-}
-
-.mock-main {
-  flex: 1;
-  padding: var(--spacing-8);
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-6);
-  overflow-y: auto;
-}
-
-.page-header {
-  border-bottom: 1px solid var(--color-border);
-  padding-bottom: var(--spacing-4);
-}
-
-.page-title {
-  font-size: var(--text-2xl);
-  font-weight: var(--font-bold);
-}
-
-.mock-content {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: var(--spacing-4);
-}
-
-.placeholder-card {
-  height: 200px;
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-</style>

@@ -146,7 +146,7 @@ onMounted(async () => {
               <!-- Avatar -->
               <div class="shrink-0">
                 <div
-                  class="w-20 h-20 rounded-full bg-black/[0.04] border border-gray-200 grid place-items-center overflow-hidden"
+                  class="w-20 h-20 rounded-full bg-black/4 border border-gray-200 grid place-items-center overflow-hidden"
                   style="box-shadow: 0 0 0 4px white, 0 0 0 5px #e5e7eb"
                 >
                   <img
@@ -198,7 +198,7 @@ onMounted(async () => {
                 { num: experiences?.length || 0, label: 'Experiences' },
               ]"
               :key="stat.label"
-              class="bg-black/[0.04] border border-gray-200 p-4 text-center flex flex-col"
+              class="bg-black/4 border border-gray-200 p-4 text-center flex flex-col"
             >
               <span class="text-3xl font-bold text-gray-900">{{ stat.num }}</span>
               <span class="text-sm font-normal text-gray-500 mt-3">{{ stat.label }}</span>
@@ -219,7 +219,7 @@ onMounted(async () => {
               type="button"
               class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-all cursor-pointer"
               :class="activeTab === tab.key
-                ? 'border-b-2 text-[var(--color-accent)]'
+                ? 'border-b-2 text-accent'
                 : 'border-transparent text-gray-500 hover:text-gray-900'"
               :style="activeTab === tab.key ? { borderBottomColor: 'var(--color-accent)' } : {}"
               @click="activeTab = tab.key"
@@ -295,7 +295,7 @@ onMounted(async () => {
 
             <div class="grid gap-6" style="grid-template-columns: repeat(auto-fit, minmax(400px, 1fr))">
               <!-- Job Preferences -->
-              <section class="p-6 bg-black/[0.04] border border-gray-200">
+              <section class="p-6 bg-black/4 border border-gray-200">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">Job Preferences</h2>
 
                 <div class="flex flex-col gap-2 mb-4">
@@ -319,7 +319,7 @@ onMounted(async () => {
                   <label class="text-sm font-semibold text-gray-900">Work Location</label>
                   <select
                     v-model="preferences.location"
-                    class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
+                    class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
                   >
                     <option>Remote</option>
                     <option>On-site</option>
@@ -335,7 +335,7 @@ onMounted(async () => {
                       v-model="preferences.salaryMin"
                       type="number"
                       placeholder="Min"
-                      class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
+                      class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
                     />
                   </div>
                   <div class="flex flex-col gap-2 flex-1">
@@ -344,14 +344,14 @@ onMounted(async () => {
                       v-model="preferences.salaryMax"
                       type="number"
                       placeholder="Max"
-                      class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
+                      class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
                     />
                   </div>
                 </div>
               </section>
 
               <!-- Company Preferences -->
-              <section class="p-6 bg-black/[0.04] border border-gray-200">
+              <section class="p-6 bg-black/4 border border-gray-200">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">Company Preferences</h2>
 
                 <div class="flex flex-col gap-2 mb-4">
@@ -381,7 +381,7 @@ onMounted(async () => {
                     v-model="preferences.industries"
                     type="text"
                     placeholder="e.g., SaaS, AI/ML, FinTech"
-                    class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
+                    class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
                   />
                 </div>
 
@@ -406,14 +406,14 @@ onMounted(async () => {
                   <input
                     type="text"
                     placeholder="Type a skill and press Enter"
-                    class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
+                    class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
                     @keydown.enter.prevent="addSkill($event)"
                   />
                 </div>
               </section>
             </div>
 
-            <div class="text-center p-6 bg-black/[0.04] border border-gray-200">
+            <div class="text-center p-6 bg-black/4 border border-gray-200">
               <button class="button button-primary" @click="savePreferences">Save Changes</button>
               <p v-if="saved" class="mt-3 text-sm font-medium text-green-600">
                 Preferences saved successfully
@@ -427,15 +427,15 @@ onMounted(async () => {
               <p class="text-sm text-gray-500">Experiences {{ experiences?.length }}</p>
 
               <!-- Notifications -->
-              <section class="p-6 bg-black/[0.04] border border-gray-200">
+              <section class="p-6 bg-black/4 border border-gray-200">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">Notifications</h2>
                 <div class="flex flex-row justify-between items-center gap-2 mb-4">
                   <label class="text-sm font-semibold text-gray-900">Job Recommendations</label>
                   <button
-                    class="px-2 py-1 border text-xs font-semibold cursor-pointer transition-all min-w-[50px]"
+                    class="px-2 py-1 border text-xs font-semibold cursor-pointer transition-all min-w-12.5"
                     :class="preferences.notifyJobs
                       ? 'text-white border-transparent'
-                      : 'bg-white border-gray-200 text-gray-500 hover:border-[var(--color-accent)]'"
+                      : 'bg-white border-gray-200 text-gray-500 hover:border-accent'"
                     :style="preferences.notifyJobs
                       ? { background: 'var(--color-accent)', borderColor: 'var(--color-accent)' }
                       : {}"
@@ -447,7 +447,7 @@ onMounted(async () => {
               </section>
 
               <!-- Privacy & Account -->
-              <section class="p-6 bg-black/[0.04] border border-gray-200">
+              <section class="p-6 bg-black/4 border border-gray-200">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">Privacy & Account</h2>
 
                 <div class="flex flex-col gap-2 mb-4">
@@ -469,7 +469,7 @@ onMounted(async () => {
                     v-model="typedEmail"
                     type="email"
                     placeholder="your@email.com"
-                    class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
+                    class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
                   />
                   <p v-if="deleteError" class="text-xs text-red-600">{{ deleteError }}</p>
                   <div class="flex gap-2 mt-1">

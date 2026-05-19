@@ -1,17 +1,29 @@
 <template>
-  <div class="mock-view">
+  <div class="flex h-full bg-black/0.04">
     <AppSidebar />
-    <main class="mock-main">
-      <header class="page-header">
-        <h1 class="page-title">System Status</h1>
-        <p class="page-subtitle">Real-time health monitoring for JobRadar services.</p>
+    <main class="flex-1 p-8 flex flex-col gap-6 overflow-y-auto">
+      <header class="border-b border-gray-200 pb-4">
+        <h1 class="text-2xl font-bold">System Status</h1>
+        <p class="text-sm text-gray-500 mt-1">Real-time health monitoring for JobRadar services.</p>
       </header>
-      <div class="status-grid">
-        <div class="status-card" v-for="service in services" :key="service.name">
-          <div class="status-indicator" :class="service.status"></div>
-          <div class="status-info">
-            <h3 class="service-name">{{ service.name }}</h3>
-            <p class="service-status">{{ service.statusText }}</p>
+
+      <div class="flex flex-col gap-3">
+        <div
+          v-for="service in services"
+          :key="service.name"
+          class="flex items-center gap-4 bg-white p-4 border border-gray-200"
+        >
+          <div
+            class="w-3 h-3 shrink-0"
+            :class="{
+              'bg-green-500': service.status === 'up',
+              'bg-yellow-400': service.status === 'warning',
+              'bg-red-500': service.status === 'down',
+            }"
+          />
+          <div>
+            <h3 class="text-sm font-semibold">{{ service.name }}</h3>
+            <p class="text-xs text-gray-400">{{ service.statusText }}</p>
           </div>
         </div>
       </div>
@@ -29,70 +41,3 @@ const services = [
   { name: 'Scrapers', status: 'warning', statusText: 'Degraded' },
 ]
 </script>
-
-<style scoped>
-.mock-view {
-  display: flex;
-  height: 100%;
-  background: var(--color-bg-secondary);
-}
-
-.mock-main {
-  flex: 1;
-  padding: var(--spacing-8);
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-6);
-  overflow-y: auto;
-}
-
-.page-header {
-  border-bottom: 1px solid var(--color-border);
-  padding-bottom: var(--spacing-4);
-}
-
-.page-title {
-  font-size: var(--text-2xl);
-  font-weight: var(--font-bold);
-}
-
-.status-grid {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-3);
-}
-
-.status-card {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-4);
-  background: var(--color-bg-primary);
-  padding: var(--spacing-4);
-  border: 1px solid var(--color-border);
-}
-
-.status-indicator {
-  width: 12px;
-  height: 12px;
-}
-
-.status-indicator.up {
-  background: #22c55e;
-}
-.status-indicator.warning {
-  background: #eab308;
-}
-.status-indicator.down {
-  background: #ef4444;
-}
-
-.service-name {
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-}
-
-.service-status {
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-}
-</style>
