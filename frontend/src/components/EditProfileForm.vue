@@ -45,7 +45,6 @@ function blankForm() {
 const form = ref(blankForm())
 const errors = ref<Record<string, string>>({})
 const saving = ref(false)
-// ADDED: internal tab state for the two sections
 const activeSection = ref<'identity' | 'career'>('identity')
 
 watch(
@@ -79,7 +78,6 @@ async function handleSubmit() {
   saving.value = true
   const body = {
     ...form.value,
-    // Send null for empty strings on optional fields
     phone: form.value.phone || null,
     website_url: form.value.website_url || null,
     linkedin_url: form.value.linkedin_url || null,
@@ -108,172 +106,205 @@ async function handleSubmit() {
 <template>
   <div
     v-if="open"
-    class="overlay"
-    @click.self="emit('close')"
+    class="fixed inset-0 bg-black/45 flex items-start justify-end z-[100]"
     role="dialog"
     aria-modal="true"
     aria-label="Edit profile"
+    @click.self="emit('close')"
   >
-    <div class="panel">
+    <!-- Panel -->
+    <div
+      class="w-full max-w-[560px] h-dvh bg-white border-l border-gray-200 flex flex-col overflow-hidden"
+    >
       <!-- Header -->
-      <div class="panel-header">
-        <h2 class="panel-title">Edit Profile</h2>
-        <button class="close-btn" type="button" @click="emit('close')" aria-label="Close">
+      <div class="flex items-center justify-between px-6 py-5 border-b border-gray-200 shrink-0">
+        <h2 class="text-lg font-semibold text-gray-900">Edit Profile</h2>
+        <button
+          type="button"
+          class="grid place-items-center w-8 h-8 border border-gray-200 text-gray-500 cursor-pointer transition-all hover:text-gray-900 hover:border-gray-400"
+          @click="emit('close')"
+          aria-label="Close"
+        >
           <X :size="18" />
         </button>
       </div>
 
-      <!-- ADDED: Internal section tabs -->
-      <div class="panel-tabs">
+      <!-- Section tabs -->
+      <div class="flex border-b border-gray-200 shrink-0">
         <button
+          v-for="tab in [
+            { key: 'identity', label: 'Identity' },
+            { key: 'career', label: 'Career' },
+          ]"
+          :key="tab.key"
           type="button"
-          class="panel-tab"
-          :class="{ 'panel-tab--active': activeSection === 'identity' }"
-          @click="activeSection = 'identity'"
+          class="px-6 py-3 text-sm font-medium border-b-2 -mb-px transition-all cursor-pointer"
+          :class="
+            activeSection === tab.key
+              ? 'text-[var(--color-accent)]'
+              : 'border-transparent text-gray-500 hover:text-gray-900'
+          "
+          :style="activeSection === tab.key ? { borderBottomColor: 'var(--color-accent)' } : {}"
+          @click="activeSection = tab.key as 'identity' | 'career'"
         >
-          Identity
-        </button>
-        <button
-          type="button"
-          class="panel-tab"
-          :class="{ 'panel-tab--active': activeSection === 'career' }"
-          @click="activeSection = 'career'"
-        >
-          Career
+          {{ tab.label }}
         </button>
       </div>
 
-      <form class="panel-body" @submit.prevent="handleSubmit" novalidate>
-        <!-- ── IDENTITY SECTION ── -->
+      <!-- Scrollable form -->
+      <form
+        class="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-5"
+        @submit.prevent="handleSubmit"
+        novalidate
+      >
+        <!-- ── IDENTITY ── -->
         <template v-if="activeSection === 'identity'">
-          <div class="form-row">
-            <div class="field" :class="{ 'field--error': errors.username }">
-              <label class="field-label" for="ep_username">
-                Username <span class="required">*</span>
+          <!-- Username + Full name -->
+          <div class="grid grid-cols-2 gap-4">
+            <div class="flex flex-col gap-2">
+              <label class="text-sm font-semibold text-gray-900" for="ep_username">
+                Username <span class="text-red-600 ml-0.5">*</span>
               </label>
               <input
                 id="ep_username"
                 v-model="form.username"
                 type="text"
-                class="form-input"
                 placeholder="e.g. samnodier"
+                class="px-3 py-2 border text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+                :class="errors.username ? 'border-red-600' : 'border-gray-200'"
               />
-              <p v-if="errors.username" class="field-error">{{ errors.username }}</p>
+              <p v-if="errors.username" class="text-xs text-red-600">{{ errors.username }}</p>
             </div>
 
-            <div class="field">
-              <label class="field-label" for="ep_full_name">Full name</label>
+            <div class="flex flex-col gap-2">
+              <label class="text-sm font-semibold text-gray-900" for="ep_full_name"
+                >Full name</label
+              >
               <input
                 id="ep_full_name"
                 v-model="form.full_name"
                 type="text"
-                class="form-input"
                 placeholder="e.g. Sam Nodier"
+                class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
               />
             </div>
           </div>
 
-          <div class="field">
-            <label class="field-label" for="ep_headline">Headline</label>
+          <!-- Headline -->
+          <div class="flex flex-col gap-2">
+            <label class="text-sm font-semibold text-gray-900" for="ep_headline">Headline</label>
             <input
               id="ep_headline"
               v-model="form.headline"
               type="text"
-              class="form-input"
               placeholder="e.g. Full-stack Engineer · Go · Vue.js"
+              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
             />
           </div>
 
-          <div class="field">
-            <label class="field-label" for="ep_summary">Summary</label>
+          <!-- Summary -->
+          <div class="flex flex-col gap-2">
+            <label class="text-sm font-semibold text-gray-900" for="ep_summary">Summary</label>
             <textarea
               id="ep_summary"
               v-model="form.user_summary"
-              class="form-input form-textarea"
               placeholder="Brief professional summary shown on your profile..."
               rows="4"
+              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)] resize-y min-h-[96px] leading-relaxed font-[inherit]"
             />
           </div>
 
-          <div class="form-row">
-            <div class="field">
-              <label class="field-label" for="ep_location">Location</label>
+          <!-- Location + Phone -->
+          <div class="grid grid-cols-2 gap-4">
+            <div class="flex flex-col gap-2">
+              <label class="text-sm font-semibold text-gray-900" for="ep_location">Location</label>
               <input
                 id="ep_location"
                 v-model="form.user_location"
                 type="text"
-                class="form-input"
                 placeholder="e.g. Kigali, Rwanda"
+                class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
               />
             </div>
 
-            <div class="field">
-              <label class="field-label" for="ep_phone">Phone</label>
+            <div class="flex flex-col gap-2">
+              <label class="text-sm font-semibold text-gray-900" for="ep_phone">Phone</label>
               <input
                 id="ep_phone"
                 v-model="form.phone"
                 type="tel"
-                class="form-input"
                 placeholder="+250 ..."
+                class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
               />
             </div>
           </div>
 
-          <div class="form-row">
-            <div class="field">
-              <label class="field-label" for="ep_website">Website</label>
+          <!-- Website + LinkedIn -->
+          <div class="grid grid-cols-2 gap-4">
+            <div class="flex flex-col gap-2">
+              <label class="text-sm font-semibold text-gray-900" for="ep_website">Website</label>
               <input
                 id="ep_website"
                 v-model="form.website_url"
                 type="url"
-                class="form-input"
                 placeholder="https://yoursite.com"
+                class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
               />
             </div>
 
-            <div class="field">
-              <label class="field-label" for="ep_linkedin">LinkedIn</label>
+            <div class="flex flex-col gap-2">
+              <label class="text-sm font-semibold text-gray-900" for="ep_linkedin">LinkedIn</label>
               <input
                 id="ep_linkedin"
                 v-model="form.linkedin_url"
                 type="url"
-                class="form-input"
                 placeholder="https://linkedin.com/in/..."
+                class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
               />
             </div>
           </div>
 
-          <div class="field">
-            <label class="field-label" for="ep_github">GitHub</label>
+          <!-- GitHub -->
+          <div class="flex flex-col gap-2">
+            <label class="text-sm font-semibold text-gray-900" for="ep_github">GitHub</label>
             <input
               id="ep_github"
               v-model="form.github_url"
               type="url"
-              class="form-input"
               placeholder="https://github.com/..."
+              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
             />
           </div>
         </template>
 
-        <!-- ── CAREER SECTION ── -->
+        <!-- ── CAREER ── -->
         <template v-else>
-          <div class="form-row">
-            <div class="field">
-              <label class="field-label" for="ep_years">Years of experience</label>
+          <!-- Years of experience + Availability -->
+          <div class="grid grid-cols-2 gap-4">
+            <div class="flex flex-col gap-2">
+              <label class="text-sm font-semibold text-gray-900" for="ep_years"
+                >Years of experience</label
+              >
               <input
                 id="ep_years"
                 v-model="form.years_of_experience"
                 type="number"
                 min="0"
                 max="50"
-                class="form-input"
                 placeholder="e.g. 5"
+                class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
               />
             </div>
 
-            <div class="field">
-              <label class="field-label" for="ep_availability">Availability</label>
-              <select id="ep_availability" v-model="form.availability" class="form-input">
+            <div class="flex flex-col gap-2">
+              <label class="text-sm font-semibold text-gray-900" for="ep_availability"
+                >Availability</label
+              >
+              <select
+                id="ep_availability"
+                v-model="form.availability"
+                class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+              >
                 <option v-for="opt in availabilityOptions" :key="opt" :value="opt">
                   {{ availabilityLabels[opt] }}
                 </option>
@@ -281,36 +312,49 @@ async function handleSubmit() {
             </div>
           </div>
 
-          <div class="form-row">
-            <div class="field">
-              <label class="field-label" for="ep_min_salary">Min salary</label>
+          <!-- Min + Max salary -->
+          <div class="grid grid-cols-2 gap-4">
+            <div class="flex flex-col gap-2">
+              <label class="text-sm font-semibold text-gray-900" for="ep_min_salary"
+                >Min salary</label
+              >
               <input
                 id="ep_min_salary"
                 v-model="form.min_salary"
                 type="number"
                 min="0"
-                class="form-input"
                 placeholder="e.g. 80000"
+                class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
               />
             </div>
 
-            <div class="field" :class="{ 'field--error': errors.max_salary }">
-              <label class="field-label" for="ep_max_salary">Max salary</label>
+            <div class="flex flex-col gap-2">
+              <label class="text-sm font-semibold text-gray-900" for="ep_max_salary"
+                >Max salary</label
+              >
               <input
                 id="ep_max_salary"
                 v-model="form.max_salary"
                 type="number"
                 min="0"
-                class="form-input"
                 placeholder="e.g. 150000"
+                class="px-3 py-2 border text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+                :class="errors.max_salary ? 'border-red-600' : 'border-gray-200'"
               />
-              <p v-if="errors.max_salary" class="field-error">{{ errors.max_salary }}</p>
+              <p v-if="errors.max_salary" class="text-xs text-red-600">{{ errors.max_salary }}</p>
             </div>
           </div>
 
-          <div class="field">
-            <label class="field-label" for="ep_currency">Salary currency</label>
-            <select id="ep_currency" v-model="form.salary_currency" class="form-input">
+          <!-- Salary currency -->
+          <div class="flex flex-col gap-2">
+            <label class="text-sm font-semibold text-gray-900" for="ep_currency"
+              >Salary currency</label
+            >
+            <select
+              id="ep_currency"
+              v-model="form.salary_currency"
+              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+            >
               <option value="USD">USD</option>
               <option value="EUR">EUR</option>
               <option value="GBP">GBP</option>
@@ -320,11 +364,19 @@ async function handleSubmit() {
         </template>
 
         <!-- Footer -->
-        <div class="panel-footer">
-          <button type="button" class="button button-secondary" @click="emit('close')">
+        <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 mt-auto">
+          <button
+            type="button"
+            class="bg-gray-200 border-gray-500 button button-secondary"
+            @click="emit('close')"
+          >
             Cancel
           </button>
-          <button type="submit" class="button button-primary" :disabled="saving">
+          <button
+            type="submit"
+            class="bg-(--color-accent) px-4 py-2 disabled:opacity-50"
+            :disabled="saving"
+          >
             {{ saving ? 'Saving…' : 'Save changes' }}
           </button>
         </div>

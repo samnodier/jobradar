@@ -39,46 +39,32 @@ watch(activeFilter, (value) => {
   if (value === 'all') {
     router.replace({ query: {} }).catch(() => {})
   } else {
-    router
-      .replace({
-        query: {
-          filter: value === 'all' ? undefined : value,
-          q: route.query.q,
-        },
-      })
-      .catch(() => {})
+    router.replace({
+      query: {
+        filter: value === 'all' ? undefined : value,
+        q: route.query.q,
+      },
+    }).catch(() => {})
   }
 })
 
 const filteredJobs = computed(() => {
   let result = [...jobs.value]
-
   const q = searchTerm.value.trim().toLowerCase()
-
   if (q) {
-    result = result.filter((job) => {
-      return (
-        job.title.toLowerCase().includes(q) ||
-        job.company_name.toLowerCase().includes(q) ||
-        job.skills?.some((skill) => skill.toLowerCase().includes(q))
-      )
-    })
+    result = result.filter((job) =>
+      job.title.toLowerCase().includes(q) ||
+      job.company_name.toLowerCase().includes(q) ||
+      job.skills?.some((skill) => skill.toLowerCase().includes(q))
+    )
   }
-
-  if (activeFilter.value === 'remote') {
-    result = result.filter((job) => job.is_remote)
-  } else if (activeFilter.value === 'saved') {
-    result = result.filter((job) => job.is_saved)
-  } else if (activeFilter.value === 'applied') {
-    result = result.filter((job) => job.is_applied)
-  } else if (activeFilter.value === 'today') {
+  if (activeFilter.value === 'remote') result = result.filter((job) => job.is_remote)
+  else if (activeFilter.value === 'saved') result = result.filter((job) => job.is_saved)
+  else if (activeFilter.value === 'applied') result = result.filter((job) => job.is_applied)
+  else if (activeFilter.value === 'today') {
     const today = new Date().toDateString()
-    result = result.filter((job) => {
-      const postedDate = new Date(job.posted_at ?? '').toDateString()
-      return postedDate === today
-    })
+    result = result.filter((job) => new Date(job.posted_at ?? '').toDateString() === today)
   }
-
   return result
 })
 
@@ -107,6 +93,7 @@ const selectedJob = computed(() => {
 })
 
 const detailOpen = computed(() => !!selectedJob.value)
+
 function closeDetail() {
   selectedJobId.value = null
 }
@@ -114,9 +101,7 @@ function closeDetail() {
 function fetchJobs() {
   loading.value = true
   error.value = ''
-  fetch('/api/jobs', {
-    credentials: 'include',
-  })
+  fetch('/api/jobs', { credentials: 'include' })
     .then(async (response) => {
       if (!response.ok) throw new Error('Failed to load jobs')
       jobs.value = await response.json()
@@ -132,25 +117,17 @@ function fetchJobs() {
     })
 }
 
-// Toggle save and unsave the job in the system
 async function handleSaveJob(job: Job) {
   if (job.is_saved) {
     try {
       const response = await fetch('/api/saved_jobs', {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          job_id: job.id,
-        }),
+        body: JSON.stringify({ job_id: job.id }),
       })
-      if (response.ok) {
-        job.is_saved = false
-      } else {
-        toast.error('Failed to unsave job')
-      }
+      if (response.ok) job.is_saved = false
+      else toast.error('Failed to unsave job')
     } catch (err) {
       toast.error('Something went wrong:' + err)
     }
@@ -158,38 +135,25 @@ async function handleSaveJob(job: Job) {
     try {
       const response = await fetch('/api/saved_jobs', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          job_id: job.id,
-        }),
+        body: JSON.stringify({ job_id: job.id }),
       })
-      if (response.ok) {
-        job.is_saved = true
-      } else {
-        toast.error('Failed to save job')
-      }
+      if (response.ok) job.is_saved = true
+      else toast.error('Failed to save job')
     } catch (err) {
       toast.error('Something went wrong:' + err)
     }
   }
 }
 
-// Mark the job as applied in the database
 async function handleApplyJob(job: Job) {
   try {
     const response = await fetch('/api/applications', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({
-        job_id: job.id,
-        application_status: 'applied',
-      }),
+      body: JSON.stringify({ job_id: job.id, application_status: 'applied' }),
     })
     if (response.ok) {
       job.is_applied = true
@@ -211,63 +175,90 @@ function toggleSort() {
   sortDirection.value = sortDirection.value === 'newest' ? 'oldest' : 'newest'
 }
 
-onMounted(() => {
-  fetchJobs()
-})
-
+onMounted(() => fetchJobs())
 onUnmounted(() => {})
 </script>
 
 <template>
-  <div class="jobs-shell">
+  <div class="grid h-full overflow-hidden" style="grid-template-columns: 220px minmax(0, 1fr)">
     <AppSidebar />
 
-    <main class="jobs-main">
-      <header class="jobs-topbar">
-        <div class="search-bar">
-          <Search class="search-icon" />
+    <main class="flex flex-col gap-6 p-6 min-h-0" style="padding: 24px 28px">
+      <!-- Topbar -->
+      <header class="flex flex-col gap-2 min-w-0 shrink-0 p-3">
+        <!-- Search bar -->
+        <div class="flex items-center gap-2 border border-gray-200 bg-white px-3 h-9">
+          <Search class="w-4 h-4 text-gray-400 shrink-0" />
           <input
             v-model="searchTerm"
             type="text"
             placeholder="Search by title, company, or skill"
-            class="search-input"
+            class="flex-1 border-none outline-none text-sm bg-transparent text-gray-900 placeholder:text-gray-400"
           />
-          <span v-if="searchTerm" class="search-clear" @click="searchTerm = ''">✕</span>
-          <button class="button search-button button-primary">Search</button>
+          <span
+            v-if="searchTerm"
+            class="text-xs text-gray-400 cursor-pointer hover:text-gray-600"
+            @click="searchTerm = ''"
+          >✕</span>
+          <button
+            class="button h-7 px-3 text-sm text-white"
+            :style="{ background: 'var(--color-accent)' }"
+          >
+            Search
+          </button>
         </div>
 
-        <div class="topbar-actions">
-          <div class="jobs-filter-bar">
+        <!-- Filters + sort -->
+        <div class="flex items-center gap-2">
+          <div class="flex gap-2 flex-wrap flex-1">
             <button
               v-for="f in filters"
               :key="f.value"
-              :class="['filter-pill', { active: activeFilter === f.value }]"
+              class="border cursor-pointer transition-all h-8 px-2 text-sm"
+              :class="activeFilter === f.value
+                ? 'border-gray-900 text-[var(--color-accent)]'
+                : 'border-gray-200 bg-white text-gray-900'"
+              :style="activeFilter === f.value ? { background: 'var(--color-accent-soft)' } : {}"
               @click="activeFilter = f.value"
             >
               {{ f.label }}
             </button>
           </div>
-          <button class="button-sort" @click="toggleSort">
-            <ListFilter />
-            {{ sortDirection == 'newest' ? 'Newest' : 'Oldest' }}
+          <button
+            class="flex items-center gap-1.5 h-8 px-2 border border-gray-200 bg-white text-sm text-gray-700 cursor-pointer hover:bg-gray-50 transition-all shrink-0"
+            @click="toggleSort"
+          >
+            <ListFilter class="w-4 h-4" />
+            {{ sortDirection === 'newest' ? 'Newest' : 'Oldest' }}
           </button>
         </div>
       </header>
 
-      <div class="count-row">
-        <span class="count-label">{{ formatCount(filteredJobs.length) }}</span>
-        <span v-if="searchTerm" class="count-query">for "{{ searchTerm }}"</span>
+      <!-- Count row -->
+      <div class="flex items-center gap-1 text-sm shrink-0">
+        <span class="font-semibold text-gray-900">{{ formatCount(filteredJobs.length) }}</span>
+        <span v-if="searchTerm" class="italic text-gray-400">for "{{ searchTerm }}"</span>
       </div>
 
-      <section class="jobs-body">
-        <div v-if="loading" class="status-card">Loading jobs…</div>
-        <div v-else-if="error" class="status-card status-error">{{ error }}</div>
-        <div v-else-if="filteredJobs.length === 0" class="status-card">
+      <!-- Jobs body -->
+      <section class="flex-1 bg-white border border-gray-200 flex flex-col min-h-0">
+        <div v-if="loading" class="m-[18px] bg-white p-6 border border-gray-200">
+          Loading jobs…
+        </div>
+        <div
+          v-else-if="error"
+          class="m-[18px] p-6 border border-red-200 bg-red-50 text-red-700"
+        >
+          {{ error }}
+        </div>
+        <div v-else-if="filteredJobs.length === 0" class="m-[18px] bg-white p-6 border border-gray-200">
           No jobs match this filter.
         </div>
-        <div v-else class="job-list-scroll">
-          <div v-for="(group, label) in groupedJobs" :key="label" class="job-group">
-            <div class="group-label">{{ label }}</div>
+        <div v-else class="flex-1 overflow-y-auto min-h-0">
+          <div v-for="(group, label) in groupedJobs" :key="label" class="px-5 py-4">
+            <div class="mb-2.5 text-[0.85rem] text-gray-400 uppercase tracking-[0.08em]">
+              {{ label }}
+            </div>
             <JobRow
               v-for="job in group"
               :key="job.id"
@@ -282,13 +273,24 @@ onUnmounted(() => {})
       </section>
     </main>
 
-    <!-- Details panel - slides in from the right as overlay -->
+    <!-- Detail panel -->
     <Teleport to="body">
       <Transition name="detail-slide">
-        <div v-if="detailOpen" class="detail-overlay" @click.self="closeDetail">
-          <div class="detail-drawer">
-            <div class="detail-back" @click="closeDetail">
-              <ArrowLeft />
+        <div
+          v-if="detailOpen"
+          class="fixed inset-0 z-[100] flex justify-end pointer-events-none"
+          style="top: var(--topbar-height)"
+          @click.self="closeDetail"
+        >
+          <div
+            class="w-[50vw] min-w-[560px] max-w-full h-full bg-white flex flex-col overflow-y-auto pointer-events-auto shadow-[-4px_0_12px_rgba(0,0,0,0.1)]"
+          >
+            <!-- Back button: hidden on desktop, visible on mobile -->
+            <div
+              class="hidden items-center gap-2 p-3 border-b border-gray-200 text-gray-400 cursor-pointer text-sm shrink-0 md:hidden"
+              @click="closeDetail"
+            >
+              <ArrowLeft class="w-4 h-4" />
               Back to jobs
             </div>
             <JobDetail
@@ -305,203 +307,25 @@ onUnmounted(() => {})
 </template>
 
 <style scoped>
-.jobs-shell {
-  display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  height: 100%;
-  overflow: hidden;
-}
-
-.jobs-main {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  padding: 24px 28px;
-  min-height: 0;
-}
-
-/* Search */
-
-.jobs-topbar {
-  display: flex;
-  flex-direction: column;
-  padding: var(--spacing-3);
-  min-width: 0;
-  gap: var(--spacing-2);
-  flex-shrink: 0;
-}
-
-.topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-}
-
-.total-count {
-  font-weight: 600;
-  color: #1f2937;
-}
-
-.jobs-body {
-  flex: 1;
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-/* Filters */
-
-.jobs-filter-bar {
-  display: flex;
-  gap: var(--spacing-2);
-  flex-wrap: wrap;
-  flex: 1;
-}
-
-.filter-pill {
-  border: 1px solid var(--color-border);
-  background: var(--bg);
-  color: var(--text);
-  cursor: pointer;
-  transition: all 0.12s;
-  height: 2rem;
-  padding: 0 var(--spacing-2);
-  font-size: var(--text-sm);
-}
-
-.filter-pill.active {
-  background: var(--accent-soft);
-  border-color: var(--color-text);
-  color: var(--accent);
-}
-
-/* Count */
-.count-row {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-1);
-  font-size: var(--text-sm);
-  flex-shrink: 0;
-}
-
-.count-label {
-  font-weight: 600;
-  color: var(--text);
-}
-
-.count-query {
-  font-style: italic;
-  color: var(--muted);
-}
-
-.count-query {
-  font-style: italic;
-  color: var(--muted);
-}
-
-.job-list-scroll {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-}
-
-.job-group {
-  padding: 16px 20px;
-}
-
-.group-label {
-  margin-bottom: 10px;
-  font-size: 0.85rem;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-/* Detail Overlay */
-.detail-overlay {
-  position: fixed;
-  top: var(--topbar-height) !important;
-  inset: 0;
-  z-index: 100;
-  display: flex;
-  justify-content: flex-end;
-  pointer-events: none;
-}
-
-.detail-drawer {
-  width: 50vw;
-  min-width: 560px;
-  max-width: 100%;
-  height: 100%;
-  background: var(--color-bg-primary);
-  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  pointer-events: auto;
-}
-
-/* hide on desktop, show on mobile */
-.detail-back {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  padding: var(--spacing-3);
-  border-bottom: 1px solid var(--color-border);
-  color: var(--muted);
-  cursor: pointer;
-  height: 0;
-  padding: 0;
-  overflow: hidden;
-  visibility: hidden;
-  flex-shrink: 0;
-  font-size: var(--text-sm);
-}
-
-.status-card {
-  margin: 18px;
-  background: var(--color-bg-primary);
-  border: var(--color-border);
-  padding: 1.5rem;
-}
-
-.status-error {
-  border-color: #fecaca;
-  background: #fef2f2;
-  color: #b91c1c;
-}
-/* Mobile */
+/* Mobile overrides — kept in <style> because Tailwind can't conditionally swap grid-template-columns easily */
 @media (max-width: 768px) {
-  .jobs-shell {
-    grid-template-columns: 1fr;
+  div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
   }
 
-  .jobs-main {
-    padding: var(--spacing-4);
+  .detail-back-mobile {
+    display: flex !important;
   }
 
-  .detail-drawer {
-    width: 100%;
-  }
-
-  .detail-back {
-    visibility: visible;
-    height: auto;
-    padding: var(--spacing-3);
-    overflow: visible;
-  }
-
-  .job-list-scroll {
+  div[class*="overflow-y-auto"][class*="min-h-0"] {
     max-height: calc(100vh - 320px);
   }
 }
 
 @media (max-width: 480px) {
-  .filter-pill {
-    font-size: var(--text-xs);
-    padding: 0 var(--spacing-1);
+  button.filter-pill-sm {
+    font-size: 0.75rem;
+    padding: 0 4px;
   }
 }
 </style>
