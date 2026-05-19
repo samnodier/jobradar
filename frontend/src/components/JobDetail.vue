@@ -12,7 +12,7 @@
           </span>
         </div>
         <button
-          class="w-[25px] h-[25px] bg-transparent border-none text-gray-400 cursor-pointer shrink-0 flex items-center justify-center transition-all"
+          class="w-25px h-25px bg-transparent border-none text-gray-400 cursor-pointer shrink-0 flex items-center justify-center transition-all"
           @click="$emit('close')"
         >
           <X :size="16" />
@@ -25,19 +25,19 @@
 
       <div class="flex flex-wrap gap-2">
         <span
-          class="inline-flex items-center gap-1 text-xs text-gray-500 bg-black/[0.04] px-2 border border-gray-200 h-[22px]"
+          class="inline-flex items-center gap-1 text-xs text-gray-500 bg-black/0.04 px-2 border border-gray-200 h-22px"
         >
           <MapPin :size="12" />
           {{ job.job_location || (job.is_remote ? 'Remote' : 'On-site') }}
         </span>
         <span
-          class="inline-flex items-center gap-1 text-xs text-gray-500 bg-black/[0.04] px-2 border border-gray-200 h-[22px]"
+          class="inline-flex items-center gap-1 text-xs text-gray-500 bg-black/0.04 px-2 border border-gray-200 h-22px"
         >
           <Briefcase :size="12" />
           {{ job.employment_type || 'Full time' }}
         </span>
         <span
-          class="inline-flex items-center gap-1 text-xs px-2 border h-[22px] font-medium"
+          class="inline-flex items-center gap-1 text-xs px-2 border h-22px font-medium"
           :style="{
             color: 'var(--color-accent)',
             borderColor: 'var(--color-accent)',
@@ -48,7 +48,7 @@
           {{ job.salary_min && job.salary_max ? formatSalary(job) : 'Salary not listed' }}
         </span>
         <span
-          class="inline-flex items-center gap-1 text-xs text-gray-500 bg-white px-2 border border-gray-200 h-[22px]"
+          class="inline-flex items-center gap-1 text-xs text-gray-500 bg-white px-2 border border-gray-200 h-22px"
         >
           <Clock :size="12" />
           {{ timeAgo(job.posted_at || job.created_at) }}
@@ -69,11 +69,11 @@
         <ExternalLink :size="13" />
       </a>
       <button
-        class="h-8 px-[14px] border text-sm cursor-pointer transition-all whitespace-nowrap"
+        class="h-8 px-14px border text-sm cursor-pointer transition-all whitespace-nowrap"
         :class="
           job.is_saved
             ? 'text-white border-transparent'
-            : 'border-gray-200 bg-black/[0.04] text-gray-900'
+            : 'border-gray-200 bg-black/0.04 text-gray-900'
         "
         :style="
           job.is_saved
@@ -85,7 +85,7 @@
         {{ job.is_saved ? 'Saved' : 'Save' }}
       </button>
       <button
-        class="w-8 h-8 border border-gray-200 bg-black/[0.04] text-gray-900 text-sm cursor-pointer flex items-center justify-center shrink-0 transition-all"
+        class="w-8 h-8 border border-gray-200 bg-black/0.04 text-gray-900 text-sm cursor-pointer flex items-center justify-center shrink-0 transition-all"
         @click="copyLink"
         :title="copied ? 'Copied!' : 'Copy link'"
       >

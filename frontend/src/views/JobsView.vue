@@ -216,7 +216,7 @@ onUnmounted(() => {})
               :key="f.value"
               class="border cursor-pointer transition-all h-8 px-2 text-sm"
               :class="activeFilter === f.value
-                ? 'border-gray-900 text-[var(--color-accent)]'
+                ? 'border-gray-900 text-accent'
                 : 'border-gray-200 bg-white text-gray-900'"
               :style="activeFilter === f.value ? { background: 'var(--color-accent-soft)' } : {}"
               @click="activeFilter = f.value"
@@ -242,16 +242,16 @@ onUnmounted(() => {})
 
       <!-- Jobs body -->
       <section class="flex-1 bg-white border border-gray-200 flex flex-col min-h-0">
-        <div v-if="loading" class="m-[18px] bg-white p-6 border border-gray-200">
+        <div v-if="loading" class="m-4.5 bg-white p-6 border border-gray-200">
           Loading jobs…
         </div>
         <div
           v-else-if="error"
-          class="m-[18px] p-6 border border-red-200 bg-red-50 text-red-700"
+          class="m-4.5 p-6 border border-red-200 bg-red-50 text-red-700"
         >
           {{ error }}
         </div>
-        <div v-else-if="filteredJobs.length === 0" class="m-[18px] bg-white p-6 border border-gray-200">
+        <div v-else-if="filteredJobs.length === 0" class="m-4.5 bg-white p-6 border border-gray-200">
           No jobs match this filter.
         </div>
         <div v-else class="flex-1 overflow-y-auto min-h-0">
@@ -278,12 +278,12 @@ onUnmounted(() => {})
       <Transition name="detail-slide">
         <div
           v-if="detailOpen"
-          class="fixed inset-0 z-[100] flex justify-end pointer-events-none"
+          class="fixed inset-0 z-100 flex justify-end pointer-events-none"
           style="top: var(--topbar-height)"
           @click.self="closeDetail"
         >
           <div
-            class="w-[50vw] min-w-[560px] max-w-full h-full bg-white flex flex-col overflow-y-auto pointer-events-auto shadow-[-4px_0_12px_rgba(0,0,0,0.1)]"
+            class="w-[50vw] min-w-140 max-w-full h-full bg-white flex flex-col overflow-y-auto pointer-events-auto shadow-[-4px_0_12px_rgba(0,0,0,0.1)]"
           >
             <!-- Back button: hidden on desktop, visible on mobile -->
             <div

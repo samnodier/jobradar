@@ -39,8 +39,6 @@ async function updateApplication(
   },
 ) {
   isSaving.value = true
-
-  // Map frontend field names to backend JSON names (pointers)
   const body = {
     notes: payload.notes,
     application_status: payload.application_status,
@@ -49,7 +47,6 @@ async function updateApplication(
     follow_up_at: payload.follow_up_at,
     clear_follow_up_at: payload.clear_follow_up_at ?? false,
   }
-
   try {
     const response = await fetch(`/api/applications/${props.app.id}`, {
       method: 'PATCH',
@@ -57,12 +54,10 @@ async function updateApplication(
       credentials: 'include',
       body: JSON.stringify(body),
     })
-
     if (!response.ok) {
       const data = await response.json().catch(() => null)
       throw new Error(data?.error ?? 'Update failed')
     }
-
     const data = await response.json()
     emit('updated', data)
     lastSaved.value = formatDateTime.format(new Date(data.updated_at))
@@ -127,39 +122,57 @@ function formatDateShort(date: string | null | undefined): string {
 </script>
 
 <template>
-  <aside class="application-detail">
+  <aside class="bg-white flex flex-col h-full" style="font-family: var(--font-base)">
     <!-- Header -->
-    <div class="detail-header">
-      <div class="header-top">
-        <div class="company-logo">
+    <div class="p-4 border-b border-gray-200 shrink-0 flex flex-col gap-3">
+      <!-- Top: logo + meta -->
+      <div class="flex items-start gap-3">
+        <!-- Company logo -->
+        <div
+          class="w-10 h-10 rounded-md border border-gray-200 bg-black/[0.04] shrink-0 flex items-center justify-center overflow-hidden"
+        >
           <img
             v-if="app.job_logo_url"
             :src="app.job_logo_url"
             :alt="app.company_name"
-            class="logo-img"
+            class="w-full h-full object-contain"
           />
-          <span v-else class="logo-initials">{{ companyInitials }}</span>
+          <span v-else class="text-base font-bold text-gray-400 tracking-wide">
+            {{ companyInitials }}
+          </span>
         </div>
 
-        <div class="header-meta">
-          <div class="title-row">
-            <h2 class="job-title">{{ app.job_title }}</h2>
-            <button class="close-button" @click="$emit('close')">
+        <!-- Title + company + meta -->
+        <div class="flex-1 min-w-0 flex flex-col gap-1">
+          <div class="flex items-start justify-between gap-2">
+            <h2 class="m-0 text-xl font-bold text-gray-900 leading-tight">{{ app.job_title }}</h2>
+            <button
+              class="w-[25px] h-[25px] bg-transparent border-none text-gray-400 cursor-pointer shrink-0 flex items-center justify-center transition-colors hover:text-gray-900"
+              @click="$emit('close')"
+            >
               <X :size="16" />
             </button>
           </div>
-          <div class="company-row">
-            <Building2 :size="13" class="meta-icon" />
-            <span class="company-name">{{ app.company_name }}</span>
+
+          <div class="flex items-center gap-2">
+            <Building2 :size="13" class="text-gray-400 shrink-0" />
+            <span class="text-sm font-semibold text-gray-400">{{ app.company_name }}</span>
           </div>
-          <div class="meta-row">
-            <div v-if="app.job_location || app.job_is_remote" class="meta-chip">
+
+          <div class="flex flex-wrap gap-2 mt-1">
+            <div
+              v-if="app.job_location || app.job_is_remote"
+              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-black/[0.04] text-gray-500 border border-gray-200"
+            >
               <MapPin :size="12" />
               <span>{{
                 app.job_is_remote ? 'Remote' : (app.job_location ?? 'Location unknown')
               }}</span>
             </div>
-            <div v-if="app.job_is_remote" class="meta-chip meta-chip--remote">
+            <div
+              v-if="app.job_is_remote"
+              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200"
+            >
               <Wifi :size="12" />
               <span>Remote</span>
             </div>
@@ -168,12 +181,28 @@ function formatDateShort(date: string | null | undefined): string {
       </div>
 
       <!-- Status selector -->
-      <div class="status-row">
-        <label class="status-label-text">Status</label>
+      <div class="flex items-center gap-3">
+        <label
+          class="text-xs font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap"
+        >
+          Status
+        </label>
         <select
-          class="status-select"
+          class="flex-1 px-2 py-1 rounded-md border text-sm font-semibold cursor-pointer transition-colors focus:outline-none focus:border-[var(--color-accent)] appearance-auto"
+          :class="{
+            'bg-blue-100 text-blue-700 border-blue-200': app.application_status === 'applied',
+            'bg-yellow-50 text-yellow-800 border-yellow-200':
+              app.application_status === 'interview',
+            'bg-green-100 text-green-700 border-green-200': app.application_status === 'offer',
+            'bg-red-100 text-red-700 border-red-200': app.application_status === 'rejected',
+            'bg-black/[0.04] text-gray-400 border-gray-200': ![
+              'applied',
+              'interview',
+              'offer',
+              'rejected',
+            ].includes(app.application_status),
+          }"
           :value="app.application_status"
-          :data-status="app.application_status"
           @change="handleStatusChange"
         >
           <option v-for="status in statusOrder" :key="status" :value="status">
@@ -184,418 +213,85 @@ function formatDateShort(date: string | null | undefined): string {
     </div>
 
     <!-- Scrollable body -->
-    <div class="detail-body">
+    <div class="flex-1 overflow-y-auto flex flex-col">
       <!-- Timeline -->
-      <div class="detail-section">
-        <p class="section-label">Timeline</p>
-        <div class="timeline">
-          <div class="timeline-row">
-            <div class="timeline-icon-wrap">
+      <div class="p-4 border-b border-gray-200">
+        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Timeline</p>
+        <div class="flex flex-col gap-2">
+          <div class="grid items-center gap-2" style="grid-template-columns: 20px 1fr auto">
+            <div class="flex items-center justify-center text-gray-500">
               <Calendar :size="13" />
             </div>
-            <span class="timeline-label">Applied</span>
+            <span class="text-sm text-gray-400">Applied</span>
             <input
               type="date"
-              class="date-input"
+              class="text-xs border border-gray-200 bg-black/[0.04] text-gray-900 px-1 py-0.5 rounded cursor-pointer ml-auto focus:outline-none focus:border-[var(--color-accent)]"
               :value="formatDateForInput(app.applied_at)"
               @change="handleDateChange('applied_at', $event)"
             />
           </div>
-          <div class="timeline-row">
-            <div class="timeline-icon-wrap">
-              <Clock :size="13" />
-            </div>
-            <span class="timeline-label">Follow up</span>
+
+          <div class="grid items-center gap-2" style="grid-template-columns: 20px 1fr auto">
+            <div class="flex items-center justify-center text-gray-500"><Clock :size="13" /></div>
+            <span class="text-sm text-gray-400">Follow up</span>
             <input
               type="date"
-              class="date-input"
+              class="text-xs border border-gray-200 bg-black/[0.04] text-gray-900 px-1 py-0.5 rounded cursor-pointer ml-auto focus:outline-none focus:border-[var(--color-accent)]"
               :value="formatDateForInput(app.follow_up_at)"
               @change="handleDateChange('follow_up_at', $event)"
             />
           </div>
-          <div class="timeline-row">
-            <div class="timeline-icon-wrap">
+
+          <div class="grid items-center gap-2" style="grid-template-columns: 20px 1fr auto">
+            <div class="flex items-center justify-center text-gray-500">
               <RefreshCw :size="13" />
             </div>
-            <span class="timeline-label">Last Activity</span>
-            <span class="timeline-value">{{ formatDate(app.last_status_changed_at) }}</span>
+            <span class="text-sm text-gray-400">Last Activity</span>
+            <span class="text-sm text-gray-900 font-semibold text-right">{{
+              formatDate(app.last_status_changed_at)
+            }}</span>
           </div>
-          <div class="timeline-row">
-            <div class="timeline-icon-wrap">
-              <Clock :size="13" />
-            </div>
-            <span class="timeline-label">Tracked on</span>
-            <span class="timeline-value">{{ formatDateShort(app.created_at) }}</span>
+
+          <div class="grid items-center gap-2" style="grid-template-columns: 20px 1fr auto">
+            <div class="flex items-center justify-center text-gray-500"><Clock :size="13" /></div>
+            <span class="text-sm text-gray-400">Tracked on</span>
+            <span class="text-sm text-gray-900 font-semibold text-right">{{
+              formatDateShort(app.created_at)
+            }}</span>
           </div>
         </div>
       </div>
 
       <!-- Notes -->
-      <div class="detail-section detail-section--notes">
-        <div class="notes-header">
-          <h2 class="section-label">Notes</h2>
-          <p class="notes-status" v-if="isSaving">Saving...</p>
+      <div class="p-4 flex-1 flex flex-col">
+        <div class="flex items-center justify-between mb-3">
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide m-0">Notes</p>
+          <p v-if="isSaving" class="text-xs text-gray-400 italic">Saving...</p>
         </div>
         <textarea
           v-model="currentText"
           @input="handleNotesInput"
-          class="notes-textarea"
           placeholder="Add your research, interview notes, or follow-up plan here..."
+          class="text-sm text-gray-900 leading-relaxed w-full font-mono min-h-[140px] flex-1 p-3 resize-y border border-gray-200 bg-black/[0.04] transition-colors focus:outline-none focus:border-[var(--color-accent)] focus:bg-white"
         ></textarea>
-        <p class="notes-status" v-if="lastSaved && !isSaving">Last saved: {{ lastSaved }}</p>
+        <p v-if="lastSaved && !isSaving" class="text-xs text-gray-400 mt-2">
+          Last saved: {{ lastSaved }}
+        </p>
       </div>
     </div>
-    <!-- Actions -->
-    <div class="detail-footer" v-if="app.source_url">
-      <a :href="app.source_url" target="_blank" rel="noreferrer" class="button-apply">
+
+    <!-- Footer -->
+    <div v-if="app.source_url" class="p-4 border-t border-gray-200 shrink-0">
+      <a
+        :href="app.source_url"
+        target="_blank"
+        rel="noreferrer"
+        class="w-full h-8 inline-flex items-center justify-center gap-1 text-white text-sm font-semibold no-underline cursor-pointer transition-opacity hover:opacity-[0.88]"
+        :style="{ background: 'var(--color-accent)' }"
+      >
         View job posting
         <ArrowUpRight :size="13" />
       </a>
     </div>
   </aside>
 </template>
-
-<style scoped>
-.application-detail {
-  background: var(--color-bg-primary);
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  font-family: var(--font-base);
-}
-
-/* Header */
-.detail-header {
-  padding: var(--spacing-4);
-  border-bottom: 1px solid var(--color-border);
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-3);
-}
-
-.header-top {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-3);
-}
-
-.company-logo {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-secondary);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.logo-img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.logo-initials {
-  font-size: var(--text-base);
-  font-weight: var(--font-bold);
-  color: var(--color-text-muted);
-  letter-spacing: 0.02em;
-}
-
-/* Title / meta */
-.header-meta {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-1);
-}
-
-.title-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--spacing-2);
-}
-
-.job-title {
-  margin: 0;
-  font-size: var(--text-xl);
-  font-weight: var(--font-bold);
-  color: var(--color-text-primary);
-  line-height: 1.25;
-}
-
-.company-row {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-2);
-}
-
-.company-name {
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  color: var(--color-text-muted);
-}
-
-.meta-icon {
-  color: var(--color-text-muted);
-  flex-shrink: 0;
-}
-
-.meta-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-2);
-  margin-top: var(--spacing-1);
-}
-
-.meta-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px var(--spacing-2);
-  border-radius: 999px;
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  background: var(--color-bg-secondary);
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
-}
-
-.meta-chip--remote {
-  background: #dcfce7;
-  color: #15803d;
-  border-color: #bbf7d0;
-}
-
-.close-button {
-  width: 25px;
-  height: 25px;
-  border: none;
-  background: transparent;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.12s ease;
-}
-
-.close-button:hover {
-  color: var(--color-text-primary);
-}
-
-/* Status row*/
-.status-row {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-3);
-}
-
-.status-label-text {
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-}
-
-.status-select {
-  flex: 1;
-  padding: var(--spacing-1) var(--spacing-2);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  font-family: var(--font-base);
-  background: var(--color-bg-secondary);
-  color: var(--color-text-primary);
-  cursor: pointer;
-  transition: border-color 0.15s ease;
-  appearance: auto;
-}
-
-.status-select:focus {
-  outline: none;
-  border-color: var(--color-accent);
-}
-
-.status-select[data-status='applied'] {
-  background: #dbeafe;
-  color: #1d4ed8;
-  border-color: #bfdbfe;
-}
-.status-select[data-status='interview'] {
-  background: #fef9c3;
-  color: #854d0e;
-  border-color: #fef08a;
-}
-.status-select[data-status='offer'] {
-  background: #dcfce7;
-  color: #15803d;
-  border-color: #bbf7d0;
-}
-.status-select[data-status='rejected'] {
-  background: #fee2e2;
-  color: #b91c1c;
-  border-color: #fecaca;
-}
-.status-select[data-status='saved'] {
-  background: var(--color-bg-secondary);
-  color: var(--color-text-muted);
-}
-
-.detail-body {
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Sections */
-.detail-section {
-  padding: var(--spacing-4);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.detail-section--notes {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.section-label {
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin: 0 0 var(--spacing-3) 0;
-}
-
-/* Timeline */
-.timeline {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2);
-}
-
-.timeline-row {
-  display: grid;
-  grid-template-columns: 20px 1fr auto;
-  align-items: center;
-  gap: var(--spacing-2);
-}
-
-.timeline-icon-wrap {
-  color: var(--color-text-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.timeline-label {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-}
-
-.timeline-value {
-  font-size: var(--text-sm);
-  color: var(--color-text-primary);
-  font-weight: var(--font-semibold);
-  text-align: right;
-}
-
-.date-input {
-  font-size: var(--text-xs);
-  font-family: var(--font-base);
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-secondary);
-  color: var(--color-text-primary);
-  padding: 2px 4px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  display: block;
-  margin-left: auto;
-}
-
-/* Notes */
-.notes-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--spacing-3);
-}
-
-.notes-header .section-label {
-  margin: 0;
-}
-
-.notes-saving {
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-  font-style: italic;
-}
-
-.notes-textarea {
-  font-size: var(--text-sm);
-  color: var(--color-text);
-  line-height: 1.6;
-  width: 100%;
-  font-family: monospace;
-  min-height: 140px;
-  flex: 1;
-  padding: var(--spacing-3);
-  resize: vertical;
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-secondary);
-  transition: border-color 0.15s ease;
-}
-
-.notes-textarea:focus {
-  outline: none;
-  border-color: var(--color-accent);
-  background: var(--color-bg-primary);
-}
-
-.notes-status {
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-  margin-top: var(--spacing-2);
-}
-
-/* Actions */
-.detail-footer {
-  padding: var(--spacing-4);
-  border-top: 1px solid var(--color-border);
-  flex-shrink: 0;
-}
-
-.button-apply {
-  width: 100%;
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-1);
-  background: var(--color-accent);
-  color: #fff;
-  border: none;
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  cursor: pointer;
-  text-decoration: none;
-  transition: opacity 0.15s ease;
-}
-
-.button-apply:hover {
-  opacity: 0.88;
-}
-</style>
