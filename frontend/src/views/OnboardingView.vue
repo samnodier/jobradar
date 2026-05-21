@@ -145,11 +145,7 @@ async function completeOnboarding() {
             />
           </div>
 
-          <button
-            type="submit"
-            class="button button-primary w-full"
-            :disabled="loading || !isFormValid"
-          >
+          <button type="submit" class="bg-accent px-3 py-2" :disabled="loading || !isFormValid">
             {{ loading ? 'Saving...' : 'Complete Onboarding' }}
           </button>
 

@@ -57,6 +57,25 @@ func (cfg *apiConfig) handlerJobSave(w http.ResponseWriter, r *http.Request) {
 	httpx.RespondJSON(w, http.StatusCreated, savedJob)
 }
 
+func (cfg *apiConfig) handlerSavedJobsGet(w http.ResponseWriter, r *http.Request) {
+	userID, ok := getUserIDFromRequest(w, r)
+	if !ok {
+		return
+	}
+
+	jobs, err := cfg.db.GetSavedJobsForUser(r.Context(), userID)
+	if err != nil {
+		httpx.RespondError(w, http.StatusInternalServerError, "failed to retrieve saved jobs")
+		return
+	}
+
+	if jobs == nil {
+		jobs = []database.GetSavedJobsForUserRow{}
+	}
+
+	httpx.RespondJSON(w, http.StatusOK, jobs)
+}
+
 func (cfg *apiConfig) handlerJobUnsave(w http.ResponseWriter, r *http.Request) {
 	// Use helper function to get userID
 	userID, ok := getUserIDFromRequest(w, r)

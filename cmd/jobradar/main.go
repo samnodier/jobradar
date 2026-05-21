@@ -110,12 +110,34 @@ func main() {
 			r.Post("/applications", cfg.handlerApplicationCreate)
 			r.Get("/applications/{applicationID}", cfg.handlerApplicationGetByID)
 			r.Patch("/applications/{id}", cfg.handlerApplicationUpdate)
+			r.Delete("/applications/{id}", cfg.handlerApplicationDelete)
 
 			r.Get("/profile/experiences", cfg.handlerGetExperiences)
 			r.Post("/profile/experiences", cfg.handlerCreateExperience)
 			r.Patch("/profile/experiences/{id}", cfg.handlerUpdateExperience)
 			r.Delete("/profile/experiences/{id}", cfg.handlerDeleteExperience)
 
+			r.Get("/profile/educations", cfg.handlerGetEducations)
+			r.Post("/profile/educations", cfg.handlerCreateEducation)
+			r.Patch("/profile/educations/{id}", cfg.handlerUpdateEducation)
+			r.Delete("/profile/educations/{id}", cfg.handlerDeleteEducation)
+
+			r.Get("/profile/projects", cfg.handlerGetProjects)
+			r.Post("/profile/projects", cfg.handlerCreateProject)
+			r.Patch("/profile/projects/{id}", cfg.handlerUpdateProject)
+			r.Delete("/profile/projects/{id}", cfg.handlerDeleteProject)
+
+			r.Get("/profile/certifications", cfg.handlerGetCertifications)
+			r.Post("/profile/certifications", cfg.handlerCreateCertification)
+			r.Patch("/profile/certifications/{id}", cfg.handlerUpdateCertification)
+			r.Delete("/profile/certifications/{id}", cfg.handlerDeleteCertification)
+
+			r.Get("/profile/languages", cfg.handlerGetLanguages)
+			r.Post("/profile/languages", cfg.handlerCreateLanguage)
+			r.Patch("/profile/languages/{id}", cfg.handlerUpdateLanguage)
+			r.Delete("/profile/languages/{id}", cfg.handlerDeleteLanguage)
+
+			r.Get("/saved_jobs", cfg.handlerSavedJobsGet)
 			r.Post("/saved_jobs", cfg.handlerJobSave)
 			r.Delete("/saved_jobs", cfg.handlerJobUnsave)
 

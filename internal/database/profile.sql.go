@@ -37,6 +37,126 @@ func (q *Queries) AddSkillToExperience(ctx context.Context, arg AddSkillToExperi
 	return i, err
 }
 
+const createUserCertification = `-- name: CreateUserCertification :one
+INSERT INTO user_certifications (
+    user_id,
+    certification_name,
+    issuing_organization,
+    issue_date,
+    expiration_date,
+    does_not_expire,
+    credential_id,
+    credential_url,
+    is_in_progress
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9
+)
+RETURNING id, user_id, certification_name, issuing_organization, issue_date, expiration_date, does_not_expire, credential_id, credential_url, is_in_progress, certification_location, created_at, updated_at
+`
+
+type CreateUserCertificationParams struct {
+	UserID              uuid.UUID   `json:"user_id"`
+	CertificationName   string      `json:"certification_name"`
+	IssuingOrganization string      `json:"issuing_organization"`
+	IssueDate           pgtype.Date `json:"issue_date"`
+	ExpirationDate      pgtype.Date `json:"expiration_date"`
+	DoesNotExpire       *bool       `json:"does_not_expire"`
+	CredentialID        *string     `json:"credential_id"`
+	CredentialUrl       *string     `json:"credential_url"`
+	IsInProgress        *bool       `json:"is_in_progress"`
+}
+
+func (q *Queries) CreateUserCertification(ctx context.Context, arg CreateUserCertificationParams) (UserCertification, error) {
+	row := q.db.QueryRow(ctx, createUserCertification,
+		arg.UserID,
+		arg.CertificationName,
+		arg.IssuingOrganization,
+		arg.IssueDate,
+		arg.ExpirationDate,
+		arg.DoesNotExpire,
+		arg.CredentialID,
+		arg.CredentialUrl,
+		arg.IsInProgress,
+	)
+	var i UserCertification
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.CertificationName,
+		&i.IssuingOrganization,
+		&i.IssueDate,
+		&i.ExpirationDate,
+		&i.DoesNotExpire,
+		&i.CredentialID,
+		&i.CredentialUrl,
+		&i.IsInProgress,
+		&i.CertificationLocation,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createUserEducation = `-- name: CreateUserEducation :one
+INSERT INTO user_education (
+    user_id,
+    institution_name,
+    degree_type,
+    degree_name,
+    field_of_study,
+    start_date,
+    end_date,
+    is_current,
+    description
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9
+)
+RETURNING id, user_id, institution_name, degree_type, degree_name, field_of_study, start_date, end_date, is_current, description, is_highlighted, created_at, updated_at
+`
+
+type CreateUserEducationParams struct {
+	UserID          uuid.UUID   `json:"user_id"`
+	InstitutionName string      `json:"institution_name"`
+	DegreeType      *string     `json:"degree_type"`
+	DegreeName      *string     `json:"degree_name"`
+	FieldOfStudy    *string     `json:"field_of_study"`
+	StartDate       pgtype.Date `json:"start_date"`
+	EndDate         pgtype.Date `json:"end_date"`
+	IsCurrent       *bool       `json:"is_current"`
+	Description     *string     `json:"description"`
+}
+
+func (q *Queries) CreateUserEducation(ctx context.Context, arg CreateUserEducationParams) (UserEducation, error) {
+	row := q.db.QueryRow(ctx, createUserEducation,
+		arg.UserID,
+		arg.InstitutionName,
+		arg.DegreeType,
+		arg.DegreeName,
+		arg.FieldOfStudy,
+		arg.StartDate,
+		arg.EndDate,
+		arg.IsCurrent,
+		arg.Description,
+	)
+	var i UserEducation
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.InstitutionName,
+		&i.DegreeType,
+		&i.DegreeName,
+		&i.FieldOfStudy,
+		&i.StartDate,
+		&i.EndDate,
+		&i.IsCurrent,
+		&i.Description,
+		&i.IsHighlighted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createUserExperience = `-- name: CreateUserExperience :one
 INSERT INTO user_experiences (
     user_id,
@@ -108,6 +228,103 @@ func (q *Queries) CreateUserExperience(ctx context.Context, arg CreateUserExperi
 	return i, err
 }
 
+const createUserLanguage = `-- name: CreateUserLanguage :one
+INSERT INTO user_languages (
+    user_id,
+    user_language,
+    proficiency
+) VALUES (
+    $1, $2, $3
+)
+RETURNING user_id, user_language, proficiency, created_at, updated_at
+`
+
+type CreateUserLanguageParams struct {
+	UserID       uuid.UUID `json:"user_id"`
+	UserLanguage string    `json:"user_language"`
+	Proficiency  *string   `json:"proficiency"`
+}
+
+func (q *Queries) CreateUserLanguage(ctx context.Context, arg CreateUserLanguageParams) (UserLanguage, error) {
+	row := q.db.QueryRow(ctx, createUserLanguage, arg.UserID, arg.UserLanguage, arg.Proficiency)
+	var i UserLanguage
+	err := row.Scan(
+		&i.UserID,
+		&i.UserLanguage,
+		&i.Proficiency,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createUserProject = `-- name: CreateUserProject :one
+INSERT INTO user_projects (
+    user_id,
+    title,
+    role_title,
+    description,
+    impact,
+    project_url,
+    repository_url,
+    start_date,
+    end_date,
+    is_current,
+    is_featured
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+)
+RETURNING id, user_id, title, role_title, description, impact, project_url, repository_url, start_date, end_date, is_current, is_featured, created_at, updated_at
+`
+
+type CreateUserProjectParams struct {
+	UserID        uuid.UUID   `json:"user_id"`
+	Title         string      `json:"title"`
+	RoleTitle     *string     `json:"role_title"`
+	Description   *string     `json:"description"`
+	Impact        *string     `json:"impact"`
+	ProjectUrl    *string     `json:"project_url"`
+	RepositoryUrl *string     `json:"repository_url"`
+	StartDate     pgtype.Date `json:"start_date"`
+	EndDate       pgtype.Date `json:"end_date"`
+	IsCurrent     *bool       `json:"is_current"`
+	IsFeatured    *bool       `json:"is_featured"`
+}
+
+func (q *Queries) CreateUserProject(ctx context.Context, arg CreateUserProjectParams) (UserProject, error) {
+	row := q.db.QueryRow(ctx, createUserProject,
+		arg.UserID,
+		arg.Title,
+		arg.RoleTitle,
+		arg.Description,
+		arg.Impact,
+		arg.ProjectUrl,
+		arg.RepositoryUrl,
+		arg.StartDate,
+		arg.EndDate,
+		arg.IsCurrent,
+		arg.IsFeatured,
+	)
+	var i UserProject
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Title,
+		&i.RoleTitle,
+		&i.Description,
+		&i.Impact,
+		&i.ProjectUrl,
+		&i.RepositoryUrl,
+		&i.StartDate,
+		&i.EndDate,
+		&i.IsCurrent,
+		&i.IsFeatured,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const deleteSkillsByExperienceID = `-- name: DeleteSkillsByExperienceID :exec
 DELETE FROM experience_skills
 WHERE experience_id = $1
@@ -115,6 +332,36 @@ WHERE experience_id = $1
 
 func (q *Queries) DeleteSkillsByExperienceID(ctx context.Context, experienceID uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteSkillsByExperienceID, experienceID)
+	return err
+}
+
+const deleteUserCertification = `-- name: DeleteUserCertification :exec
+DELETE FROM user_certifications
+WHERE id = $1 AND user_id = $2
+`
+
+type DeleteUserCertificationParams struct {
+	ID     uuid.UUID `json:"id"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) DeleteUserCertification(ctx context.Context, arg DeleteUserCertificationParams) error {
+	_, err := q.db.Exec(ctx, deleteUserCertification, arg.ID, arg.UserID)
+	return err
+}
+
+const deleteUserEducation = `-- name: DeleteUserEducation :exec
+DELETE FROM user_education
+WHERE id = $1 AND user_id = $2
+`
+
+type DeleteUserEducationParams struct {
+	ID     uuid.UUID `json:"id"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) DeleteUserEducation(ctx context.Context, arg DeleteUserEducationParams) error {
+	_, err := q.db.Exec(ctx, deleteUserEducation, arg.ID, arg.UserID)
 	return err
 }
 
@@ -131,6 +378,170 @@ type DeleteUserExperienceParams struct {
 func (q *Queries) DeleteUserExperience(ctx context.Context, arg DeleteUserExperienceParams) error {
 	_, err := q.db.Exec(ctx, deleteUserExperience, arg.ID, arg.UserID)
 	return err
+}
+
+const deleteUserLanguage = `-- name: DeleteUserLanguage :exec
+DELETE FROM user_languages
+WHERE user_id = $1 AND user_language = $2
+`
+
+type DeleteUserLanguageParams struct {
+	UserID       uuid.UUID `json:"user_id"`
+	UserLanguage string    `json:"user_language"`
+}
+
+func (q *Queries) DeleteUserLanguage(ctx context.Context, arg DeleteUserLanguageParams) error {
+	_, err := q.db.Exec(ctx, deleteUserLanguage, arg.UserID, arg.UserLanguage)
+	return err
+}
+
+const deleteUserProject = `-- name: DeleteUserProject :exec
+DELETE FROM user_projects
+WHERE id = $1 AND user_id = $2
+`
+
+type DeleteUserProjectParams struct {
+	ID     uuid.UUID `json:"id"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) DeleteUserProject(ctx context.Context, arg DeleteUserProjectParams) error {
+	_, err := q.db.Exec(ctx, deleteUserProject, arg.ID, arg.UserID)
+	return err
+}
+
+const getCertificationsByUserID = `-- name: GetCertificationsByUserID :many
+SELECT
+    id,
+    user_id,
+    certification_name,
+    issuing_organization,
+    issue_date,
+    expiration_date,
+    does_not_expire,
+    credential_id,
+    credential_url,
+    is_in_progress,
+    created_at,
+    updated_at
+FROM user_certifications
+WHERE user_id = $1
+ORDER BY issue_date DESC
+`
+
+type GetCertificationsByUserIDRow struct {
+	ID                  uuid.UUID   `json:"id"`
+	UserID              uuid.UUID   `json:"user_id"`
+	CertificationName   string      `json:"certification_name"`
+	IssuingOrganization string      `json:"issuing_organization"`
+	IssueDate           pgtype.Date `json:"issue_date"`
+	ExpirationDate      pgtype.Date `json:"expiration_date"`
+	DoesNotExpire       *bool       `json:"does_not_expire"`
+	CredentialID        *string     `json:"credential_id"`
+	CredentialUrl       *string     `json:"credential_url"`
+	IsInProgress        *bool       `json:"is_in_progress"`
+	CreatedAt           *time.Time  `json:"created_at"`
+	UpdatedAt           *time.Time  `json:"updated_at"`
+}
+
+func (q *Queries) GetCertificationsByUserID(ctx context.Context, userID uuid.UUID) ([]GetCertificationsByUserIDRow, error) {
+	rows, err := q.db.Query(ctx, getCertificationsByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCertificationsByUserIDRow
+	for rows.Next() {
+		var i GetCertificationsByUserIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.CertificationName,
+			&i.IssuingOrganization,
+			&i.IssueDate,
+			&i.ExpirationDate,
+			&i.DoesNotExpire,
+			&i.CredentialID,
+			&i.CredentialUrl,
+			&i.IsInProgress,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getEducationsByUserID = `-- name: GetEducationsByUserID :many
+SELECT
+    id,
+    user_id,
+    institution_name,
+    degree_type,
+    degree_name,
+    field_of_study,
+    start_date,
+    end_date,
+    is_current,
+    description,
+    created_at,
+    updated_at
+FROM user_education
+WHERE user_id = $1
+ORDER BY start_date DESC
+`
+
+type GetEducationsByUserIDRow struct {
+	ID              uuid.UUID   `json:"id"`
+	UserID          uuid.UUID   `json:"user_id"`
+	InstitutionName string      `json:"institution_name"`
+	DegreeType      *string     `json:"degree_type"`
+	DegreeName      *string     `json:"degree_name"`
+	FieldOfStudy    *string     `json:"field_of_study"`
+	StartDate       pgtype.Date `json:"start_date"`
+	EndDate         pgtype.Date `json:"end_date"`
+	IsCurrent       *bool       `json:"is_current"`
+	Description     *string     `json:"description"`
+	CreatedAt       *time.Time  `json:"created_at"`
+	UpdatedAt       *time.Time  `json:"updated_at"`
+}
+
+func (q *Queries) GetEducationsByUserID(ctx context.Context, userID uuid.UUID) ([]GetEducationsByUserIDRow, error) {
+	rows, err := q.db.Query(ctx, getEducationsByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetEducationsByUserIDRow
+	for rows.Next() {
+		var i GetEducationsByUserIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.InstitutionName,
+			&i.DegreeType,
+			&i.DegreeName,
+			&i.FieldOfStudy,
+			&i.StartDate,
+			&i.EndDate,
+			&i.IsCurrent,
+			&i.Description,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getExperiencesByUserID = `-- name: GetExperiencesByUserID :many
@@ -219,6 +630,44 @@ func (q *Queries) GetExperiencesByUserID(ctx context.Context, userID uuid.UUID) 
 	return items, nil
 }
 
+const getLanguagesByUserID = `-- name: GetLanguagesByUserID :many
+SELECT
+    user_id,
+    user_language,
+    proficiency,
+    created_at,
+    updated_at
+FROM user_languages
+WHERE user_id = $1
+ORDER BY proficiency DESC
+`
+
+func (q *Queries) GetLanguagesByUserID(ctx context.Context, userID uuid.UUID) ([]UserLanguage, error) {
+	rows, err := q.db.Query(ctx, getLanguagesByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []UserLanguage
+	for rows.Next() {
+		var i UserLanguage
+		if err := rows.Scan(
+			&i.UserID,
+			&i.UserLanguage,
+			&i.Proficiency,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getOrCreateSkill = `-- name: GetOrCreateSkill :one
 INSERT INTO skills (
     name
@@ -236,6 +685,190 @@ func (q *Queries) GetOrCreateSkill(ctx context.Context, name string) (uuid.UUID,
 	return id, err
 }
 
+const getProjectsByUserID = `-- name: GetProjectsByUserID :many
+SELECT
+    id,
+    user_id,
+    title,
+    role_title,
+    description,
+    impact,
+    project_url,
+    repository_url,
+    start_date,
+    end_date,
+    is_current,
+    is_featured,
+    created_at,
+    updated_at
+FROM user_projects
+WHERE user_id = $1
+ORDER BY start_date DESC
+`
+
+func (q *Queries) GetProjectsByUserID(ctx context.Context, userID uuid.UUID) ([]UserProject, error) {
+	rows, err := q.db.Query(ctx, getProjectsByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []UserProject
+	for rows.Next() {
+		var i UserProject
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Title,
+			&i.RoleTitle,
+			&i.Description,
+			&i.Impact,
+			&i.ProjectUrl,
+			&i.RepositoryUrl,
+			&i.StartDate,
+			&i.EndDate,
+			&i.IsCurrent,
+			&i.IsFeatured,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateUserCertification = `-- name: UpdateUserCertification :one
+UPDATE user_certifications
+SET
+    certification_name
+    = COALESCE($3, certification_name),
+    issuing_organization
+    = COALESCE($4, issuing_organization),
+    issue_date = COALESCE($5, issue_date),
+    expiration_date = COALESCE($6, expiration_date),
+    does_not_expire = COALESCE($7, does_not_expire),
+    credential_id = COALESCE($8, credential_id),
+    credential_url = COALESCE($9, credential_url),
+    is_in_progress = COALESCE($10, is_in_progress),
+    updated_at = NOW()
+WHERE id = $1 AND user_id = $2
+RETURNING id, user_id, certification_name, issuing_organization, issue_date, expiration_date, does_not_expire, credential_id, credential_url, is_in_progress, certification_location, created_at, updated_at
+`
+
+type UpdateUserCertificationParams struct {
+	ID                  uuid.UUID   `json:"id"`
+	UserID              uuid.UUID   `json:"user_id"`
+	CertificationName   *string     `json:"certification_name"`
+	IssuingOrganization *string     `json:"issuing_organization"`
+	IssueDate           pgtype.Date `json:"issue_date"`
+	ExpirationDate      pgtype.Date `json:"expiration_date"`
+	DoesNotExpire       *bool       `json:"does_not_expire"`
+	CredentialID        *string     `json:"credential_id"`
+	CredentialUrl       *string     `json:"credential_url"`
+	IsInProgress        *bool       `json:"is_in_progress"`
+}
+
+func (q *Queries) UpdateUserCertification(ctx context.Context, arg UpdateUserCertificationParams) (UserCertification, error) {
+	row := q.db.QueryRow(ctx, updateUserCertification,
+		arg.ID,
+		arg.UserID,
+		arg.CertificationName,
+		arg.IssuingOrganization,
+		arg.IssueDate,
+		arg.ExpirationDate,
+		arg.DoesNotExpire,
+		arg.CredentialID,
+		arg.CredentialUrl,
+		arg.IsInProgress,
+	)
+	var i UserCertification
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.CertificationName,
+		&i.IssuingOrganization,
+		&i.IssueDate,
+		&i.ExpirationDate,
+		&i.DoesNotExpire,
+		&i.CredentialID,
+		&i.CredentialUrl,
+		&i.IsInProgress,
+		&i.CertificationLocation,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateUserEducation = `-- name: UpdateUserEducation :one
+UPDATE user_education
+SET
+    institution_name
+    = COALESCE($3, institution_name),
+    degree_type = COALESCE($4, degree_type),
+    degree_name = COALESCE($5, degree_name),
+    field_of_study = COALESCE($6, field_of_study),
+    start_date = COALESCE($7::date, start_date),
+    end_date = CASE
+        WHEN $8::boolean = TRUE THEN NULL
+        ELSE COALESCE($9::date, end_date)
+    END,
+    is_current = COALESCE($8::boolean, is_current),
+    description = COALESCE($10, description),
+    updated_at = NOW()
+WHERE id = $1 AND user_id = $2
+RETURNING id, user_id, institution_name, degree_type, degree_name, field_of_study, start_date, end_date, is_current, description, is_highlighted, created_at, updated_at
+`
+
+type UpdateUserEducationParams struct {
+	ID              uuid.UUID   `json:"id"`
+	UserID          uuid.UUID   `json:"user_id"`
+	InstitutionName *string     `json:"institution_name"`
+	DegreeType      *string     `json:"degree_type"`
+	DegreeName      *string     `json:"degree_name"`
+	FieldOfStudy    *string     `json:"field_of_study"`
+	StartDate       pgtype.Date `json:"start_date"`
+	IsCurrent       *bool       `json:"is_current"`
+	EndDate         pgtype.Date `json:"end_date"`
+	Description     *string     `json:"description"`
+}
+
+func (q *Queries) UpdateUserEducation(ctx context.Context, arg UpdateUserEducationParams) (UserEducation, error) {
+	row := q.db.QueryRow(ctx, updateUserEducation,
+		arg.ID,
+		arg.UserID,
+		arg.InstitutionName,
+		arg.DegreeType,
+		arg.DegreeName,
+		arg.FieldOfStudy,
+		arg.StartDate,
+		arg.IsCurrent,
+		arg.EndDate,
+		arg.Description,
+	)
+	var i UserEducation
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.InstitutionName,
+		&i.DegreeType,
+		&i.DegreeName,
+		&i.FieldOfStudy,
+		&i.StartDate,
+		&i.EndDate,
+		&i.IsCurrent,
+		&i.Description,
+		&i.IsHighlighted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const updateUserExperience = `-- name: UpdateUserExperience :one
 UPDATE user_experiences
 SET
@@ -249,8 +882,8 @@ SET
     achievements = COALESCE($10, achievements),
     start_date = COALESCE($11, start_date),
     end_date = CASE
-        WHEN $12 = TRUE THEN NULL
-        ELSE COALESCE($13, end_date)
+        WHEN $12::boolean = TRUE THEN NULL
+        ELSE COALESCE($13::date, end_date)
     END,
     is_current = COALESCE($12, is_current),
     updated_at = NOW()
@@ -270,7 +903,7 @@ type UpdateUserExperienceParams struct {
 	Description    *string     `json:"description"`
 	Achievements   []string    `json:"achievements"`
 	StartDate      pgtype.Date `json:"start_date"`
-	IsCurrent      interface{} `json:"is_current"`
+	IsCurrent      *bool       `json:"is_current"`
 	EndDate        pgtype.Date `json:"end_date"`
 }
 
@@ -305,6 +938,105 @@ func (q *Queries) UpdateUserExperience(ctx context.Context, arg UpdateUserExperi
 		&i.StartDate,
 		&i.EndDate,
 		&i.IsCurrent,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateUserLanguage = `-- name: UpdateUserLanguage :one
+UPDATE user_languages
+SET
+    proficiency = COALESCE($3, proficiency),
+    updated_at = NOW()
+WHERE user_id = $1 AND user_language = $2
+RETURNING user_id, user_language, proficiency, created_at, updated_at
+`
+
+type UpdateUserLanguageParams struct {
+	UserID       uuid.UUID `json:"user_id"`
+	UserLanguage string    `json:"user_language"`
+	Proficiency  *string   `json:"proficiency"`
+}
+
+func (q *Queries) UpdateUserLanguage(ctx context.Context, arg UpdateUserLanguageParams) (UserLanguage, error) {
+	row := q.db.QueryRow(ctx, updateUserLanguage, arg.UserID, arg.UserLanguage, arg.Proficiency)
+	var i UserLanguage
+	err := row.Scan(
+		&i.UserID,
+		&i.UserLanguage,
+		&i.Proficiency,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateUserProject = `-- name: UpdateUserProject :one
+UPDATE user_projects
+SET
+    title = COALESCE($3, title),
+    role_title = COALESCE($4, role_title),
+    description = COALESCE($5, description),
+    impact = COALESCE($6, impact),
+    project_url = COALESCE($7, project_url),
+    repository_url = COALESCE($8, repository_url),
+    start_date = COALESCE($9, start_date),
+    end_date = CASE
+        WHEN $10::boolean = TRUE THEN NULL
+        ELSE COALESCE($11::date, end_date)
+    END,
+    is_current = COALESCE($10, is_current),
+    is_featured = COALESCE($12, is_featured),
+    updated_at = NOW()
+WHERE id = $1 AND user_id = $2
+RETURNING id, user_id, title, role_title, description, impact, project_url, repository_url, start_date, end_date, is_current, is_featured, created_at, updated_at
+`
+
+type UpdateUserProjectParams struct {
+	ID            uuid.UUID   `json:"id"`
+	UserID        uuid.UUID   `json:"user_id"`
+	Title         *string     `json:"title"`
+	RoleTitle     *string     `json:"role_title"`
+	Description   *string     `json:"description"`
+	Impact        *string     `json:"impact"`
+	ProjectUrl    *string     `json:"project_url"`
+	RepositoryUrl *string     `json:"repository_url"`
+	StartDate     pgtype.Date `json:"start_date"`
+	IsCurrent     *bool       `json:"is_current"`
+	EndDate       pgtype.Date `json:"end_date"`
+	IsFeatured    *bool       `json:"is_featured"`
+}
+
+func (q *Queries) UpdateUserProject(ctx context.Context, arg UpdateUserProjectParams) (UserProject, error) {
+	row := q.db.QueryRow(ctx, updateUserProject,
+		arg.ID,
+		arg.UserID,
+		arg.Title,
+		arg.RoleTitle,
+		arg.Description,
+		arg.Impact,
+		arg.ProjectUrl,
+		arg.RepositoryUrl,
+		arg.StartDate,
+		arg.IsCurrent,
+		arg.EndDate,
+		arg.IsFeatured,
+	)
+	var i UserProject
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Title,
+		&i.RoleTitle,
+		&i.Description,
+		&i.Impact,
+		&i.ProjectUrl,
+		&i.RepositoryUrl,
+		&i.StartDate,
+		&i.EndDate,
+		&i.IsCurrent,
+		&i.IsFeatured,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

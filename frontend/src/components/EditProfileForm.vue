@@ -106,7 +106,7 @@ async function handleSubmit() {
 <template>
   <div
     v-if="open"
-    class="fixed inset-0 bg-black/45 flex items-start justify-end z-[100]"
+    class="fixed inset-0 bg-black/45 flex items-start justify-end z-100"
     role="dialog"
     aria-modal="true"
     aria-label="Edit profile"
@@ -114,7 +114,7 @@ async function handleSubmit() {
   >
     <!-- Panel -->
     <div
-      class="w-full max-w-[560px] h-dvh bg-white border-l border-gray-200 flex flex-col overflow-hidden"
+      class="w-full max-w-140 h-dvh bg-white border-l border-gray-200 flex flex-col overflow-hidden"
     >
       <!-- Header -->
       <div class="flex items-center justify-between px-6 py-5 border-b border-gray-200 shrink-0">
@@ -141,7 +141,7 @@ async function handleSubmit() {
           class="px-6 py-3 text-sm font-medium border-b-2 -mb-px transition-all cursor-pointer"
           :class="
             activeSection === tab.key
-              ? 'text-[var(--color-accent)]'
+              ? 'text-accent'
               : 'border-transparent text-gray-500 hover:text-gray-900'
           "
           :style="activeSection === tab.key ? { borderBottomColor: 'var(--color-accent)' } : {}"
@@ -170,7 +170,7 @@ async function handleSubmit() {
                 v-model="form.username"
                 type="text"
                 placeholder="e.g. samnodier"
-                class="px-3 py-2 border text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+                class="px-3 py-2 border text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
                 :class="errors.username ? 'border-red-600' : 'border-gray-200'"
               />
               <p v-if="errors.username" class="text-xs text-red-600">{{ errors.username }}</p>
@@ -185,7 +185,7 @@ async function handleSubmit() {
                 v-model="form.full_name"
                 type="text"
                 placeholder="e.g. Sam Nodier"
-                class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+                class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
               />
             </div>
           </div>
@@ -198,7 +198,7 @@ async function handleSubmit() {
               v-model="form.headline"
               type="text"
               placeholder="e.g. Full-stack Engineer · Go · Vue.js"
-              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
             />
           </div>
 
@@ -210,7 +210,7 @@ async function handleSubmit() {
               v-model="form.user_summary"
               placeholder="Brief professional summary shown on your profile..."
               rows="4"
-              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)] resize-y min-h-[96px] leading-relaxed font-[inherit]"
+              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] resize-y min-h-24 leading-relaxed font-[inherit]"
             />
           </div>
 
@@ -223,7 +223,7 @@ async function handleSubmit() {
                 v-model="form.user_location"
                 type="text"
                 placeholder="e.g. Kigali, Rwanda"
-                class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+                class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
               />
             </div>
 
@@ -234,7 +234,7 @@ async function handleSubmit() {
                 v-model="form.phone"
                 type="tel"
                 placeholder="+250 ..."
-                class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+                class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
               />
             </div>
           </div>

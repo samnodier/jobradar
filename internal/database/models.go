@@ -93,26 +93,30 @@ type Skill struct {
 }
 
 type User struct {
-	ID                uuid.UUID  `json:"id"`
-	Email             string     `json:"email"`
-	Username          string     `json:"username"`
-	FullName          *string    `json:"full_name"`
-	AvatarUrl         *string    `json:"avatar_url"`
-	Phone             *string    `json:"phone"`
-	UserLocation      *string    `json:"user_location"`
-	WebsiteUrl        *string    `json:"website_url"`
-	LinkedinUrl       *string    `json:"linkedin_url"`
-	GithubUrl         *string    `json:"github_url"`
-	Headline          *string    `json:"headline"`
-	UserSummary       *string    `json:"user_summary"`
-	Availability      *string    `json:"availability"`
-	MinSalary         *int32     `json:"min_salary"`
-	MaxSalary         *int32     `json:"max_salary"`
-	SalaryCurrency    *string    `json:"salary_currency"`
-	YearsOfExperience *int32     `json:"years_of_experience"`
-	IsAdmin           *bool      `json:"is_admin"`
-	CreatedAt         *time.Time `json:"created_at"`
-	UpdatedAt         *time.Time `json:"updated_at"`
+	ID                     uuid.UUID  `json:"id"`
+	Email                  string     `json:"email"`
+	Username               string     `json:"username"`
+	FullName               *string    `json:"full_name"`
+	AvatarUrl              *string    `json:"avatar_url"`
+	Phone                  *string    `json:"phone"`
+	UserLocation           *string    `json:"user_location"`
+	WebsiteUrl             *string    `json:"website_url"`
+	LinkedinUrl            *string    `json:"linkedin_url"`
+	GithubUrl              *string    `json:"github_url"`
+	Headline               *string    `json:"headline"`
+	UserSummary            *string    `json:"user_summary"`
+	Availability           *string    `json:"availability"`
+	MinSalary              *int32     `json:"min_salary"`
+	MaxSalary              *int32     `json:"max_salary"`
+	SalaryCurrency         *string    `json:"salary_currency"`
+	YearsOfExperience      *int32     `json:"years_of_experience"`
+	PreferredJobTypes      []string   `json:"preferred_job_types"`
+	PreferredIndustries    []string   `json:"preferred_industries"`
+	CompanyStagePreference []string   `json:"company_stage_preference"`
+	NotifyJobs             *bool      `json:"notify_jobs"`
+	IsAdmin                *bool      `json:"is_admin"`
+	CreatedAt              *time.Time `json:"created_at"`
+	UpdatedAt              *time.Time `json:"updated_at"`
 }
 
 type UserAccount struct {
@@ -129,19 +133,19 @@ type UserAccount struct {
 }
 
 type UserCertification struct {
-	ID                  uuid.UUID   `json:"id"`
-	UserID              uuid.UUID   `json:"user_id"`
-	Name                string      `json:"name"`
-	IssuingOrganization string      `json:"issuing_organization"`
-	IssueDate           pgtype.Date `json:"issue_date"`
-	ExpirationDate      pgtype.Date `json:"expiration_date"`
-	DoesNotExpire       *bool       `json:"does_not_expire"`
-	CredentialID        *string     `json:"credential_id"`
-	CredentialUrl       *string     `json:"credential_url"`
-	IsInProgress        *bool       `json:"is_in_progress"`
-	Location            *string     `json:"location"`
-	CreatedAt           *time.Time  `json:"created_at"`
-	UpdatedAt           *time.Time  `json:"updated_at"`
+	ID                    uuid.UUID   `json:"id"`
+	UserID                uuid.UUID   `json:"user_id"`
+	CertificationName     string      `json:"certification_name"`
+	IssuingOrganization   string      `json:"issuing_organization"`
+	IssueDate             pgtype.Date `json:"issue_date"`
+	ExpirationDate        pgtype.Date `json:"expiration_date"`
+	DoesNotExpire         *bool       `json:"does_not_expire"`
+	CredentialID          *string     `json:"credential_id"`
+	CredentialUrl         *string     `json:"credential_url"`
+	IsInProgress          *bool       `json:"is_in_progress"`
+	CertificationLocation *string     `json:"certification_location"`
+	CreatedAt             *time.Time  `json:"created_at"`
+	UpdatedAt             *time.Time  `json:"updated_at"`
 }
 
 type UserDesiredLocation struct {
@@ -192,11 +196,11 @@ type UserExperience struct {
 }
 
 type UserLanguage struct {
-	UserID      uuid.UUID  `json:"user_id"`
-	Language    string     `json:"language"`
-	Proficiency *string    `json:"proficiency"`
-	CreatedAt   *time.Time `json:"created_at"`
-	UpdatedAt   *time.Time `json:"updated_at"`
+	UserID       uuid.UUID  `json:"user_id"`
+	UserLanguage string     `json:"user_language"`
+	Proficiency  *string    `json:"proficiency"`
+	CreatedAt    *time.Time `json:"created_at"`
+	UpdatedAt    *time.Time `json:"updated_at"`
 }
 
 type UserProject struct {

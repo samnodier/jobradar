@@ -1,7 +1,7 @@
 -- +goose Up
 CREATE TABLE IF NOT EXISTS user_experiences (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id uuid not null references users (id) on delete cascade,
+    user_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     company_name TEXT NOT NULL,
     company_url TEXT,
     role_title TEXT NOT NULL,
@@ -60,7 +60,7 @@ CREATE TABLE user_projects (
 CREATE TABLE user_certifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    name TEXT NOT NULL,
+    certification_name TEXT NOT NULL,
     issuing_organization TEXT NOT NULL,
     issue_date DATE,
     expiration_date DATE,
@@ -69,7 +69,7 @@ CREATE TABLE user_certifications (
     credential_url TEXT,
     is_in_progress BOOLEAN DEFAULT FALSE,
     -- Important for region-specific licenses like RN or CPA
-    location TEXT,
+    certification_location TEXT,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -78,10 +78,11 @@ CREATE TABLE user_certifications (
 CREATE TABLE IF NOT EXISTS user_languages (
     user_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     -- 'native', 'fluent', 'professional'
-    language TEXT NOT NULL, proficiency TEXT,
+    user_language TEXT NOT NULL,
+    proficiency TEXT,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now(),
-    PRIMARY KEY (user_id, language)
+    PRIMARY KEY (user_id, user_language)
 );
 
 
