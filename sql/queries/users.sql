@@ -25,6 +25,10 @@ SELECT
     max_salary,
     salary_currency,
     years_of_experience,
+    preferred_job_types,
+    preferred_industries,
+    company_stage_preference,
+    notify_jobs,
     is_admin,
     created_at,
     updated_at
@@ -50,6 +54,10 @@ SELECT
     u.max_salary,
     u.salary_currency,
     u.years_of_experience,
+    u.preferred_job_types,
+    u.preferred_industries,
+    u.company_stage_preference,
+    u.notify_jobs,
     u.is_admin,
     u.created_at,
     u.updated_at
@@ -77,6 +85,13 @@ SET
     salary_currency = COALESCE(sqlc.narg('salary_currency'), salary_currency),
     years_of_experience
     = COALESCE(sqlc.narg('years_of_experience'), years_of_experience),
+    preferred_job_types
+    = COALESCE(sqlc.narg('preferred_job_types'), preferred_job_types),
+    preferred_industries
+    = COALESCE(sqlc.narg('preferred_industries'), preferred_industries),
+    company_stage_preference
+    = COALESCE(sqlc.narg('company_stage_preference'), company_stage_preference),
+    notify_jobs = COALESCE(sqlc.narg('notify_jobs'), notify_jobs),
     updated_at = NOW()
 WHERE id = $1
 RETURNING *;

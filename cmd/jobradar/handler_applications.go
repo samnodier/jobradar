@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"time"
 
@@ -161,7 +162,6 @@ func (cfg *apiConfig) handlerApplicationUpdate(w http.ResponseWriter, r *http.Re
 		ClearFollowUpAt:   &req.ClearFollowUpAt,
 		FollowUpAt:        req.FollowUpAt,
 	})
-
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			httpx.RespondError(w, http.StatusNotFound, "application not found")
@@ -174,9 +174,42 @@ func (cfg *apiConfig) handlerApplicationUpdate(w http.ResponseWriter, r *http.Re
 			return
 		}
 
+		log.Printf("Update application error: %v\n", err)
+
 		httpx.RespondError(w, http.StatusInternalServerError, "failed to update application")
 		return
 	}
 
 	httpx.RespondJSON(w, http.StatusOK, application)
+}
+
+func (cfg *apiConfig) handlerApplicationDelete(w http.ResponseWriter, r *http.Request) {
+	// Use helper function to get userID
+	userID, ok := getUserIDFromRequest(w, r)
+	if !ok {
+		return
+	}
+
+	// Get the application id from url and parse it
+	appIDStr := chi.URLParam(r, "id")
+	applicationID, err := uuid.Parse(appIDStr)
+	if err != nil {
+		httpx.RespondError(w, http.StatusBadRequest, "invalid application id format")
+		return
+	}
+
+	err = cfg.db.DeleteApplication(r.Context(), database.DeleteApplicationParams{
+		ID:     applicationID,
+		UserID: userID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			httpx.RespondError(w, http.StatusNotFound, "application not found")
+			return
+		}
+		httpx.RespondError(w, http.StatusInternalServerError, "failed to delete the application")
+		return
+	}
+
+	httpx.RespondJSON(w, http.StatusOK, map[string]string{"message": "application deleted"})
 }

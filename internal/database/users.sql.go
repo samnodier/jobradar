@@ -17,7 +17,7 @@ INSERT INTO users (
 ) VALUES (
     $1, $2, $3, $4
 )
-RETURNING id, email, username, full_name, avatar_url, phone, user_location, website_url, linkedin_url, github_url, headline, user_summary, availability, min_salary, max_salary, salary_currency, years_of_experience, is_admin, created_at, updated_at
+RETURNING id, email, username, full_name, avatar_url, phone, user_location, website_url, linkedin_url, github_url, headline, user_summary, availability, min_salary, max_salary, salary_currency, years_of_experience, preferred_job_types, preferred_industries, company_stage_preference, notify_jobs, is_admin, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -53,6 +53,10 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.MaxSalary,
 		&i.SalaryCurrency,
 		&i.YearsOfExperience,
+		&i.PreferredJobTypes,
+		&i.PreferredIndustries,
+		&i.CompanyStagePreference,
+		&i.NotifyJobs,
 		&i.IsAdmin,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -89,6 +93,10 @@ SELECT
     max_salary,
     salary_currency,
     years_of_experience,
+    preferred_job_types,
+    preferred_industries,
+    company_stage_preference,
+    notify_jobs,
     is_admin,
     created_at,
     updated_at
@@ -117,6 +125,10 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.MaxSalary,
 		&i.SalaryCurrency,
 		&i.YearsOfExperience,
+		&i.PreferredJobTypes,
+		&i.PreferredIndustries,
+		&i.CompanyStagePreference,
+		&i.NotifyJobs,
 		&i.IsAdmin,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -143,6 +155,10 @@ SELECT
     u.max_salary,
     u.salary_currency,
     u.years_of_experience,
+    u.preferred_job_types,
+    u.preferred_industries,
+    u.company_stage_preference,
+    u.notify_jobs,
     u.is_admin,
     u.created_at,
     u.updated_at
@@ -177,6 +193,10 @@ func (q *Queries) GetUserByProviderIdentity(ctx context.Context, arg GetUserByPr
 		&i.MaxSalary,
 		&i.SalaryCurrency,
 		&i.YearsOfExperience,
+		&i.PreferredJobTypes,
+		&i.PreferredIndustries,
+		&i.CompanyStagePreference,
+		&i.NotifyJobs,
 		&i.IsAdmin,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -204,27 +224,38 @@ SET
     salary_currency = COALESCE($14, salary_currency),
     years_of_experience
     = COALESCE($15, years_of_experience),
+    preferred_job_types
+    = COALESCE($16, preferred_job_types),
+    preferred_industries
+    = COALESCE($17, preferred_industries),
+    company_stage_preference
+    = COALESCE($18, company_stage_preference),
+    notify_jobs = COALESCE($19, notify_jobs),
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, email, username, full_name, avatar_url, phone, user_location, website_url, linkedin_url, github_url, headline, user_summary, availability, min_salary, max_salary, salary_currency, years_of_experience, is_admin, created_at, updated_at
+RETURNING id, email, username, full_name, avatar_url, phone, user_location, website_url, linkedin_url, github_url, headline, user_summary, availability, min_salary, max_salary, salary_currency, years_of_experience, preferred_job_types, preferred_industries, company_stage_preference, notify_jobs, is_admin, created_at, updated_at
 `
 
 type UpdateUserParams struct {
-	ID                uuid.UUID `json:"id"`
-	Username          string    `json:"username"`
-	FullName          *string   `json:"full_name"`
-	Phone             *string   `json:"phone"`
-	UserLocation      *string   `json:"user_location"`
-	WebsiteUrl        *string   `json:"website_url"`
-	LinkedinUrl       *string   `json:"linkedin_url"`
-	GithubUrl         *string   `json:"github_url"`
-	Headline          *string   `json:"headline"`
-	UserSummary       *string   `json:"user_summary"`
-	Availability      *string   `json:"availability"`
-	MinSalary         *int32    `json:"min_salary"`
-	MaxSalary         *int32    `json:"max_salary"`
-	SalaryCurrency    *string   `json:"salary_currency"`
-	YearsOfExperience *int32    `json:"years_of_experience"`
+	ID                     uuid.UUID `json:"id"`
+	Username               string    `json:"username"`
+	FullName               *string   `json:"full_name"`
+	Phone                  *string   `json:"phone"`
+	UserLocation           *string   `json:"user_location"`
+	WebsiteUrl             *string   `json:"website_url"`
+	LinkedinUrl            *string   `json:"linkedin_url"`
+	GithubUrl              *string   `json:"github_url"`
+	Headline               *string   `json:"headline"`
+	UserSummary            *string   `json:"user_summary"`
+	Availability           *string   `json:"availability"`
+	MinSalary              *int32    `json:"min_salary"`
+	MaxSalary              *int32    `json:"max_salary"`
+	SalaryCurrency         *string   `json:"salary_currency"`
+	YearsOfExperience      *int32    `json:"years_of_experience"`
+	PreferredJobTypes      []string  `json:"preferred_job_types"`
+	PreferredIndustries    []string  `json:"preferred_industries"`
+	CompanyStagePreference []string  `json:"company_stage_preference"`
+	NotifyJobs             *bool     `json:"notify_jobs"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
@@ -244,6 +275,10 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		arg.MaxSalary,
 		arg.SalaryCurrency,
 		arg.YearsOfExperience,
+		arg.PreferredJobTypes,
+		arg.PreferredIndustries,
+		arg.CompanyStagePreference,
+		arg.NotifyJobs,
 	)
 	var i User
 	err := row.Scan(
@@ -264,6 +299,10 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.MaxSalary,
 		&i.SalaryCurrency,
 		&i.YearsOfExperience,
+		&i.PreferredJobTypes,
+		&i.PreferredIndustries,
+		&i.CompanyStagePreference,
+		&i.NotifyJobs,
 		&i.IsAdmin,
 		&i.CreatedAt,
 		&i.UpdatedAt,

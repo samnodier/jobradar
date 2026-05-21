@@ -22,6 +22,11 @@ CREATE TABLE IF NOT EXISTS users (
     max_salary INTEGER,
     salary_currency TEXT DEFAULT 'USD',
     years_of_experience INTEGER,
+    -- Job Preferences
+    preferred_job_types TEXT [] DEFAULT '{}',
+    preferred_industries TEXT [] DEFAULT '{}',
+    company_stage_preference TEXT [] DEFAULT '{}',
+    notify_jobs BOOLEAN DEFAULT TRUE,
     -- Meta
     is_admin BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT now(),

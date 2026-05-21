@@ -64,19 +64,22 @@ SET
         sqlc.narg('application_status'), application_status
     ),
     applied_at = CASE
-        WHEN sqlc.narg('clear_applied_at')::boolean = true THEN NULL
-        WHEN sqlc.narg('applied_at') IS NOT NULL THEN sqlc.narg('applied_at')
+        WHEN sqlc.narg('clear_applied_at')::boolean = true THEN null
+        WHEN
+            sqlc.narg('applied_at')::timestamptz IS NOT null
+            THEN sqlc.narg('applied_at')::timestamptz
         ELSE applied_at
     END,
     follow_up_at = CASE
-        WHEN sqlc.narg('clear_follow_up_at')::boolean = true THEN NULL
-        WHEN sqlc.narg('follow_up_at') IS NOT NULL THEN sqlc.narg('follow_up_at')
+        WHEN sqlc.narg('clear_follow_up_at')::boolean = true THEN null
+        WHEN
+            sqlc.narg('follow_up_at')::timestamptz IS NOT null
+            THEN sqlc.narg('follow_up_at')::timestamptz
         ELSE follow_up_at
-    
     END,
     last_status_changed_at = CASE
         WHEN
-            sqlc.narg('application_status') IS NOT NULL
+            sqlc.narg('application_status') IS NOT null
             AND sqlc.narg('application_status') <> application_status THEN NOW()
         ELSE last_status_changed_at
     END,

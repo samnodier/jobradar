@@ -254,19 +254,22 @@ SET
         $4, application_status
     ),
     applied_at = CASE
-        WHEN $5::boolean = true THEN NULL
-        WHEN $6 IS NOT NULL THEN $6
+        WHEN $5::boolean = true THEN null
+        WHEN
+            $6::timestamptz IS NOT null
+            THEN $6::timestamptz
         ELSE applied_at
     END,
     follow_up_at = CASE
-        WHEN $7::boolean = true THEN NULL
-        WHEN $8 IS NOT NULL THEN $8
+        WHEN $7::boolean = true THEN null
+        WHEN
+            $8::timestamptz IS NOT null
+            THEN $8::timestamptz
         ELSE follow_up_at
-    
     END,
     last_status_changed_at = CASE
         WHEN
-            $4 IS NOT NULL
+            $4 IS NOT null
             AND $4 <> application_status THEN NOW()
         ELSE last_status_changed_at
     END,

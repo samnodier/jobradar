@@ -13,20 +13,24 @@ import (
 )
 
 type userUpdateRequest struct {
-	Username          *string `json:"username"`
-	FullName          *string `json:"full_name"`
-	Phone             *string `json:"phone"`
-	UserLocation      *string `json:"user_location"`
-	WebsiteURL        *string `json:"website_url"`
-	LinkedInURL       *string `json:"linkedin_url"`
-	GitHubURL         *string `json:"github_url"`
-	Headline          *string `json:"headline"`
-	UserSummary       *string `json:"user_summary"`
-	Availability      *string `json:"availability"`
-	MinSalary         *int32  `json:"min_salary"`
-	MaxSalary         *int32  `json:"max_salary"`
-	SalaryCurrency    *string `json:"salary_currency"`
-	YearsOfExperience *int32  `json:"years_of_experience"`
+	Username               *string  `json:"username"`
+	FullName               *string  `json:"full_name"`
+	Phone                  *string  `json:"phone"`
+	UserLocation           *string  `json:"user_location"`
+	WebsiteURL             *string  `json:"website_url"`
+	LinkedInURL            *string  `json:"linkedin_url"`
+	GitHubURL              *string  `json:"github_url"`
+	Headline               *string  `json:"headline"`
+	UserSummary            *string  `json:"user_summary"`
+	Availability           *string  `json:"availability"`
+	MinSalary              *int32   `json:"min_salary"`
+	MaxSalary              *int32   `json:"max_salary"`
+	SalaryCurrency         *string  `json:"salary_currency"`
+	YearsOfExperience      *int32   `json:"years_of_experience"`
+	PreferredJobTypes      []string `json:"preferred_job_types"`
+	PreferredIndustries    []string `json:"preferred_industries"`
+	CompanyStagePreference []string `json:"company_stage_preference"`
+	NotifyJobs             *bool    `json:"notify_jobs"`
 }
 
 func (cfg *apiConfig) handlerUserGet(w http.ResponseWriter, r *http.Request) {
@@ -74,21 +78,25 @@ func (cfg *apiConfig) handlerUserUpdate(w http.ResponseWriter, r *http.Request) 
 	}
 
 	user, err := cfg.db.UpdateUser(r.Context(), database.UpdateUserParams{
-		ID:                userID,
-		Username:          *req.Username,
-		FullName:          req.FullName,
-		Phone:             req.Phone,
-		UserLocation:      req.UserLocation,
-		WebsiteUrl:        req.WebsiteURL,
-		LinkedinUrl:       req.LinkedInURL,
-		GithubUrl:         req.GitHubURL,
-		Headline:          req.Headline,
-		UserSummary:       req.UserSummary,
-		Availability:      req.Availability,
-		MinSalary:         req.MinSalary,
-		MaxSalary:         req.MaxSalary,
-		SalaryCurrency:    req.SalaryCurrency,
-		YearsOfExperience: req.YearsOfExperience,
+		ID:                     userID,
+		Username:               *req.Username,
+		FullName:               req.FullName,
+		Phone:                  req.Phone,
+		UserLocation:           req.UserLocation,
+		WebsiteUrl:             req.WebsiteURL,
+		LinkedinUrl:            req.LinkedInURL,
+		GithubUrl:              req.GitHubURL,
+		Headline:               req.Headline,
+		UserSummary:            req.UserSummary,
+		Availability:           req.Availability,
+		MinSalary:              req.MinSalary,
+		MaxSalary:              req.MaxSalary,
+		SalaryCurrency:         req.SalaryCurrency,
+		YearsOfExperience:      req.YearsOfExperience,
+		PreferredJobTypes:      req.PreferredJobTypes,
+		PreferredIndustries:    req.PreferredIndustries,
+		CompanyStagePreference: req.CompanyStagePreference,
+		NotifyJobs:             req.NotifyJobs,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
