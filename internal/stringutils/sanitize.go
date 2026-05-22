@@ -1,3 +1,4 @@
+// Package stringutils
 package stringutils
 
 import (
@@ -24,7 +25,10 @@ func SanitizeStrict(input string) string {
 }
 
 func SanitizeDescription(input string) string {
-	return strings.TrimSpace(input)
+	str := html.UnescapeString(input)
+	str = controlCharsRe.ReplaceAllString(str, "")
+	str = multiNewlineRe.ReplaceAllString(str, "\n\n")
+	return strings.TrimSpace(str)
 }
 
 func GenerateUsername(email string) string {
@@ -40,4 +44,25 @@ func IsValidUsername(username string) bool {
 	// Check for alphanumeric and underscores only
 	re := regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
 	return len(username) >= 3 && len(username) <= 20 && re.MatchString(username)
+}
+
+func SanitizeStringSlice(slice []string) []string {
+	seen := make(map[string]bool)
+	var result []string
+	for _, s := range slice {
+		trimmed := strings.TrimSpace(s)
+		if trimmed == "" {
+			continue
+		}
+		valLower := strings.ToLower(trimmed)
+		if seen[valLower] {
+			continue
+		}
+		seen[valLower] = true
+		result = append(result, trimmed)
+	}
+	if result == nil {
+		return []string{}
+	}
+	return result
 }
