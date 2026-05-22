@@ -64,14 +64,15 @@ func TestSanitizeDescription(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "preserves html tags",
+			name: "preserves html tags",
+
 			input:    "<ul><li>Build things</li></ul>",
 			expected: "<ul><li>Build things</li></ul>",
 		},
 		{
 			name:     "unescapes html entities",
 			input:    "We&rsquo;re hiring",
-			expected: "We're hiring",
+			expected: "We\u2019re hiring", // Smart apostrophe U+2019
 		},
 		{
 			name:     "handles empty string",
@@ -83,13 +84,18 @@ func TestSanitizeDescription(t *testing.T) {
 			input:    "  About the role  ",
 			expected: "About the role",
 		},
+		{
+			name:     "collapses multiple newlines",
+			input:    "Line 1\n\n\n\nLine 2",
+			expected: "Line 1\n\nLine 2",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := SanitizeDescription(tt.input)
 			if got != tt.expected {
-				t.Errorf("SanitizeDescription(%q)\n  got:  %q\n  want: %q", tt.input, got, tt.expected)
+				t.Errorf("SanitizeDescription(%q)\n got: %q\n want: %q", tt.input, got, tt.expected)
 			}
 		})
 	}
@@ -156,6 +162,44 @@ func TestIsValidUsername(t *testing.T) {
 			got := IsValidUsername(tt.username)
 			if got != tt.valid {
 				t.Errorf("IsValidUsername(%q) = %v, want %v", tt.username, got, tt.valid)
+			}
+		})
+	}
+}
+
+func TestSanitizeStringSlice(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []string
+		expected []string
+	}{
+		{
+			name:     "trims, removes empty and duplicates",
+			input:    []string{"  Go ", "", "go", " Vue.js ", "Go", "  "},
+			expected: []string{"Go", "Vue.js"},
+		},
+		{
+			name:     "nil slice",
+			input:    nil,
+			expected: []string{},
+		},
+		{
+			name:     "empty slice",
+			input:    []string{},
+			expected: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := SanitizeStringSlice(tt.input)
+			if len(got) != len(tt.expected) {
+				t.Fatalf("SanitizeStringSlice(%v) returned slice of length %d, want %d (got: %v)", tt.input, len(got), len(tt.expected), got)
+			}
+			for i, v := range got {
+				if v != tt.expected[i] {
+					t.Errorf("SanitizeStringSlice(%v) at index %d got %q, want %q", tt.input, i, v, tt.expected[i])
+				}
 			}
 		})
 	}
