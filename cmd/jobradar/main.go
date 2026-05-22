@@ -137,6 +137,9 @@ func main() {
 			r.Patch("/profile/languages/{id}", cfg.handlerUpdateLanguage)
 			r.Delete("/profile/languages/{id}", cfg.handlerDeleteLanguage)
 
+			r.Get("/profile/preferences", cfg.handlerGetPreferences)
+			r.Patch("/profile/preferences", cfg.handlerUpdatePreferences)
+
 			r.Get("/saved_jobs", cfg.handlerSavedJobsGet)
 			r.Post("/saved_jobs", cfg.handlerJobSave)
 			r.Delete("/saved_jobs", cfg.handlerJobUnsave)
