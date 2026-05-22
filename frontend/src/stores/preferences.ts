@@ -1,0 +1,54 @@
+import type { UserPreferences } from '@/types/preferences'
+import { defineStore } from 'pinia'
+
+interface PreferencesState {
+  preferences: UserPreferences | null
+  isSaving: boolean
+  loading: boolean
+  error: string | null
+}
+
+export const usePreferencesStore = defineStore('preferences', {
+  state: (): PreferencesState => ({
+    preferences: null,
+    isSaving: false,
+    loading: false,
+    error: null,
+  }),
+  actions: {
+    async fetchPreferences() {
+      this.loading = true
+      this.error = null
+      try {
+        const response = await fetch('/api/profile/preferences', {
+          credentials: 'include',
+        })
+        if (!response.ok) throw new Error('Failed to fetch preferences')
+        this.preferences = await response.json()
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to load preferences'
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async updatePreferences(preferences: Partial<UserPreferences>) {
+      this.isSaving = true
+      this.error = null
+
+      try {
+        const response = await fetch('/api/profile/preferences', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(preferences),
+        })
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to update preferences'
+        throw err
+      } finally {
+        this.isSaving = false
+      }
+    },
+  },
+})
