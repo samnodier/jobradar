@@ -36,7 +36,7 @@ SELECT
     e.updated_at,
     COALESCE(
         JSON_AGG(
-            JSON_BUILD_OBJECT('id', s.id, 'name', s.name)
+            JSON_BUILD_OBJECT('id', s.id, 'name', s.skill_name)
         ) FILTER (WHERE s.id IS NOT NULL), '[]'
     ) AS skills
 FROM user_experiences AS e
@@ -79,11 +79,11 @@ RETURNING *;
 
 -- name: GetOrCreateSkill :one
 INSERT INTO skills (
-    name
+    skill_name
 ) VALUES ($1)
-ON CONFLICT (name)
+ON CONFLICT (skill_name)
 -- This is a "fake" update just to get the id back
-DO UPDATE SET name = excluded.name
+DO UPDATE SET skill_name = excluded.skill_name
 RETURNING id;
 
 -- name: DeleteSkillsByExperienceID :exec
@@ -296,3 +296,82 @@ RETURNING *;
 -- name: DeleteUserLanguage :exec
 DELETE FROM user_languages
 WHERE user_id = $1 AND user_language = $2;
+
+-- name: GetUserSkillsByUserID :many
+SELECT
+    s.id AS skill_id,
+    s.skill_name,
+    s.category AS skill_category,
+    us.proficiency,
+    us.years_experience,
+    us.is_featured,
+    us.endorsed_by_ai,
+    us.display_order
+FROM user_skills AS us
+INNER JOIN skills AS s ON us.skill_id = s.id
+WHERE us.user_id = $1
+ORDER BY us.display_order ASC, s.skill_name ASC;
+
+-- name: AddSkillToUser :one
+INSERT INTO user_skills (
+    user_id,
+    skill_id,
+    proficiency,
+    years_experience,
+    is_featured,
+    endorsed_by_ai,
+    display_order
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7
+)
+RETURNING *;
+
+-- name: ClearUserSkills :exec
+DELETE FROM user_skills
+WHERE user_id = $1;
+
+-- name: GetUserDesiredLocations :many
+SELECT
+    location_name,
+    is_remote,
+    priority
+FROM user_desired_locations
+WHERE user_id = $1
+ORDER BY priority ASC, location_name ASC;
+
+-- name: AddDesiredLocation :one
+INSERT INTO user_desired_locations (
+    user_id,
+    location_name,
+    is_remote,
+    priority
+) VALUES (
+    $1, $2, $3, $4
+)
+RETURNING *;
+
+-- name: ClearUserDesiredLocations :exec
+DELETE FROM user_desired_locations
+WHERE user_id = $1;
+
+-- name: GetUserDesiredRoles :many                              
+SELECT
+    role_title,
+    priority
+FROM user_desired_roles
+WHERE user_id = $1
+ORDER BY priority ASC, role_title ASC;
+
+-- name: AddDesiredRole :one
+INSERT INTO user_desired_roles (
+    user_id,
+    role_title,
+    priority
+) VALUES (
+    $1, $2, $3
+)
+RETURNING *;
+
+-- name: ClearUserDesiredRoles :exec
+DELETE FROM user_desired_roles
+WHERE user_id = $1;

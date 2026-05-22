@@ -30,18 +30,7 @@ const isEditProfileOpen = ref(false)
 const selectedExperience = ref<Experience | undefined>(undefined)
 const profile = ref<User | undefined>(undefined)
 
-const preferences = ref({
-  jobTypes: ['Full-time', 'Contract'],
-  location: 'Remote',
-  salaryMin: 150000,
-  salaryMax: 250000,
-  experience: '5-10',
-  skills: ['React', 'TypeScript', 'Node.js'],
-  companyStage: ['Growth', 'Enterprise'],
-  industries: 'SaaS, AI/ML, Developer Tools',
-  notifyJobs: true,
-  visibleToRecruiters: true,
-})
+const preferences = ref<Partial<User>>({})
 
 const tabs: Array<{ key: ProfileTab; label: string }> = [
   { key: 'overview', label: 'Overview' },

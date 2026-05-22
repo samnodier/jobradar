@@ -13,6 +13,66 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const addDesiredLocation = `-- name: AddDesiredLocation :one
+INSERT INTO user_desired_locations (
+    user_id,
+    location_name,
+    is_remote,
+    priority
+) VALUES (
+    $1, $2, $3, $4
+)
+RETURNING user_id, location_name, is_remote, priority
+`
+
+type AddDesiredLocationParams struct {
+	UserID       uuid.UUID `json:"user_id"`
+	LocationName string    `json:"location_name"`
+	IsRemote     *bool     `json:"is_remote"`
+	Priority     *int32    `json:"priority"`
+}
+
+func (q *Queries) AddDesiredLocation(ctx context.Context, arg AddDesiredLocationParams) (UserDesiredLocation, error) {
+	row := q.db.QueryRow(ctx, addDesiredLocation,
+		arg.UserID,
+		arg.LocationName,
+		arg.IsRemote,
+		arg.Priority,
+	)
+	var i UserDesiredLocation
+	err := row.Scan(
+		&i.UserID,
+		&i.LocationName,
+		&i.IsRemote,
+		&i.Priority,
+	)
+	return i, err
+}
+
+const addDesiredRole = `-- name: AddDesiredRole :one
+INSERT INTO user_desired_roles (
+    user_id,
+    role_title,
+    priority
+) VALUES (
+    $1, $2, $3
+)
+RETURNING user_id, role_title, priority
+`
+
+type AddDesiredRoleParams struct {
+	UserID    uuid.UUID `json:"user_id"`
+	RoleTitle string    `json:"role_title"`
+	Priority  *int32    `json:"priority"`
+}
+
+func (q *Queries) AddDesiredRole(ctx context.Context, arg AddDesiredRoleParams) (UserDesiredRole, error) {
+	row := q.db.QueryRow(ctx, addDesiredRole, arg.UserID, arg.RoleTitle, arg.Priority)
+	var i UserDesiredRole
+	err := row.Scan(&i.UserID, &i.RoleTitle, &i.Priority)
+	return i, err
+}
+
 const addSkillToExperience = `-- name: AddSkillToExperience :one
 INSERT INTO experience_skills (
     experience_id, skill_id
@@ -35,6 +95,86 @@ func (q *Queries) AddSkillToExperience(ctx context.Context, arg AddSkillToExperi
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const addSkillToUser = `-- name: AddSkillToUser :one
+INSERT INTO user_skills (
+    user_id,
+    skill_id,
+    proficiency,
+    years_experience,
+    is_featured,
+    endorsed_by_ai,
+    display_order
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7
+)
+RETURNING user_id, skill_id, proficiency, years_experience, is_featured, endorsed_by_ai, display_order, created_at, updated_at
+`
+
+type AddSkillToUserParams struct {
+	UserID          uuid.UUID `json:"user_id"`
+	SkillID         uuid.UUID `json:"skill_id"`
+	Proficiency     *string   `json:"proficiency"`
+	YearsExperience *int32    `json:"years_experience"`
+	IsFeatured      *bool     `json:"is_featured"`
+	EndorsedByAi    *bool     `json:"endorsed_by_ai"`
+	DisplayOrder    *int32    `json:"display_order"`
+}
+
+func (q *Queries) AddSkillToUser(ctx context.Context, arg AddSkillToUserParams) (UserSkill, error) {
+	row := q.db.QueryRow(ctx, addSkillToUser,
+		arg.UserID,
+		arg.SkillID,
+		arg.Proficiency,
+		arg.YearsExperience,
+		arg.IsFeatured,
+		arg.EndorsedByAi,
+		arg.DisplayOrder,
+	)
+	var i UserSkill
+	err := row.Scan(
+		&i.UserID,
+		&i.SkillID,
+		&i.Proficiency,
+		&i.YearsExperience,
+		&i.IsFeatured,
+		&i.EndorsedByAi,
+		&i.DisplayOrder,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const clearUserDesiredLocations = `-- name: ClearUserDesiredLocations :exec
+DELETE FROM user_desired_locations
+WHERE user_id = $1
+`
+
+func (q *Queries) ClearUserDesiredLocations(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, clearUserDesiredLocations, userID)
+	return err
+}
+
+const clearUserDesiredRoles = `-- name: ClearUserDesiredRoles :exec
+DELETE FROM user_desired_roles
+WHERE user_id = $1
+`
+
+func (q *Queries) ClearUserDesiredRoles(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, clearUserDesiredRoles, userID)
+	return err
+}
+
+const clearUserSkills = `-- name: ClearUserSkills :exec
+DELETE FROM user_skills
+WHERE user_id = $1
+`
+
+func (q *Queries) ClearUserSkills(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, clearUserSkills, userID)
+	return err
 }
 
 const createUserCertification = `-- name: CreateUserCertification :one
@@ -563,7 +703,7 @@ SELECT
     e.updated_at,
     COALESCE(
         JSON_AGG(
-            JSON_BUILD_OBJECT('id', s.id, 'name', s.name)
+            JSON_BUILD_OBJECT('id', s.id, 'name', s.skill_name)
         ) FILTER (WHERE s.id IS NOT NULL), '[]'
     ) AS skills
 FROM user_experiences AS e
@@ -670,16 +810,16 @@ func (q *Queries) GetLanguagesByUserID(ctx context.Context, userID uuid.UUID) ([
 
 const getOrCreateSkill = `-- name: GetOrCreateSkill :one
 INSERT INTO skills (
-    name
+    skill_name
 ) VALUES ($1)
-ON CONFLICT (name)
-DO UPDATE SET name = excluded.name
+ON CONFLICT (skill_name)
+DO UPDATE SET skill_name = excluded.skill_name
 RETURNING id
 `
 
 // This is a "fake" update just to get the id back
-func (q *Queries) GetOrCreateSkill(ctx context.Context, name string) (uuid.UUID, error) {
-	row := q.db.QueryRow(ctx, getOrCreateSkill, name)
+func (q *Queries) GetOrCreateSkill(ctx context.Context, skillName string) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, getOrCreateSkill, skillName)
 	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
@@ -730,6 +870,132 @@ func (q *Queries) GetProjectsByUserID(ctx context.Context, userID uuid.UUID) ([]
 			&i.IsFeatured,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUserDesiredLocations = `-- name: GetUserDesiredLocations :many
+SELECT
+    location_name,
+    is_remote,
+    priority
+FROM user_desired_locations
+WHERE user_id = $1
+ORDER BY priority ASC, location_name ASC
+`
+
+type GetUserDesiredLocationsRow struct {
+	LocationName string `json:"location_name"`
+	IsRemote     *bool  `json:"is_remote"`
+	Priority     *int32 `json:"priority"`
+}
+
+func (q *Queries) GetUserDesiredLocations(ctx context.Context, userID uuid.UUID) ([]GetUserDesiredLocationsRow, error) {
+	rows, err := q.db.Query(ctx, getUserDesiredLocations, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUserDesiredLocationsRow
+	for rows.Next() {
+		var i GetUserDesiredLocationsRow
+		if err := rows.Scan(&i.LocationName, &i.IsRemote, &i.Priority); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUserDesiredRoles = `-- name: GetUserDesiredRoles :many
+SELECT
+    role_title,
+    priority
+FROM user_desired_roles
+WHERE user_id = $1
+ORDER BY priority ASC, role_title ASC
+`
+
+type GetUserDesiredRolesRow struct {
+	RoleTitle string `json:"role_title"`
+	Priority  *int32 `json:"priority"`
+}
+
+func (q *Queries) GetUserDesiredRoles(ctx context.Context, userID uuid.UUID) ([]GetUserDesiredRolesRow, error) {
+	rows, err := q.db.Query(ctx, getUserDesiredRoles, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUserDesiredRolesRow
+	for rows.Next() {
+		var i GetUserDesiredRolesRow
+		if err := rows.Scan(&i.RoleTitle, &i.Priority); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUserSkillsByUserID = `-- name: GetUserSkillsByUserID :many
+SELECT
+    s.id AS skill_id,
+    s.skill_name,
+    s.category AS skill_category,
+    us.proficiency,
+    us.years_experience,
+    us.is_featured,
+    us.endorsed_by_ai,
+    us.display_order
+FROM user_skills AS us
+INNER JOIN skills AS s ON us.skill_id = s.id
+WHERE us.user_id = $1
+ORDER BY us.display_order ASC, s.skill_name ASC
+`
+
+type GetUserSkillsByUserIDRow struct {
+	SkillID         uuid.UUID `json:"skill_id"`
+	SkillName       string    `json:"skill_name"`
+	SkillCategory   *string   `json:"skill_category"`
+	Proficiency     *string   `json:"proficiency"`
+	YearsExperience *int32    `json:"years_experience"`
+	IsFeatured      *bool     `json:"is_featured"`
+	EndorsedByAi    *bool     `json:"endorsed_by_ai"`
+	DisplayOrder    *int32    `json:"display_order"`
+}
+
+func (q *Queries) GetUserSkillsByUserID(ctx context.Context, userID uuid.UUID) ([]GetUserSkillsByUserIDRow, error) {
+	rows, err := q.db.Query(ctx, getUserSkillsByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUserSkillsByUserIDRow
+	for rows.Next() {
+		var i GetUserSkillsByUserIDRow
+		if err := rows.Scan(
+			&i.SkillID,
+			&i.SkillName,
+			&i.SkillCategory,
+			&i.Proficiency,
+			&i.YearsExperience,
+			&i.IsFeatured,
+			&i.EndorsedByAi,
+			&i.DisplayOrder,
 		); err != nil {
 			return nil, err
 		}

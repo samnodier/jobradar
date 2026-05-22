@@ -16,5 +16,9 @@ export interface User {
   max_salary: number | null
   salary_currency: string | null
   years_of_experience: number | null
+  preferred_job_types: string[]
+  preferred_industries: string[]
+  company_stage_preference: string[]
+  notify_jobs: boolean
   is_admin: boolean | null
 }

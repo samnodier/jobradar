@@ -1,7 +1,7 @@
 -- +goose Up
 CREATE TABLE IF NOT EXISTS skills (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT NOT NULL UNIQUE, -- 'Go', 'Vue.js'
+    skill_name TEXT NOT NULL UNIQUE, -- 'Go', 'Vue.js'
     category TEXT, -- 'Language', 'Framework', 'Database'
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
