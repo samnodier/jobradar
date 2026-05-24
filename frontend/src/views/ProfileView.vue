@@ -34,7 +34,7 @@ const isEditProfileOpen = ref(false)
 const selectedExperience = ref<Experience | undefined>(undefined)
 const profile = ref<User | undefined>(undefined)
 
-const preferencesStore = usePreferencesStore
+const preferencesStore = usePreferencesStore()
 const { preferences, loading, error, isSaving } = storeToRefs(preferencesStore)
 
 const tabs: Array<{ key: ProfileTab; label: string }> = [
@@ -64,8 +64,8 @@ const preferredLocationSelect = computed({
     const locs = preferences?.value ? preferences.value?.desired_locations : []
     if (locs.length === 0) return 'Any'
     const first = locs[0]
-    if (first.location_name.toLowerCase() === 'remote') return 'Remote'
-    if (first.is_remote) return 'Hybrid'
+    if (first?.location_name.toLowerCase() === 'remote') return 'Remote'
+    if (first?.is_remote) return 'Hybrid'
     return 'On-Site'
   },
   set(val: string) {
@@ -243,13 +243,13 @@ onMounted(async () => {
             <!-- Actions -->
             <div class="flex flex-row items-center justify-center gap-3">
               <button
-                class="button button-primary"
+                class="inline-flex items-center bg-accent text-accent-foreground px-4 py-2 gap-2 transition-colors duration-150 hover:bg-accent/90 active:bg-accent/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-none"
                 @click="authStore.user && openProfileEditForm(authStore.user)"
               >
                 <SquarePen :size="16" />
                 Edit Profile
               </button>
-              <button class="button button-secondary">Export To PDF</button>
+              <button class="border border-gray-200 bg-gray-100 px-4 py-2">Export To PDF</button>
             </div>
           </div>
 
@@ -334,7 +334,10 @@ onMounted(async () => {
             <div class="p-6 border border-gray-200">
               <div class="flex justify-between items-center mb-4">
                 <h2 class="text-lg font-semibold text-gray-900 tracking-tight">Work history</h2>
-                <button class="button button-primary" @click="openExperienceAddForm">
+                <button
+                  class="bg-accent text-white px-4 py-2 inline-flex gap-2"
+                  @click="openExperienceAddForm"
+                >
                   <Plus /> Add Experience
                 </button>
               </div>
@@ -357,7 +360,7 @@ onMounted(async () => {
           </section>
 
           <!-- Preferences -->
-          <section v-if="activeTab === 'preferences'" class="flex flex-col gap-6">
+          <section v-if="activeTab === 'preferences' && preferences" class="flex flex-col gap-6">
             <div class="pb-6 border-b border-gray-200">
               <h1 class="text-2xl font-bold text-gray-900 mb-2">Preferences & Settings</h1>
               <p class="text-base text-gray-500">
@@ -503,12 +506,19 @@ onMounted(async () => {
             </div>
 
             <div class="text-center p-6 bg-black/4 border border-gray-200">
-              <button class="button button-primary" @click="savePreferences">Save Changes</button>
-              <p v-if="saved" class="mt-3 text-sm font-medium text-green-600">
+              <button
+                class="bg-accent text-accent-foreground px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                :disabled="isSaving"
+                @click="savePreferences"
+              >
+                {{ isSaving ? 'Saving Changes...' : 'Save Changes' }}
+              </button>
+              <p v-if="saved && !isSaving" class="mt-3 text-sm font-medium text-green-600">
                 Preferences saved successfully
               </p>
             </div>
           </section>
+          <div v-else-if="activeTab === 'settings' && !preferences">Loading preferences...</div>
 
           <!-- Settings -->
           <section v-if="activeTab === 'settings'" class="flex flex-col gap-6">
@@ -537,7 +547,7 @@ onMounted(async () => {
                     "
                     @click="preferences.notify_jobs = !preferences.notify_jobs"
                   >
-                    {{ preferences.notifyJobs ? 'On' : 'Off' }}
+                    {{ preferences.notify_jobs ? 'On' : 'Off' }}
                   </button>
                 </div>
               </section>
@@ -567,13 +577,18 @@ onMounted(async () => {
                     v-model="typedEmail"
                     type="email"
                     placeholder="your@email.com"
-                    class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
+                    class="px-4 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
                   />
                   <p v-if="deleteError" class="text-xs text-red-600">{{ deleteError }}</p>
                   <div class="flex gap-2 mt-1">
-                    <button class="button button-secondary" @click="cancelDelete">Cancel</button>
                     <button
-                      class="button button-primary disabled:opacity-50"
+                      class="px-4 py-2 bg-gray-400 border-gray-200 button button-secondary"
+                      @click="cancelDelete"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      class="bg-accent text-white px-3 py-2 disabled:opacity-50"
                       :disabled="typedEmail !== authStore.user?.email"
                       @click="deleteAccount"
                     >
