@@ -14,14 +14,28 @@ const emit = defineEmits<{
 }>()
 
 const employmentTypes = [
-  'Full-time', 'Part-time', 'Contract', 'Freelance',
-  'Internship', 'Apprenticeship', 'Volunteer',
+  'Full-time',
+  'Part-time',
+  'Contract',
+  'Freelance',
+  'Internship',
+  'Apprenticeship',
+  'Volunteer',
 ]
 
 const industries = [
-  'Software / Technology', 'FinTech', 'HealthTech', 'EdTech', 'SaaS',
-  'AI / ML', 'E-commerce', 'Media & Entertainment', 'Consulting',
-  'Government', 'Non-profit', 'Other',
+  'Software / Technology',
+  'FinTech',
+  'HealthTech',
+  'EdTech',
+  'SaaS',
+  'AI / ML',
+  'E-commerce',
+  'Media & Entertainment',
+  'Consulting',
+  'Government',
+  'Non-profit',
+  'Other',
 ]
 
 function blankForm() {
@@ -111,9 +125,12 @@ function validate(): boolean {
   if (!form.value.is_current && !form.value.end_date)
     errors.value.end_date = 'End date is required unless this is your current role.'
   if (
-    form.value.start_date && form.value.end_date &&
-    !form.value.is_current && form.value.end_date < form.value.start_date
-  ) errors.value.end_date = 'End date must be after start date.'
+    form.value.start_date &&
+    form.value.end_date &&
+    !form.value.is_current &&
+    form.value.end_date < form.value.start_date
+  )
+    errors.value.end_date = 'End date must be after start date.'
   return Object.keys(errors.value).length === 0
 }
 
@@ -143,15 +160,16 @@ function handleClose() {
 <template>
   <div
     v-if="open"
-    class="fixed inset-0 bg-black/45 flex items-start justify-end z-[100]"
+    class="fixed inset-0 bg-black/45 flex items-start justify-end z-100"
     role="dialog"
     aria-modal="true"
     :aria-label="isEditing ? 'Edit experience' : 'Add experience'"
     @click.self="handleClose"
   >
     <!-- Panel -->
-    <div class="w-full max-w-[560px] h-dvh bg-white border-l border-gray-200 flex flex-col overflow-hidden">
-
+    <div
+      class="w-full max-w-140 h-dvh bg-white border-l border-gray-200 flex flex-col overflow-hidden"
+    >
       <!-- Header -->
       <div class="flex items-center justify-between px-6 py-5 border-b border-gray-200 shrink-0">
         <h2 class="text-lg font-semibold text-gray-900">
@@ -185,20 +203,22 @@ function handleClose() {
               type="text"
               placeholder="e.g. Andela"
               autocomplete="organization"
-              class="px-3 py-2 border text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+              class="px-3 py-2 border text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
               :class="errors.company_name ? 'border-red-600' : 'border-gray-200'"
             />
             <p v-if="errors.company_name" class="text-xs text-red-600">{{ errors.company_name }}</p>
           </div>
 
           <div class="flex flex-col gap-2">
-            <label class="text-sm font-semibold text-gray-900" for="company_url">Company website</label>
+            <label class="text-sm font-semibold text-gray-900" for="company_url"
+              >Company website</label
+            >
             <input
               id="company_url"
               v-model="form.company_url"
               type="url"
               placeholder="https://company.com"
-              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
             />
           </div>
         </div>
@@ -214,18 +234,20 @@ function handleClose() {
               v-model="form.role_title"
               type="text"
               placeholder="e.g. Senior Engineer"
-              class="px-3 py-2 border text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+              class="px-3 py-2 border text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
               :class="errors.role_title ? 'border-red-600' : 'border-gray-200'"
             />
             <p v-if="errors.role_title" class="text-xs text-red-600">{{ errors.role_title }}</p>
           </div>
 
           <div class="flex flex-col gap-2">
-            <label class="text-sm font-semibold text-gray-900" for="employment_type">Employment type</label>
+            <label class="text-sm font-semibold text-gray-900" for="employment_type"
+              >Employment type</label
+            >
             <select
               id="employment_type"
               v-model="form.employment_type"
-              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
             >
               <option value="">Select type</option>
               <option v-for="type in employmentTypes" :key="type" :value="type">{{ type }}</option>
@@ -242,7 +264,7 @@ function handleClose() {
               v-model="form.exp_location"
               type="text"
               placeholder="e.g. Kigali, Rwanda or Remote"
-              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
             />
           </div>
 
@@ -251,7 +273,7 @@ function handleClose() {
             <select
               id="industry"
               v-model="form.industry"
-              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
             >
               <option value="">Select industry</option>
               <option v-for="ind in industries" :key="ind" :value="ind">{{ ind }}</option>
@@ -270,7 +292,7 @@ function handleClose() {
               v-model="form.start_date"
               type="month"
               :max="new Date().toISOString().substring(0, 7)"
-              class="px-3 py-2 border text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+              class="px-3 py-2 border text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
               :class="errors.start_date ? 'border-red-600' : 'border-gray-200'"
             />
             <p v-if="errors.start_date" class="text-xs text-red-600">{{ errors.start_date }}</p>
@@ -285,7 +307,7 @@ function handleClose() {
               :disabled="endDateDisabled"
               :min="form.start_date || undefined"
               :max="form.is_current ? undefined : new Date().toISOString().substring(0, 7)"
-              class="px-3 py-2 border text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)] disabled:opacity-45 disabled:cursor-not-allowed disabled:bg-black/[0.04]"
+              class="px-3 py-2 border text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] disabled:opacity-45 disabled:cursor-not-allowed disabled:bg-black/[0.04]"
               :class="errors.end_date ? 'border-red-600' : 'border-gray-200'"
             />
             <p v-if="errors.end_date" class="text-xs text-red-600">{{ errors.end_date }}</p>
@@ -314,7 +336,7 @@ function handleClose() {
             v-model="form.description"
             placeholder="Describe your role, responsibilities, and impact..."
             rows="4"
-            class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)] resize-y min-h-[96px] leading-relaxed font-[inherit]"
+            class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] resize-y min-h-24 leading-relaxed font-[inherit]"
           />
         </div>
 
@@ -325,13 +347,21 @@ function handleClose() {
             Add bullet points that highlight impact — think metrics, outcomes, and deliverables.
           </p>
 
-          <ul v-if="form.achievements.length" class="flex flex-col gap-2 list-none p-0 mb-2" role="list">
+          <ul
+            v-if="form.achievements.length"
+            class="flex flex-col gap-2 list-none p-0 mb-2"
+            role="list"
+          >
             <li
               v-for="(item, idx) in form.achievements"
               :key="idx"
-              class="flex items-start gap-2 px-3 py-2 bg-black/[0.04] border border-gray-200"
+              class="flex items-start gap-2 px-3 py-2 bg-black/4 border border-gray-200"
             >
-              <span class="font-bold shrink-0 leading-snug" :style="{ color: 'var(--color-accent)' }">•</span>
+              <span
+                class="font-bold shrink-0 leading-snug"
+                :style="{ color: 'var(--color-accent)' }"
+                >•</span
+              >
               <span class="flex-1 text-sm text-gray-900 leading-snug">{{ item }}</span>
               <button
                 type="button"
@@ -349,12 +379,12 @@ function handleClose() {
               v-model="newAchievement"
               type="text"
               placeholder="e.g. Reduced API latency by 40% by optimising query plans"
-              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
               @keydown.enter.prevent="addAchievement"
             />
             <button
               type="button"
-              class="inline-flex items-center gap-1 px-3 py-2 bg-black/[0.04] border border-gray-200 text-sm font-semibold text-gray-900 cursor-pointer whitespace-nowrap shrink-0 transition-all hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] disabled:opacity-40 disabled:cursor-not-allowed"
+              class="inline-flex items-center gap-1 px-3 py-2 bg-black/4 border border-gray-200 text-sm font-semibold text-gray-900 cursor-pointer whitespace-nowrap shrink-0 transition-all hover:border-accent hover:text-accent disabled:opacity-40 disabled:cursor-not-allowed"
               @click="addAchievement"
               :disabled="!newAchievement.trim()"
             >
@@ -367,7 +397,9 @@ function handleClose() {
         <!-- Skills -->
         <div class="flex flex-col gap-2">
           <label class="text-sm font-semibold text-gray-900">Skills used</label>
-          <p class="text-xs text-gray-500 -mt-1">Tag the technologies and skills relevant to this role.</p>
+          <p class="text-xs text-gray-500 -mt-1">
+            Tag the technologies and skills relevant to this role.
+          </p>
 
           <div v-if="form.skills.length" class="flex flex-wrap gap-2 mb-2">
             <span
@@ -383,7 +415,9 @@ function handleClose() {
                 :style="{ color: 'var(--color-accent)' }"
                 @click="removeSkill(skill.id)"
                 :aria-label="`Remove skill ${skill.name}`"
-              >×</button>
+              >
+                ×
+              </button>
             </span>
           </div>
 
@@ -392,12 +426,12 @@ function handleClose() {
               v-model="newSkillName"
               type="text"
               placeholder="e.g. Go, PostgreSQL, Docker"
-              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-[var(--color-accent)] focus:shadow-[0_0_0_1px_var(--color-accent)]"
+              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
               @keydown.enter.prevent="addSkill"
             />
             <button
               type="button"
-              class="inline-flex items-center gap-1 px-3 py-2 bg-black/[0.04] border border-gray-200 text-sm font-semibold text-gray-900 cursor-pointer whitespace-nowrap shrink-0 transition-all hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] disabled:opacity-40 disabled:cursor-not-allowed"
+              class="inline-flex items-center gap-1 px-4 py-2 bg-black/4 border border-gray-200 text-sm font-semibold text-gray-900 cursor-pointer whitespace-nowrap shrink-0 transition-all hover:border-accent hover:text-accent disabled:opacity-40 disabled:cursor-not-allowed"
               @click="addSkill"
               :disabled="!newSkillName.trim()"
             >
@@ -409,8 +443,14 @@ function handleClose() {
 
         <!-- Footer -->
         <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 mt-auto">
-          <button type="button" class="button button-secondary" @click="handleClose">Cancel</button>
-          <button type="submit" class="button button-primary">
+          <button
+            type="button"
+            class="px-4 py-2 bg-gray-100 border border-gray-300"
+            @click="handleClose"
+          >
+            Cancel
+          </button>
+          <button type="submit" class="bg-accent text-accent-foreground px-4 py-2">
             {{ isEditing ? 'Save changes' : 'Add experience' }}
           </button>
         </div>
