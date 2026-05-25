@@ -2,10 +2,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -16,6 +19,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/samnodier/jobradar/internal/auth"
 	"github.com/samnodier/jobradar/internal/database"
+	"github.com/samnodier/jobradar/internal/queue"
 )
 
 type apiConfig struct {
@@ -47,6 +51,21 @@ func main() {
 		pool:         dbClient.Pool,
 		IsProduction: os.Getenv("APP_ENV") == "production",
 	}
+
+	q := queue.NewRedisQueue(rdb)
+	wp := queue.NewWorkerPool(q, 2)
+	wp.RegisterHandler(queue.JobScrapeRemoteOK, func(ctx context.Context, job *queue.Job) error {
+		return cfg.scrapeRemoteOK(ctx)
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	wp.Start(ctx)
+	defer wp.Stop()
+	defer cancel()
+
+	// Start a Cron Scheduler
+	sched := queue.NewScheduler(q)
+	sched.StartCron(ctx, queue.JobScrapeRemoteOK, 6*time.Hour)
 
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
@@ -158,14 +177,35 @@ func main() {
 		port = "8080"
 	}
 	addr := ":" + port
-	fmt.Printf("Server starting on port %s\n", port)
-
-	go startScraping(cfg, 6*time.Hour)
-
 	server := &http.Server{
 		Addr:    addr,
 		Handler: router,
 	}
 
-	log.Fatal(server.ListenAndServe())
+	// Start HTTP server in a separate background goroutine
+	go func() {
+		fmt.Printf("Server starting on port %s\n", port)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("failed to start server: %v", err)
+		}
+	}()
+
+	// Graceful shutdown wiring
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+
+	log.Println("Shutting down server gracefully...")
+	// Cancel the context to stop scheduler and workers
+	cancel()
+	// Stop workers (blocks until all workers have finished processing their current job)
+	wp.Stop()
+
+	// Shutdown HTTP server with a 5-second timeout
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Fatalf("Server forced to shutdown: %v", err)
+	}
 }
