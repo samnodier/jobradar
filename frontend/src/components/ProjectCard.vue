@@ -37,14 +37,14 @@ const formatDate = (dateStr: string | null) => {
 
       <div class="flex gap-2">
         <button
-          class="border border-gray-200 text-gray-500 p-1 cursor- pointer grid place-items-center transition-all hover:text-accent hover:border-accent"
+          class="border border-gray-200 text-gray-500 p-1 cursor-pointer grid place-items-center transition-all hover:text-accent hover:border-accent"
           @click="emit('edit')"
           aria-label="Edit project"
         >
           <Pencil :size="14" />
         </button>
         <button
-          class="border border-gray-200 text-gray-500 p-1 cursor- pointer grid place-items-center transition-all hover:text-red-600 hover:border-red-600"
+          class="border border-gray-200 text-gray-500 p-1 cursor-pointer grid place-items-center transition-all hover:text-red-600 hover:border-red-600"
           @click="emit('delete')"
           aria-label="Delete project"
         >
@@ -54,40 +54,40 @@ const formatDate = (dateStr: string | null) => {
     </div>
 
     <!-- Meta / Links / Dates -->
-    <div class="flex flex-wrap items-center gap-3 text-xs text- gray-400 mb-3">
+    <div class="flex flex-wrap items-center gap-3 text-xs text-gray-400 mb-3">
       <span>
         {{ formatDate(proj.start_date) }} —
         {{ proj.is_current ? 'Present' : formatDate(proj.end_date) }}
       </span>
 
-      <span v-if="proj.is_featured" class="text-gray- 300">•</span>
+      <span v-if="proj.is_featured" class="text-gray-300">•</span>
       <span
         v-if="proj.is_featured"
-        class="text-[10px] px-1.5 py- 0.5 bg-yellow-50 border border-yellow-200 text-yellow-700 font- semibold uppercase tracking-wider"
+        class="text-[10px] px-1.5 py-0.5 bg-yellow-50 border border-yellow-200 text-yellow-700 font-semibold uppercase tracking-wider"
       >
         Featured
       </span>
 
       <!-- Project URL -->
-      <span v-if="proj.project_url" class="text-gray- 300">•</span>
+      <span v-if="proj.project_url" class="text-gray-300">•</span>
       <a
         v-if="proj.project_url"
         :href="proj.project_url"
         target="_blank"
         rel="noreferrer"
-        class="inline-flex items-center gap-1 text-accent no- underline hover:underline font-medium"
+        class="inline-flex items-center gap-1 text-accent no-underline hover:underline font-medium"
       >
         <ExternalLink :size="12" /> Live Demo
       </a>
 
       <!-- Repository URL -->
-      <span v-if="proj.repository_url" class="text-gray- 300">•</span>
+      <span v-if="proj.repository_url" class="text-gray-300">•</span>
       <a
         v-if="proj.repository_url"
         :href="proj.repository_url"
         target="_blank"
         rel="noreferrer"
-        class="inline-flex items-center gap-1 text-accent no- underline hover:underline font-medium"
+        class="inline-flex items-center gap-1 text-accent no-underline hover:underline font-medium"
       >
         <Code :size="12" /> Source Code
       </a>
@@ -104,7 +104,7 @@ const formatDate = (dateStr: string | null) => {
     <!-- Impact -->
     <div
       v-if="proj.impact"
-      class="mt-3 p-3 bg-black/4 border-l- 2 border-accent text-sm text-gray-600 italic"
+      class="mt-3 p-3 bg-black/4 border-l-2 border-accent text-sm text-gray-600 italic"
     >
       <strong
         class="text-gray-900 block text-xs not-italic uppercase font-semibold tracking-wider mb-1"

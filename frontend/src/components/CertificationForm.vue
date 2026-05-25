@@ -185,7 +185,7 @@ function handleSubmit() {
               class="px-3 py-2 border text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] disabled:opacity-45 disabled:cursor-not-allowed"
               :class="errors.issue_date ? 'border-red-600' : 'border-gray-200'"
             />
-            <p v-if="errors.issue_date" class="text-xs text-red- 600">{{ errors.issue_date }}</p>
+            <p v-if="errors.issue_date" class="text-xs text-red-600">{{ errors.issue_date }}</p>
           </div>
 
           <div class="flex flex-col gap-2">

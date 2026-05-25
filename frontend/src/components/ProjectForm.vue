@@ -120,7 +120,7 @@ function handleSubmit() {
         </h2>
         <button
           type="button"
-          class="grid place-items-center w-8 h-8 border border-gray-200 text-gray-500 cursor-pointer transition-all hover:text- gray-900 hover:border-gray-400"
+          class="grid place-items-center w-8 h-8 border border-gray-200 text-gray-500 cursor-pointer transition-all hover:text-gray-900 hover:border-gray-400"
           @click="emit('close')"
           aria-label="Close"
         >

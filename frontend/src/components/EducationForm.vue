@@ -111,7 +111,7 @@ function handleSubmit() {
 <template>
   <div
     v-if="open"
-    class="fixed inset-0 bg-black/45 flex items-start justify- end z-100"
+    class="fixed inset-0 bg-black/45 flex items-start justify-end z-100"
     role="dialog"
     aria-modal="true"
     :aria-label="isEditing ? 'Edit education' : 'Add education'"
@@ -119,7 +119,7 @@ function handleSubmit() {
   >
     <!-- Panel -->
     <div
-      class="w-full max-w-140 h-dvh bg-white border-l border- gray-200 flex flex-col overflow-hidden"
+      class="w-full max-w-140 h-dvh bg-white border-l border-gray-200 flex flex-col overflow-hidden"
     >
       <!-- Header -->
       <div class="flex items-center justify-between px-6 py-5 border-b border-gray-200 shrink-0">
@@ -128,7 +128,7 @@ function handleSubmit() {
         </h2>
         <button
           type="button"
-          class="grid place-items-center w-8 h-8 border border- gray-200 text-gray-500 cursor-pointer transition-all hover:text- gray-900 hover:border-gray-400"
+          class="grid place-items-center w-8 h-8 border border-gray-200 text-gray-500 cursor-pointer transition-all hover:text-gray-900 hover:border-gray-400"
           @click="emit('close')"
           aria-label="Close"
         >
@@ -138,7 +138,7 @@ function handleSubmit() {
 
       <!-- Form body -->
       <form
-        class="flex-1 overflow-y-auto px-6 py-6 flex flex- col gap-5"
+        class="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-5"
         @submit.prevent="handleSubmit"
         novalidate
       >
@@ -152,10 +152,10 @@ function handleSubmit() {
             v-model="form.institution_name"
             type="text"
             placeholder="e.g. University of Waterloo"
-            class="px-3 py-2 border text-sm bg-white text-gray- 900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
+            class="px-3 py-2 border text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
             :class="errors.institution_name ? 'border-red-600' : 'border-gray-200'"
           />
-          <p v-if="errors.institution_name" class="text-xs text- red-600">
+          <p v-if="errors.institution_name" class="text-xs text-red-600">
             {{ errors.institution_name }}
           </p>
         </div>
@@ -167,7 +167,7 @@ function handleSubmit() {
             <select
               id="degree_type"
               v-model="form.degree_type"
-              class="px-3 py-2 border border-gray-200 text-sm bg- white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
+              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
             >
               <option v-for="type in degreeTypes" :key="type.value" :value="type.value">
                 {{ type.label }}
@@ -182,7 +182,7 @@ function handleSubmit() {
               v-model="form.degree_name"
               type="text"
               placeholder="e.g. Bachelor of Science"
-              class="px-3 py-2 border border-gray-200 text-sm bg- white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
+              class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
             />
           </div>
         </div>
@@ -197,7 +197,7 @@ function handleSubmit() {
             v-model="form.field_of_study"
             type="text"
             placeholder="e.g. Computer Science"
-            class="px-3 py-2 border border-gray-200 text-sm bg- white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
+            class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
           />
         </div>
 
@@ -212,10 +212,10 @@ function handleSubmit() {
               v-model="form.start_date"
               type="month"
               :max="new Date().toISOString().substring(0, 7)"
-              class="px-3 py-2 border text-sm bg-white text-gray- 900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
+              class="px-3 py-2 border text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)]"
               :class="errors.start_date ? 'border-red-600' : 'border-gray-200'"
             />
-            <p v-if="errors.start_date" class="text-xs text-red- 600">{{ errors.start_date }}</p>
+            <p v-if="errors.start_date" class="text-xs text-red-600">{{ errors.start_date }}</p>
           </div>
 
           <div class="flex flex-col gap-2">
@@ -227,10 +227,10 @@ function handleSubmit() {
               :disabled="endDateDisabled"
               :min="form.start_date || undefined"
               :max="form.is_current ? undefined : new Date().toISOString().substring(0, 7)"
-              class="px-3 py-2 border text-sm bg-white text-gray- 900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] disabled:opacity-45 disabled:cursor-not-allowed disabled:bg-black/4"
+              class="px-3 py-2 border text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] disabled:opacity-45 disabled:cursor-not-allowed disabled:bg-black/4"
               :class="errors.end_date ? 'border-red-600' : 'border-gray-200'"
             />
-            <p v-if="errors.end_date" class="text-xs text-red- 600">{{ errors.end_date }}</p>
+            <p v-if="errors.end_date" class="text-xs text-red-600">{{ errors.end_date }}</p>
           </div>
         </div>
 
@@ -256,12 +256,12 @@ function handleSubmit() {
             v-model="form.description"
             placeholder="Focus coursework, honors, or leadership activities..."
             rows="4"
-            class="px-3 py-2 border border-gray-200 text-sm bg- white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] resize-y min-h-24 leading-relaxed font-[inherit]"
+            class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] resize-y min-h-24 leading-relaxed font-[inherit]"
           />
         </div>
 
         <!-- Footer -->
-        <div class="flex justify-end gap-3 pt-4 border-t border- gray-200 mt-auto">
+        <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 mt-auto">
           <button
             type="button"
             class="px-4 py-2 bg-gray-100 border border-gray-300 cursor-pointer"

@@ -515,13 +515,13 @@ onMounted(async () => {
             <!-- Actions -->
             <div class="flex flex-row items-center justify-center gap-3">
               <button
-                class="inline-flex items-center bg-accent text-accent-foreground px-4 py-2 gap-2 transition-colors duration-150 hover:bg-accent/90 active:bg-accent/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none"
+                class="button button-primary"
                 @click="authStore.user && openProfileEditForm(authStore.user)"
               >
                 <SquarePen :size="16" />
                 Edit Profile
               </button>
-              <button class="border border-gray-200 bg-gray-100 px-4 py-2">Export To PDF</button>
+              <button class="button button-secondary">Export To PDF</button>
             </div>
           </div>
 
@@ -724,13 +724,13 @@ onMounted(async () => {
           <section v-if="activeTab === 'experience'" class="flex flex-col">
             <!-- Work History Section -->
 
-            <div class="p-6 border border-gray-200">
-              <div class="flex justify-between items-center mb- 4">
+            <div class="mt-2 mb-2 p-6 border border-gray-200">
+              <div class="flex justify-between items-center mb-4">
                 <h2 class="text-lg font-semibold text-gray-900 tracking-tight">
                   Work history ({{ experiences?.length || 0 }})
                 </h2>
                 <button
-                  class="bg-accent text-white px-4 py-2 inline- flex gap-2 text-sm font-semibold cursor-pointer transition- transform hover:-translate-y-px"
+                  class="button button-primary"
                   @click="openExperienceAddForm"
                 >
                   <Plus /> Add Experience
@@ -754,13 +754,13 @@ onMounted(async () => {
             </div>
 
             <!-- Education Section -->
-            <div class="p-6 border border-gray-200">
-              <div class="flex justify-between items-center mb- 4">
+            <div class="mt-2 mb-2 p-6 border border-gray-200">
+              <div class="flex justify-between items-center mb-4">
                 <h2 class="text-lg font-semibold text-gray-900 tracking-tight">
                   Education ({{ educations?.length || 0 }})
                 </h2>
                 <button
-                  class="bg-accent text-white px-4 py-2 inline- flex gap-2 text-sm font-semibold cursor-pointer transition- transform hover:-translate-y-px"
+                  class="button button-primary"
                   @click="openEducationAddForm"
                 >
                   <Plus /> Add Education
@@ -784,13 +784,13 @@ onMounted(async () => {
             </div>
 
             <!-- Projects Section -->
-            <div class="p-6 border border-gray-200">
-              <div class="flex justify-between items-center mb- 4">
+            <div class="mt-2 mb-2 p-6 border border-gray-200">
+              <div class="flex justify-between items-center mb-4">
                 <h2 class="text-lg font-semibold text-gray-900 tracking-tight">
                   Projects ({{ projects?.length || 0 }})
                 </h2>
                 <button
-                  class="bg-accent text-white px-4 py-2 inline- flex gap-2 text-sm font-semibold cursor-pointer transition- transform hover:-translate-y-px"
+                  class="button button-primary"
                   @click="openProjectAddForm"
                 >
                   <Plus /> Add Project
@@ -814,15 +814,15 @@ onMounted(async () => {
             </div>
 
             <!-- Certifications and Languages Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="mt-2 mb-2 grid grid-cols-1 md:grid-cols-2 gap-6">
               <!-- Certifications -->
-              <div class="p-6 border border-gray-200 flex flex- col h-full">
-                <div class="flex justify-between items-center mb- 4">
+              <div class="p-6 border border-gray-200 flex flex-col h-full">
+                <div class="flex justify-between items-center mb-4">
                   <h2 class="text-lg font-semibold text-gray-900 tracking-tight">
                     Certifications ({{ certifications?.length || 0 }})
                   </h2>
                   <button
-                    class="bg-accent text-white px-3 py-1.5 inline-flex gap-1.5 text-xs font-semibold cursor-pointer transition-transform hover:-translate-y-px"
+                    class="button button-primary"
                     @click="openCertificationAddForm"
                   >
                     <Plus :size="14" /> Add Cert
@@ -830,7 +830,7 @@ onMounted(async () => {
                 </div>
                 <p
                   v-if="!certifications?.length"
-                  class="text-center py-8 text-gray-400 border border-dashed border-gray-200 text-sm flex-1 grid place-items- center"
+                  class="text-center py-8 text-gray-400 border border-dashed border-gray-200 text-sm flex-1 grid place-items-center"
                 >
                   No certifications added yet.
                 </p>
@@ -846,13 +846,13 @@ onMounted(async () => {
               </div>
 
               <!-- Spoken Languages -->
-              <div class="p-6 border border-gray-200 flex flex- col h-full">
-                <div class="flex justify-between items-center mb- 4">
+              <div class="p-6 border border-gray-200 flex flex-col h-full">
+                <div class="flex justify-between items-center mb-4">
                   <h2 class="text-lg font-semibold text-gray-900 tracking-tight">
                     Languages ({{ languages?.length || 0 }})
                   </h2>
                   <button
-                    class="bg-accent text-white px-3 py-1.5 inline-flex gap-1.5 text-xs font-semibold cursor-pointer transition-transform hover:-translate-y-px"
+                    class="button button-primary"
                     @click="openLanguageAddForm"
                   >
                     <Plus :size="14" /> Add Language
@@ -860,7 +860,7 @@ onMounted(async () => {
                 </div>
                 <p
                   v-if="!languages?.length"
-                  class="text-center py-8 text-gray-400 border border-dashed border-gray-200 text-sm flex-1 grid place-items- center"
+                  class="text-center py-8 text-gray-400 border border-dashed border-gray-200 text-sm flex-1 grid place-items-center"
                 >
                   No languages added yet.
                 </p>
@@ -1064,7 +1064,7 @@ onMounted(async () => {
 
             <div class="text-center p-6 bg-black/4 border border-gray-200">
               <button
-                class="bg-accent text-accent-foreground px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                class="button button-primary"
                 :disabled="isSaving"
                 @click="handleSavePreferences"
               >
@@ -1115,7 +1115,7 @@ onMounted(async () => {
                 </div>
 
                 <div v-if="!isDeleteConfirmVisible" class="flex flex-col gap-2">
-                  <button class="button button-secondary" @click="isDeleteConfirmVisible = true">
+                  <button class="button button-danger" @click="isDeleteConfirmVisible = true">
                     Delete My Account
                   </button>
                 </div>
@@ -1136,13 +1136,13 @@ onMounted(async () => {
                   <p v-if="deleteError" class="text-xs text-red-600">{{ deleteError }}</p>
                   <div class="flex gap-2 mt-1">
                     <button
-                      class="px-4 py-2 bg-gray-400 border-gray-200 button button-secondary"
+                      class="button button-secondary"
                       @click="cancelDelete"
                     >
                       Cancel
                     </button>
                     <button
-                      class="bg-accent text-white px-3 py-2 disabled:opacity-50"
+                      class="button button-primary"
                       :disabled="typedEmail !== authStore.user?.email"
                       @click="deleteAccount"
                     >
