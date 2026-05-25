@@ -54,26 +54,26 @@ const degreeTypeLabel = computed(() => {
         <h3 class="text-base font-semibold text-gray-900 tracking-tight">
           {{ education.institution_name }}
         </h3>
-        <p class="flex items-center gap-2 text-sm text-gray- 500">
+        <p class="flex items-center gap-2 text-sm text-gray-500">
           <span class="text-gray-900 font-medium">
             {{ degreeTypeLabel
             }}<span v-if="education.degree_name">: {{ education.degree_name }}</span>
           </span>
-          <span v-if="education.field_of_study" class="text-gray- 300">•</span>
+          <span v-if="education.field_of_study" class="text-gray-300">•</span>
           <span v-if="education.field_of_study">{{ education.field_of_study }}</span>
         </p>
       </div>
 
       <div class="flex gap-2">
         <button
-          class="border border-gray-200 text-gray-500 p-1 cursor- pointer grid place-items-center transition-all hover:text-accent hover:border-accent"
+          class="border border-gray-200 text-gray-500 p-1 cursor-pointer grid place-items-center transition-all hover:text-accent hover:border-accent"
           @click="emit('edit')"
           aria-label="Edit education"
         >
           <Pencil :size="14" />
         </button>
         <button
-          class="border border-gray-200 text-gray-500 p-1 cursor- pointer grid place-items-center transition-all hover:text-red-600 hover:border-red-600"
+          class="border border-gray-200 text-gray-500 p-1 cursor-pointer grid place-items-center transition-all hover:text-red-600 hover:border-red-600"
           @click="emit('delete')"
           aria-label="Delete education"
         >
@@ -83,12 +83,12 @@ const degreeTypeLabel = computed(() => {
     </div>
 
     <!-- Meta / Dates -->
-    <div class="flex items-center gap-2 text-xs text-gray-400 mb- 3">
+    <div class="flex items-center gap-2 text-xs text-gray-400 mb-3">
       <span>
         {{ formatDate(education.start_date) }} —
         {{ education.is_current ? 'Present' : formatDate(education.end_date) }}
       </span>
-      <span v-if="education.is_highlighted" class="text-gray- 300">•</span>
+      <span v-if="education.is_highlighted" class="text-gray-300">•</span>
       <span
         v-if="education.is_highlighted"
         class="text-[10px] px-1.5 py-0.5 bg-green-50 border border-green-200 text-green-700 font-semibold uppercase tracking-wider"
