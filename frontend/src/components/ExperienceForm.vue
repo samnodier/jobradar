@@ -6,6 +6,7 @@ import type { Experience, Skill } from '@/types/experience'
 const props = defineProps<{
   experience?: Experience
   open: boolean
+  isSaving: boolean
 }>()
 
 const emit = defineEmits<{
@@ -74,8 +75,10 @@ watch(
           employment_type: props.experience.employment_type ?? '',
           description: props.experience.description ?? '',
           achievements: props.experience.achievements ? [...props.experience.achievements] : [],
-          start_date: props.experience.start_date,
-          end_date: props.experience.end_date ?? '',
+          start_date: props.experience.start_date
+            ? props.experience.start_date.substring(0, 7)
+            : '',
+          end_date: props.experience.end_date ? props.experience.end_date.substring(0, 7) : '',
           is_current: props.experience.is_current,
           skills: props.experience.skills ? [...props.experience.skills] : [],
         }
@@ -107,9 +110,13 @@ function removeAchievement(index: number) {
 function addSkill() {
   const name = newSkillName.value.trim()
   if (!name) return
-  const already = form.value.skills.some((s) => s.name.toLowerCase() === name.toLowerCase())
+  const already = form.value.skills.some((s) => s.skill_name.toLowerCase() === name.toLowerCase())
   if (already) return
-  form.value.skills.push({ id: crypto.randomUUID(), name })
+  form.value.skills.push({
+    id: name,
+    skill_name: name,
+    category: null,
+  })
   newSkillName.value = ''
 }
 
@@ -307,7 +314,7 @@ function handleClose() {
               :disabled="endDateDisabled"
               :min="form.start_date || undefined"
               :max="form.is_current ? undefined : new Date().toISOString().substring(0, 7)"
-              class="px-3 py-2 border text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] disabled:opacity-45 disabled:cursor-not-allowed disabled:bg-black/[0.04]"
+              class="px-3 py-2 border text-sm bg-white text-gray-900 w-full transition-all focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] disabled:opacity-45 disabled:cursor-not-allowed disabled:bg-black/4"
               :class="errors.end_date ? 'border-red-600' : 'border-gray-200'"
             />
             <p v-if="errors.end_date" class="text-xs text-red-600">{{ errors.end_date }}</p>
@@ -408,13 +415,13 @@ function handleClose() {
               class="inline-flex items-center gap-1 px-2 py-1 bg-white border text-xs font-medium"
               :style="{ borderColor: 'var(--color-accent)', color: 'var(--color-accent)' }"
             >
-              {{ skill.name }}
+              {{ skill.skill_name }}
               <button
                 type="button"
                 class="border-none text-sm leading-none p-0 cursor-pointer"
                 :style="{ color: 'var(--color-accent)' }"
                 @click="removeSkill(skill.id)"
-                :aria-label="`Remove skill ${skill.name}`"
+                :aria-label="`Remove skill ${skill.skill_name}`"
               >
                 ×
               </button>
@@ -450,8 +457,12 @@ function handleClose() {
           >
             Cancel
           </button>
-          <button type="submit" class="bg-accent text-accent-foreground px-4 py-2">
-            {{ isEditing ? 'Save changes' : 'Add experience' }}
+          <button
+            type="submit"
+            class="bg-accent text-accent-foreground px-4 py-2 disabled:opacity-50"
+            :disabled="isSaving"
+          >
+            {{ isSaving ? 'Saving…' : (isEditing ? 'Save changes' : 'Add experience') }}
           </button>
         </div>
       </form>

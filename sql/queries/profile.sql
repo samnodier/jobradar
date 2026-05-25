@@ -36,7 +36,7 @@ SELECT
     e.updated_at,
     COALESCE(
         JSON_AGG(
-            JSON_BUILD_OBJECT('id', s.id, 'name', s.skill_name)
+            JSON_BUILD_OBJECT('id', s.id, 'skill_name', s.skill_name)
         ) FILTER (WHERE s.id IS NOT NULL), '[]'
     ) AS skills
 FROM user_experiences AS e
@@ -45,6 +45,35 @@ LEFT JOIN skills AS s ON es.skill_id = s.id
 WHERE e.user_id = $1
 GROUP BY e.id
 ORDER BY e.start_date DESC;
+
+-- name: GetExperienceByID :one
+SELECT
+    e.id,
+    e.user_id,
+    e.company_name,
+    e.company_url,
+    e.role_title,
+    e.exp_location,
+    e.industry,
+    e.employment_type,
+    e.description,
+    e.achievements,
+    e.start_date,
+    e.end_date,
+    e.is_current,
+    e.created_at,
+    e.updated_at,
+    COALESCE(
+        JSON_AGG(
+            JSON_BUILD_OBJECT('id', s.id, 'skill_name', s.skill_name)
+        ) FILTER (WHERE s.id IS NOT NULL), '[]'
+    ) AS skills
+FROM user_experiences AS e
+LEFT JOIN experience_skills AS es ON e.id = es.experience_id
+LEFT JOIN skills AS s ON es.skill_id = s.id
+WHERE e.id = $1 AND e.user_id = $2
+GROUP BY e.id;
+
 
 -- name: UpdateUserExperience :one
 UPDATE user_experiences

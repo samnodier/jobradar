@@ -684,6 +684,83 @@ func (q *Queries) GetEducationsByUserID(ctx context.Context, userID uuid.UUID) (
 	return items, nil
 }
 
+const getExperienceByID = `-- name: GetExperienceByID :one
+SELECT
+    e.id,
+    e.user_id,
+    e.company_name,
+    e.company_url,
+    e.role_title,
+    e.exp_location,
+    e.industry,
+    e.employment_type,
+    e.description,
+    e.achievements,
+    e.start_date,
+    e.end_date,
+    e.is_current,
+    e.created_at,
+    e.updated_at,
+    COALESCE(
+        JSON_AGG(
+            JSON_BUILD_OBJECT('id', s.id, 'skill_name', s.skill_name)
+        ) FILTER (WHERE s.id IS NOT NULL), '[]'
+    ) AS skills
+FROM user_experiences AS e
+LEFT JOIN experience_skills AS es ON e.id = es.experience_id
+LEFT JOIN skills AS s ON es.skill_id = s.id
+WHERE e.id = $1 AND e.user_id = $2
+GROUP BY e.id
+`
+
+type GetExperienceByIDParams struct {
+	ID     uuid.UUID `json:"id"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
+type GetExperienceByIDRow struct {
+	ID             uuid.UUID   `json:"id"`
+	UserID         uuid.UUID   `json:"user_id"`
+	CompanyName    string      `json:"company_name"`
+	CompanyUrl     *string     `json:"company_url"`
+	RoleTitle      string      `json:"role_title"`
+	ExpLocation    *string     `json:"exp_location"`
+	Industry       *string     `json:"industry"`
+	EmploymentType *string     `json:"employment_type"`
+	Description    *string     `json:"description"`
+	Achievements   []string    `json:"achievements"`
+	StartDate      pgtype.Date `json:"start_date"`
+	EndDate        pgtype.Date `json:"end_date"`
+	IsCurrent      *bool       `json:"is_current"`
+	CreatedAt      *time.Time  `json:"created_at"`
+	UpdatedAt      *time.Time  `json:"updated_at"`
+	Skills         interface{} `json:"skills"`
+}
+
+func (q *Queries) GetExperienceByID(ctx context.Context, arg GetExperienceByIDParams) (GetExperienceByIDRow, error) {
+	row := q.db.QueryRow(ctx, getExperienceByID, arg.ID, arg.UserID)
+	var i GetExperienceByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.CompanyName,
+		&i.CompanyUrl,
+		&i.RoleTitle,
+		&i.ExpLocation,
+		&i.Industry,
+		&i.EmploymentType,
+		&i.Description,
+		&i.Achievements,
+		&i.StartDate,
+		&i.EndDate,
+		&i.IsCurrent,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Skills,
+	)
+	return i, err
+}
+
 const getExperiencesByUserID = `-- name: GetExperiencesByUserID :many
 SELECT
     e.id,
@@ -703,7 +780,7 @@ SELECT
     e.updated_at,
     COALESCE(
         JSON_AGG(
-            JSON_BUILD_OBJECT('id', s.id, 'name', s.skill_name)
+            JSON_BUILD_OBJECT('id', s.id, 'skill_name', s.skill_name)
         ) FILTER (WHERE s.id IS NOT NULL), '[]'
     ) AS skills
 FROM user_experiences AS e

@@ -74,11 +74,11 @@ const formatDate = (dateStr: string | null) => {
     </p>
 
     <!-- Achievements -->
-    <ul v-if="experience.achievements?.length" class="pl-4 mb-4">
+    <ul v-if="experience.achievements?.length" class="list-disc pl-4 mb-4 space-y-1">
       <li
         v-for="(achievement, index) in experience.achievements"
         :key="index"
-        class="text-sm text-gray-500 mb-1 leading-snug"
+        class="text-sm text-gray-900 leading-snug"
       >
         {{ achievement }}
       </li>
@@ -91,7 +91,7 @@ const formatDate = (dateStr: string | null) => {
         :key="skill.id"
         class="text-[11px] px-2 py-0.5 bg-black/4 border border-gray-200 text-gray-500 font-medium"
       >
-        {{ skill.name }}
+        {{ skill.skill_name }}
       </span>
     </div>
   </div>
