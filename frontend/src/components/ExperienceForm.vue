@@ -450,19 +450,9 @@ function handleClose() {
 
         <!-- Footer -->
         <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 mt-auto">
-          <button
-            type="button"
-            class="px-4 py-2 bg-gray-100 border border-gray-300"
-            @click="handleClose"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            class="bg-accent text-accent-foreground px-4 py-2 disabled:opacity-50"
-            :disabled="isSaving"
-          >
-            {{ isSaving ? 'Saving…' : (isEditing ? 'Save changes' : 'Add experience') }}
+          <button type="button" class="button button-secondary" @click="handleClose">Cancel</button>
+          <button type="submit" class="button button-primary" :disabled="isSaving">
+            {{ isSaving ? 'Saving…' : isEditing ? 'Save changes' : 'Add experience' }}
           </button>
         </div>
       </form>

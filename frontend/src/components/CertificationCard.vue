@@ -2,6 +2,7 @@
 import type { Certification } from '@/types/certification'
 import { Pencil, Trash2, ExternalLink } from '@lucide/vue'
 import { computed } from 'vue'
+import { ensureAbsoluteUrl } from '@/utils/url'
 
 const props = defineProps<{ cert: Certification }>()
 const emit = defineEmits<{
@@ -70,7 +71,7 @@ const formatDate = (dateStr: string | null) => {
       <span v-if="c.credential_url" class="text-gray-300">•</span>
       <a
         v-if="c.credential_url"
-        :href="c.credential_url"
+        :href="ensureAbsoluteUrl(c.credential_url)"
         target="_blank"
         rel="noreferrer"
         class="inline-flex items-center gap-1 text-accent no-underline hover:underline font-medium"

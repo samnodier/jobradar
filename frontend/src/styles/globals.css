@@ -66,3 +66,26 @@ body {
 .button-ghost {
   @apply bg-transparent text-gray-500 hover:bg-black/5 hover:text-gray-900 active:scale-[0.98];
 }
+
+/* Toggle switch — use with role="switch" and :aria-checked */
+.toggle-switch {
+  @apply relative inline-flex items-center w-10 h-5 cursor-pointer border-none p-0;
+  background: #d1d5db;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.toggle-switch[aria-checked='true'] {
+  background: var(--color-accent);
+}
+
+.toggle-switch::after {
+  content: '';
+  @apply absolute w-4 h-4 bg-white;
+  left: 2px;
+  top: 2px;
+  transition: transform 0.2s ease-in-out;
+}
+
+.toggle-switch[aria-checked='true']::after {
+  transform: translateX(20px);
+}

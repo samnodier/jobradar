@@ -78,6 +78,7 @@ SELECT
     job_id,
     application_status,
     applied_at,
+    last_status_changed_at,
     notes,
     follow_up_at,
     created_at,
@@ -92,15 +93,16 @@ type GetApplicationByIDParams struct {
 }
 
 type GetApplicationByIDRow struct {
-	ID                uuid.UUID          `json:"id"`
-	UserID            uuid.UUID          `json:"user_id"`
-	JobID             uuid.UUID          `json:"job_id"`
-	ApplicationStatus string             `json:"application_status"`
-	AppliedAt         *time.Time         `json:"applied_at"`
-	Notes             *string            `json:"notes"`
-	FollowUpAt        *time.Time         `json:"follow_up_at"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	ID                  uuid.UUID          `json:"id"`
+	UserID              uuid.UUID          `json:"user_id"`
+	JobID               uuid.UUID          `json:"job_id"`
+	ApplicationStatus   string             `json:"application_status"`
+	AppliedAt           *time.Time         `json:"applied_at"`
+	LastStatusChangedAt pgtype.Timestamptz `json:"last_status_changed_at"`
+	Notes               *string            `json:"notes"`
+	FollowUpAt          *time.Time         `json:"follow_up_at"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 }
 
 func (q *Queries) GetApplicationByID(ctx context.Context, arg GetApplicationByIDParams) (GetApplicationByIDRow, error) {
@@ -112,6 +114,7 @@ func (q *Queries) GetApplicationByID(ctx context.Context, arg GetApplicationByID
 		&i.JobID,
 		&i.ApplicationStatus,
 		&i.AppliedAt,
+		&i.LastStatusChangedAt,
 		&i.Notes,
 		&i.FollowUpAt,
 		&i.CreatedAt,
@@ -127,6 +130,7 @@ SELECT
     job_id,
     application_status,
     applied_at,
+    last_status_changed_at,
     notes,
     follow_up_at,
     created_at,
@@ -141,15 +145,16 @@ type GetApplicationByUserAndJobParams struct {
 }
 
 type GetApplicationByUserAndJobRow struct {
-	ID                uuid.UUID          `json:"id"`
-	UserID            uuid.UUID          `json:"user_id"`
-	JobID             uuid.UUID          `json:"job_id"`
-	ApplicationStatus string             `json:"application_status"`
-	AppliedAt         *time.Time         `json:"applied_at"`
-	Notes             *string            `json:"notes"`
-	FollowUpAt        *time.Time         `json:"follow_up_at"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	ID                  uuid.UUID          `json:"id"`
+	UserID              uuid.UUID          `json:"user_id"`
+	JobID               uuid.UUID          `json:"job_id"`
+	ApplicationStatus   string             `json:"application_status"`
+	AppliedAt           *time.Time         `json:"applied_at"`
+	LastStatusChangedAt pgtype.Timestamptz `json:"last_status_changed_at"`
+	Notes               *string            `json:"notes"`
+	FollowUpAt          *time.Time         `json:"follow_up_at"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 }
 
 func (q *Queries) GetApplicationByUserAndJob(ctx context.Context, arg GetApplicationByUserAndJobParams) (GetApplicationByUserAndJobRow, error) {
@@ -161,6 +166,7 @@ func (q *Queries) GetApplicationByUserAndJob(ctx context.Context, arg GetApplica
 		&i.JobID,
 		&i.ApplicationStatus,
 		&i.AppliedAt,
+		&i.LastStatusChangedAt,
 		&i.Notes,
 		&i.FollowUpAt,
 		&i.CreatedAt,
@@ -176,6 +182,7 @@ SELECT
     a.job_id,
     a.application_status,
     a.applied_at,
+    a.last_status_changed_at,
     a.notes,
     a.follow_up_at,
     a.created_at,
@@ -193,21 +200,22 @@ ORDER BY a.updated_at DESC
 `
 
 type GetApplicationsByUserIDRow struct {
-	ID                uuid.UUID          `json:"id"`
-	UserID            uuid.UUID          `json:"user_id"`
-	JobID             uuid.UUID          `json:"job_id"`
-	ApplicationStatus string             `json:"application_status"`
-	AppliedAt         *time.Time         `json:"applied_at"`
-	Notes             *string            `json:"notes"`
-	FollowUpAt        *time.Time         `json:"follow_up_at"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
-	JobTitle          string             `json:"job_title"`
-	CompanyName       string             `json:"company_name"`
-	JobLocation       *string            `json:"job_location"`
-	SourceUrl         string             `json:"source_url"`
-	JobIsRemote       *bool              `json:"job_is_remote"`
-	JobLogoUrl        *string            `json:"job_logo_url"`
+	ID                  uuid.UUID          `json:"id"`
+	UserID              uuid.UUID          `json:"user_id"`
+	JobID               uuid.UUID          `json:"job_id"`
+	ApplicationStatus   string             `json:"application_status"`
+	AppliedAt           *time.Time         `json:"applied_at"`
+	LastStatusChangedAt pgtype.Timestamptz `json:"last_status_changed_at"`
+	Notes               *string            `json:"notes"`
+	FollowUpAt          *time.Time         `json:"follow_up_at"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	JobTitle            string             `json:"job_title"`
+	CompanyName         string             `json:"company_name"`
+	JobLocation         *string            `json:"job_location"`
+	SourceUrl           string             `json:"source_url"`
+	JobIsRemote         *bool              `json:"job_is_remote"`
+	JobLogoUrl          *string            `json:"job_logo_url"`
 }
 
 func (q *Queries) GetApplicationsByUserID(ctx context.Context, userID uuid.UUID) ([]GetApplicationsByUserIDRow, error) {
@@ -225,6 +233,7 @@ func (q *Queries) GetApplicationsByUserID(ctx context.Context, userID uuid.UUID)
 			&i.JobID,
 			&i.ApplicationStatus,
 			&i.AppliedAt,
+			&i.LastStatusChangedAt,
 			&i.Notes,
 			&i.FollowUpAt,
 			&i.CreatedAt,

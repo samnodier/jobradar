@@ -2,6 +2,7 @@
 import type { Project } from '@/types/project'
 import { Pencil, Trash2, ExternalLink, Code } from '@lucide/vue'
 import { computed } from 'vue'
+import { ensureAbsoluteUrl } from '@/utils/url'
 
 const props = defineProps<{ project: Project }>()
 const emit = defineEmits<{
@@ -72,7 +73,7 @@ const formatDate = (dateStr: string | null) => {
       <span v-if="proj.project_url" class="text-gray-300">•</span>
       <a
         v-if="proj.project_url"
-        :href="proj.project_url"
+        :href="ensureAbsoluteUrl(proj.project_url)"
         target="_blank"
         rel="noreferrer"
         class="inline-flex items-center gap-1 text-accent no-underline hover:underline font-medium"
@@ -84,7 +85,7 @@ const formatDate = (dateStr: string | null) => {
       <span v-if="proj.repository_url" class="text-gray-300">•</span>
       <a
         v-if="proj.repository_url"
-        :href="proj.repository_url"
+        :href="ensureAbsoluteUrl(proj.repository_url)"
         target="_blank"
         rel="noreferrer"
         class="inline-flex items-center gap-1 text-accent no-underline hover:underline font-medium"
