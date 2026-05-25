@@ -145,7 +145,17 @@ func (cfg *apiConfig) handlerCreateExperience(w http.ResponseWriter, r *http.Req
 		}
 	}
 
-	httpx.RespondJSON(w, http.StatusCreated, experience)
+	// After insertion, fetch the fully aggregated experience from the database
+	fullExperience, err := cfg.db.GetExperienceByID(r.Context(), database.GetExperienceByIDParams{
+		ID:     experience.ID,
+		UserID: userID,
+	})
+	if err != nil {
+		httpx.RespondError(w, http.StatusInternalServerError, "failed to fetch created experience details")
+		return
+	}
+
+	httpx.RespondJSON(w, http.StatusCreated, fullExperience)
 }
 
 func (cfg *apiConfig) handlerUpdateExperience(w http.ResponseWriter, r *http.Request) {
@@ -274,7 +284,17 @@ func (cfg *apiConfig) handlerUpdateExperience(w http.ResponseWriter, r *http.Req
 		}
 	}
 
-	httpx.RespondJSON(w, http.StatusOK, experience)
+	// fetch the full updated experience from the database after update
+	fullExperience, err := cfg.db.GetExperienceByID(r.Context(), database.GetExperienceByIDParams{
+		ID:     experience.ID,
+		UserID: userID,
+	})
+	if err != nil {
+		httpx.RespondError(w, http.StatusInternalServerError, "failed to fetch updated experience details")
+		return
+	}
+
+	httpx.RespondJSON(w, http.StatusOK, fullExperience)
 }
 
 func (cfg *apiConfig) handlerGetExperiences(w http.ResponseWriter, r *http.Request) {

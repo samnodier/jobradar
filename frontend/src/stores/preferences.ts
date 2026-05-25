@@ -43,6 +43,11 @@ export const usePreferencesStore = defineStore('preferences', {
           credentials: 'include',
           body: JSON.stringify(preferences),
         })
+        if (!response.ok) {
+          const data = await response.json().catch(() => null)
+          throw new Error(data?.error ?? 'Failed to update preferences')
+        }
+        this.preferences = await response.json()
       } catch (err) {
         this.error = err instanceof Error ? err.message : 'Failed to update preferences'
         throw err

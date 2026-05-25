@@ -1,16 +1,13 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { X } from '@lucide/vue'
-import { useAuthStore } from '@/stores/auth'
-import { useToast } from '@/composables/useToast'
+import type { User } from '@/types/user'
 
-const props = defineProps<{ open: boolean }>()
+const props = defineProps<{ user: User; open: boolean; isSaving: boolean }>()
 const emit = defineEmits<{
   (e: 'close'): void
+  (e: 'save', payload: Partial<User>): void
 }>()
-
-const authStore = useAuthStore()
-const toast = useToast()
 
 const availabilityOptions = ['immediate', 'two_weeks', 'one_month', 'three_months', 'not_looking']
 
@@ -23,7 +20,7 @@ const availabilityLabels: Record<string, string> = {
 }
 
 function blankForm() {
-  const u = authStore.user
+  const u = props.user
   return {
     username: u?.username ?? '',
     full_name: u?.full_name ?? '',
@@ -44,7 +41,6 @@ function blankForm() {
 
 const form = ref(blankForm())
 const errors = ref<Record<string, string>>({})
-const saving = ref(false)
 const activeSection = ref<'identity' | 'career'>('identity')
 
 watch(
@@ -75,7 +71,6 @@ function validate(): boolean {
 
 async function handleSubmit() {
   if (!validate()) return
-  saving.value = true
   const body = {
     ...form.value,
     phone: form.value.phone || null,
@@ -92,14 +87,8 @@ async function handleSubmit() {
     min_salary: form.value.min_salary ? Number(form.value.min_salary) : null,
     max_salary: form.value.max_salary ? Number(form.value.max_salary) : null,
   }
-  await authStore.editProfile(body)
 
-  if (authStore.error) {
-    toast.error(authStore.error)
-  } else {
-    toast.success('User updated successfully')
-    emit('close')
-  }
+  emit('save', body)
 }
 </script>
 
@@ -375,9 +364,9 @@ async function handleSubmit() {
           <button
             type="submit"
             class="bg-accent px-4 py-2 disabled:opacity-50"
-            :disabled="saving"
+            :disabled="isSaving"
           >
-            {{ saving ? 'Saving…' : 'Save changes' }}
+            {{ isSaving ? 'Saving…' : 'Save changes' }}
           </button>
         </div>
       </form>
