@@ -3,7 +3,8 @@ import { onMounted, ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { usePreferencesStore } from '@/stores/preferences'
 import { useToast } from '@/composables/useToast'
-import { Plus, SquarePen, X } from '@lucide/vue'
+import { MapPin, Plus, SquarePen, X } from '@lucide/vue'
+import { ensureAbsoluteUrl } from '@/utils/url'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { useProfileStore } from '@/stores/profile'
@@ -78,19 +79,30 @@ const availabilityLabels: Record<string, string> = {
   not_looking: 'Not actively looking',
 }
 
-const industriesText = computed({
-  get() {
-    return preferences?.value ? preferences.value?.preferred_industries?.join(', ') : ''
-  },
-  set(val: string) {
-    if (preferences?.value) {
-      preferences.value.preferred_industries = val
-        .split(', ')
-        .map((s) => s.trim())
-        .filter((s) => s !== '')
+const removeIndustry = (name: string) => {
+  if (preferences?.value && preferences.value.preferred_industries) {
+    preferences.value.preferred_industries = preferences.value.preferred_industries.filter(
+      (i: string) => i !== name,
+    )
+  }
+}
+
+const addIndustry = (e: Event) => {
+  const target = e.target as HTMLInputElement
+  const val = target.value.trim()
+  if (val && preferences?.value) {
+    if (!preferences.value.preferred_industries) {
+      preferences.value.preferred_industries = []
     }
-  },
-})
+    const exists = preferences.value.preferred_industries.some(
+      (i: string) => i.toLowerCase() === val.toLowerCase(),
+    )
+    if (!exists) {
+      preferences.value.preferred_industries.push(val)
+    }
+    target.value = ''
+  }
+}
 
 // bridge simple dropdown and desired_locations array
 const preferredLocationSelect = computed({
@@ -250,6 +262,21 @@ async function handleSavePreferences() {
     setTimeout(() => (saved.value = false), 2500)
   } catch (err) {
     toast.error(err instanceof Error ? err.message : 'Failed to save preferences.')
+  }
+}
+
+async function toggleNotifyJobs() {
+  if (!preferences?.value) return
+  preferences.value.notify_jobs = !preferences.value.notify_jobs
+  try {
+    await preferencesStore.updatePreferences(preferences.value)
+    toast.success(
+      preferences.value.notify_jobs ? 'Job notifications enabled' : 'Job notifications disabled',
+    )
+  } catch (err) {
+    // revert on failure
+    preferences.value.notify_jobs = !preferences.value.notify_jobs
+    toast.error('Failed to update notification setting' + err)
   }
 }
 
@@ -502,10 +529,17 @@ onMounted(async () => {
                 <h1 class="text-2xl font-bold text-gray-900 mb-1 tracking-tight">
                   {{ authStore.user?.full_name || authStore.user?.username }}
                 </h1>
-                <p class="text-sm text-gray-500 mb-3">
+                <p class="text-sm text-gray-500 mb-1">
                   {{ authStore.user?.email }}
                   <span v-if="authStore.user?.username"> • {{ authStore.user.username }}</span>
                 </p>
+                <p
+                  v-if="authStore.user?.user_location"
+                  class="text-sm text-gray-500 flex items-center gap-1 mb-3"
+                >
+                  <MapPin :size="13" class="shrink-0" /> {{ authStore.user.user_location }}
+                </p>
+                <p v-else class="mb-3"></p>
                 <p class="text-base text-gray-500 leading-relaxed">
                   {{ authStore.user?.user_summary || 'Add a summary to your profile.' }}
                 </p>
@@ -638,7 +672,7 @@ onMounted(async () => {
                   <span class="text-gray-400 font-medium">GitHub</span>
                   <a
                     v-if="authStore.user?.github_url"
-                    :href="authStore.user.github_url"
+                    :href="ensureAbsoluteUrl(authStore.user.github_url)"
                     target="_blank"
                     rel="noreferrer"
                     class="text-accent no-underline hover:underline"
@@ -651,7 +685,7 @@ onMounted(async () => {
                   <span class="text-gray-400 font-medium">LinkedIn</span>
                   <a
                     v-if="authStore.user?.linkedin_url"
-                    :href="authStore.user.linkedin_url"
+                    :href="ensureAbsoluteUrl(authStore.user.linkedin_url)"
                     target="_blank"
                     rel="noreferrer"
                     class="text-accent no-underline hover:underline"
@@ -664,7 +698,7 @@ onMounted(async () => {
                   <span class="text-gray-400 font-medium">Website</span>
                   <a
                     v-if="authStore.user?.website_url"
-                    :href="authStore.user.website_url"
+                    :href="ensureAbsoluteUrl(authStore.user.website_url)"
                     target="_blank"
                     rel="noreferrer"
                     class="text-accent no-underline hover:underline"
@@ -729,10 +763,7 @@ onMounted(async () => {
                 <h2 class="text-lg font-semibold text-gray-900 tracking-tight">
                   Work history ({{ experiences?.length || 0 }})
                 </h2>
-                <button
-                  class="button button-primary"
-                  @click="openExperienceAddForm"
-                >
+                <button class="button button-primary" @click="openExperienceAddForm">
                   <Plus /> Add Experience
                 </button>
               </div>
@@ -759,10 +790,7 @@ onMounted(async () => {
                 <h2 class="text-lg font-semibold text-gray-900 tracking-tight">
                   Education ({{ educations?.length || 0 }})
                 </h2>
-                <button
-                  class="button button-primary"
-                  @click="openEducationAddForm"
-                >
+                <button class="button button-primary" @click="openEducationAddForm">
                   <Plus /> Add Education
                 </button>
               </div>
@@ -789,10 +817,7 @@ onMounted(async () => {
                 <h2 class="text-lg font-semibold text-gray-900 tracking-tight">
                   Projects ({{ projects?.length || 0 }})
                 </h2>
-                <button
-                  class="button button-primary"
-                  @click="openProjectAddForm"
-                >
+                <button class="button button-primary" @click="openProjectAddForm">
                   <Plus /> Add Project
                 </button>
               </div>
@@ -821,10 +846,7 @@ onMounted(async () => {
                   <h2 class="text-lg font-semibold text-gray-900 tracking-tight">
                     Certifications ({{ certifications?.length || 0 }})
                   </h2>
-                  <button
-                    class="button button-primary"
-                    @click="openCertificationAddForm"
-                  >
+                  <button class="button button-primary" @click="openCertificationAddForm">
                     <Plus :size="14" /> Add Cert
                   </button>
                 </div>
@@ -851,10 +873,7 @@ onMounted(async () => {
                   <h2 class="text-lg font-semibold text-gray-900 tracking-tight">
                     Languages ({{ languages?.length || 0 }})
                   </h2>
-                  <button
-                    class="button button-primary"
-                    @click="openLanguageAddForm"
-                  >
+                  <button class="button button-primary" @click="openLanguageAddForm">
                     <Plus :size="14" /> Add Language
                   </button>
                 </div>
@@ -879,19 +898,12 @@ onMounted(async () => {
 
           <!-- Preferences -->
           <section v-if="activeTab === 'preferences' && preferences" class="flex flex-col gap-6">
-            <div class="pb-6 border-b border-gray-200">
-              <h1 class="text-2xl font-bold text-gray-900 mb-2">Preferences & Settings</h1>
-              <p class="text-base text-gray-500">
-                Fine-tune your job recommendations and notification preferences
-              </p>
-            </div>
-
             <div
               class="grid gap-6"
               style="grid-template-columns: repeat(auto-fit, minmax(400px, 1fr))"
             >
               <!-- Job Preferences -->
-              <section class="p-6 bg-black/4 border border-gray-200">
+              <section class="p-6 bg-white border border-gray-200">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">Job Preferences</h2>
 
                 <div class="flex flex-col gap-2 mb-4">
@@ -992,7 +1004,7 @@ onMounted(async () => {
               </section>
 
               <!-- Company Preferences -->
-              <section class="p-6 bg-black/4 border border-gray-200">
+              <section class="p-6 bg-white border border-gray-200">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">Company Preferences</h2>
 
                 <div class="flex flex-col gap-2 mb-4">
@@ -1024,11 +1036,27 @@ onMounted(async () => {
 
                 <div class="flex flex-col gap-2 mb-4">
                   <label class="text-sm font-semibold text-gray-900">Industries of Interest</label>
+                  <div class="flex flex-wrap gap-2 mb-2">
+                    <span
+                      v-for="ind in preferences.preferred_industries"
+                      :key="ind"
+                      class="flex items-center gap-2 px-2 py-1 bg-white border text-xs font-medium"
+                    >
+                      {{ ind }}
+                      <button
+                        type="button"
+                        class="bg-transparent border-none cursor-pointer text-sm p-0 leading-none"
+                        @click="removeIndustry(ind)"
+                      >
+                        <X :size="12" />
+                      </button>
+                    </span>
+                  </div>
                   <input
-                    v-model="industriesText"
                     type="text"
-                    placeholder="e.g., SaaS, AI/ML, FinTech"
+                    placeholder="Type an industry (e.g. SaaS) and press Enter"
                     class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
+                    @keydown.enter.prevent="addIndustry($event)"
                   />
                 </div>
 
@@ -1062,7 +1090,7 @@ onMounted(async () => {
               </section>
             </div>
 
-            <div class="text-center p-6 bg-black/4 border border-gray-200">
+            <div class="text-center p-6 bg-white border border-gray-200">
               <button
                 class="button button-primary"
                 :disabled="isSaving"
@@ -1083,31 +1111,26 @@ onMounted(async () => {
               style="grid-template-columns: repeat(auto-fit, minmax(400px, 1fr))"
             >
               <!-- Notifications -->
-              <section class="p-6 bg-black/4 border border-gray-200">
+              <section class="p-6 bg-white border border-gray-200">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">Notifications</h2>
                 <div class="flex flex-row justify-between items-center gap-2 mb-4">
-                  <label class="text-sm font-semibold text-gray-900">Job Recommendations</label>
+                  <div class="flex flex-col gap-0.5">
+                    <label class="text-sm font-semibold text-gray-900">Job Recommendations</label>
+                    <span class="text-xs text-gray-400"
+                      >Receive notifications about matching jobs</span
+                    >
+                  </div>
                   <button
-                    class="px-2 py-1 border text-xs font-semibold cursor-pointer transition-all min-w-12.5"
-                    :class="
-                      preferences.notify_jobs
-                        ? 'text-white border-transparent'
-                        : 'bg-white border-gray-200 text-gray-500 hover:border-accent'
-                    "
-                    :style="
-                      preferences.notify_jobs
-                        ? { background: 'var(--color-accent)', borderColor: 'var(--color-accent)' }
-                        : {}
-                    "
-                    @click="preferences.notify_jobs = !preferences.notify_jobs"
-                  >
-                    {{ preferences.notify_jobs ? 'On' : 'Off' }}
-                  </button>
+                    class="toggle-switch"
+                    role="switch"
+                    :aria-checked="preferences.notify_jobs"
+                    @click="toggleNotifyJobs"
+                  />
                 </div>
               </section>
 
               <!-- Privacy & Account -->
-              <section class="p-6 bg-black/4 border border-gray-200">
+              <section class="p-6 bg-white border border-gray-200">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">Privacy & Account</h2>
 
                 <div class="flex flex-col gap-2 mb-4">
@@ -1135,12 +1158,7 @@ onMounted(async () => {
                   />
                   <p v-if="deleteError" class="text-xs text-red-600">{{ deleteError }}</p>
                   <div class="flex gap-2 mt-1">
-                    <button
-                      class="button button-secondary"
-                      @click="cancelDelete"
-                    >
-                      Cancel
-                    </button>
+                    <button class="button button-secondary" @click="cancelDelete">Cancel</button>
                     <button
                       class="button button-primary"
                       :disabled="typedEmail !== authStore.user?.email"
@@ -1153,8 +1171,11 @@ onMounted(async () => {
               </section>
             </div>
           </section>
-          <div v-else-if="activeTab === 'settings' || activeTab === 'preferences'">
-            Loading data...
+          <div
+            v-else-if="(activeTab === 'settings' || activeTab === 'preferences') && !preferences"
+            class="flex items-center justify-center py-12 text-sm text-gray-400"
+          >
+            <span class="animate-pulse">Loading preferences…</span>
           </div>
         </div>
       </div>

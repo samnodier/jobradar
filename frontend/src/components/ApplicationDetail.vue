@@ -129,7 +129,7 @@ function formatDateShort(date: string | null | undefined): string {
       <div class="flex items-start gap-3">
         <!-- Company logo -->
         <div
-          class="w-10 h-10 rounded-md border border-gray-200 bg-black/[0.04] shrink-0 flex items-center justify-center overflow-hidden"
+          class="w-10 h-10 border border-gray-200 bg-black/4 shrink-0 flex items-center justify-center overflow-hidden"
         >
           <img
             v-if="app.job_logo_url"
@@ -147,7 +147,7 @@ function formatDateShort(date: string | null | undefined): string {
           <div class="flex items-start justify-between gap-2">
             <h2 class="m-0 text-xl font-bold text-gray-900 leading-tight">{{ app.job_title }}</h2>
             <button
-              class="w-[25px] h-[25px] bg-transparent border-none text-gray-400 cursor-pointer shrink-0 flex items-center justify-center transition-colors hover:text-gray-900"
+              class="w-6.25 h-6.25 bg-transparent border-none text-gray-400 cursor-pointer shrink-0 flex items-center justify-center transition-colors hover:text-gray-900"
               @click="$emit('close')"
             >
               <X :size="16" />
@@ -162,7 +162,7 @@ function formatDateShort(date: string | null | undefined): string {
           <div class="flex flex-wrap gap-2 mt-1">
             <div
               v-if="app.job_location || app.job_is_remote"
-              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-black/[0.04] text-gray-500 border border-gray-200"
+              class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold bg-black/4 text-gray-500 border border-gray-200"
             >
               <MapPin :size="12" />
               <span>{{
@@ -171,7 +171,7 @@ function formatDateShort(date: string | null | undefined): string {
             </div>
             <div
               v-if="app.job_is_remote"
-              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200"
+              class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 border border-green-200"
             >
               <Wifi :size="12" />
               <span>Remote</span>
@@ -188,14 +188,14 @@ function formatDateShort(date: string | null | undefined): string {
           Status
         </label>
         <select
-          class="flex-1 px-2 py-1 rounded-md border text-sm font-semibold cursor-pointer transition-colors focus:outline-none focus:border-[var(--color-accent)] appearance-auto"
+          class="flex-1 px-2 py-1 border text-sm font-semibold cursor-pointer transition-colors focus:outline-none focus:border-accent appearance-auto"
           :class="{
             'bg-blue-100 text-blue-700 border-blue-200': app.application_status === 'applied',
             'bg-yellow-50 text-yellow-800 border-yellow-200':
               app.application_status === 'interview',
             'bg-green-100 text-green-700 border-green-200': app.application_status === 'offer',
             'bg-red-100 text-red-700 border-red-200': app.application_status === 'rejected',
-            'bg-black/[0.04] text-gray-400 border-gray-200': ![
+            'bg-black/4 text-gray-400 border-gray-200': ![
               'applied',
               'interview',
               'offer',
@@ -225,7 +225,7 @@ function formatDateShort(date: string | null | undefined): string {
             <span class="text-sm text-gray-400">Applied</span>
             <input
               type="date"
-              class="text-xs border border-gray-200 bg-black/[0.04] text-gray-900 px-1 py-0.5 rounded cursor-pointer ml-auto focus:outline-none focus:border-[var(--color-accent)]"
+              class="text-xs border border-gray-200 bg-black/4 text-gray-900 px-1 py-0.5 cursor-pointer ml-auto max-w-35 min-w-0 focus:outline-none focus:border-accent"
               :value="formatDateForInput(app.applied_at)"
               @change="handleDateChange('applied_at', $event)"
             />
@@ -236,7 +236,7 @@ function formatDateShort(date: string | null | undefined): string {
             <span class="text-sm text-gray-400">Follow up</span>
             <input
               type="date"
-              class="text-xs border border-gray-200 bg-black/[0.04] text-gray-900 px-1 py-0.5 rounded cursor-pointer ml-auto focus:outline-none focus:border-[var(--color-accent)]"
+              class="text-xs border border-gray-200 bg-black/4 text-gray-900 px-1 py-0.5 cursor-pointer ml-auto max-w-35 min-w-0 focus:outline-none focus:border-accent"
               :value="formatDateForInput(app.follow_up_at)"
               @change="handleDateChange('follow_up_at', $event)"
             />
@@ -248,7 +248,7 @@ function formatDateShort(date: string | null | undefined): string {
             </div>
             <span class="text-sm text-gray-400">Last Activity</span>
             <span class="text-sm text-gray-900 font-semibold text-right">{{
-              formatDate(app.last_status_changed_at)
+              formatDate(app.updated_at)
             }}</span>
           </div>
 
@@ -272,7 +272,7 @@ function formatDateShort(date: string | null | undefined): string {
           v-model="currentText"
           @input="handleNotesInput"
           placeholder="Add your research, interview notes, or follow-up plan here..."
-          class="text-sm text-gray-900 leading-relaxed w-full font-mono min-h-[140px] flex-1 p-3 resize-y border border-gray-200 bg-black/[0.04] transition-colors focus:outline-none focus:border-[var(--color-accent)] focus:bg-white"
+          class="text-sm text-gray-900 leading-relaxed w-full font-mono min-h-35 flex-1 p-3 resize-y border border-gray-200 bg-black/4 transition-colors focus:outline-none focus:border-accent focus:bg-white"
         ></textarea>
         <p v-if="lastSaved && !isSaving" class="text-xs text-gray-400 mt-2">
           Last saved: {{ lastSaved }}

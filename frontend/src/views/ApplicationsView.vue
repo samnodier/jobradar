@@ -74,19 +74,19 @@ const applicationByStatus = computed(() => {
           <h1 class="text-2xl font-bold text-gray-900 leading-tight">Applications</h1>
           <p class="text-sm text-gray-500 mt-1">Track every job you've applied to</p>
         </div>
-        <button class="button button-primary">
+        <RouterLink to="/jobs" class="button button-primary">
           <Plus />
           Track Application
-        </button>
+        </RouterLink>
       </header>
 
       <!-- Loading skeletons -->
       <div v-if="loading" class="flex-1">
         <div class="flex flex-col gap-3">
-          <div v-for="n in 4" :key="n" class="flex items-center gap-4 p-4 bg-white rounded-md">
-            <div class="h-4 w-180px bg-black/0.04 rounded animate-pulse"></div>
-            <div class="h-14px flex-1 bg-black/0.04 rounded animate-pulse"></div>
-            <div class="h-22px w-72px bg-black/0.04 rounded-full animate-pulse"></div>
+          <div v-for="n in 4" :key="n" class="flex items-center gap-4 p-4 bg-white">
+            <div class="h-4 w-180px bg-black/0.04 animate-pulse"></div>
+            <div class="h-14px flex-1 bg-black/0.04 animate-pulse"></div>
+            <div class="h-22px w-72px bg-black/0.04 animate-pulse"></div>
           </div>
         </div>
       </div>

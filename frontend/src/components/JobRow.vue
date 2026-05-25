@@ -1,7 +1,7 @@
 <template>
   <div
-    class="flex items-center px-5 h-11 border-b border-[#f0f0ec] gap-3 transition-colors cursor-pointer"
-    :class="selected ? 'bg-[#f0f1fb]' : 'bg-white hover:bg-[#fafaf8]'"
+    class="flex items-center px-5 h-11 border-b border-zinc-200 gap-3 transition-colors cursor-pointer"
+    :class="selected ? 'bg-indigo-50' : 'bg-white hover:bg-zinc-50'"
     @click="$emit('click')"
   >
     <span
@@ -15,17 +15,17 @@
       {{ job.title }}
     </span>
 
-    <span class="text-xs text-[#888] w-32.5 shrink-0 truncate">
+    <span class="text-xs text-zinc-400 w-32.5 shrink-0 truncate">
       {{ job.company_name }}
     </span>
 
     <span
-      class="h-5 px-1.75 rounded text-[11px] bg-[#f5f5f3] text-[#888] border border-[#e8e8e4] flex items-center shrink-0"
+      class="h-5 px-1.75 text-[11px] bg-zinc-100 text-zinc-400 border border-zinc-200 flex items-center shrink-0"
     >
       {{ job.is_remote ? 'Remote' : 'On-site' }}
     </span>
 
-    <span class="text-xs text-[#bbb] w-17.5 text-right shrink-0">
+    <span class="text-xs text-zinc-200 w-17.5 text-right shrink-0">
       {{ timeAgo(job.posted_at) }}
     </span>
 

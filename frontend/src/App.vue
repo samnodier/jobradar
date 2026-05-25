@@ -75,13 +75,13 @@ async function logout() {
     <main class="flex-1 flex flex-col min-h-0 relative">
       <div
         v-if="authStore.loading"
-        class="p-4 px-5 rounded-[18px] bg-indigo-500/6 text-gray-900 border border-indigo-500/12"
+        class="p-4 px-5 bg-indigo-500/6 text-gray-900 border border-indigo-500/12"
       >
         Loading auth state…
       </div>
       <div
         v-else-if="authStore.error"
-        class="p-4 px-5 rounded-[18px] bg-red-400/8 text-red-700 border border-red-400/18"
+        class="p-4 px-5 bg-red-400/8 text-red-700 border border-red-400/18"
       >
         Error: {{ authStore.error }}
       </div>
