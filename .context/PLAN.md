@@ -1,7 +1,7 @@
 ## Current Status
 
-Phase: 2.5 — Resume Profile Vertical Slice
-Status: In Progress
+Phase: Phase 5 — AI Matching
+Status: Not Started
 
 ## The Vision — What Jobradar Becomes
 
@@ -24,7 +24,7 @@ Jobradar is a full job search command center inspired by career-ops (<https://gi
 
 ### Phase 2.5 — Resume Profile Vertical Slice
 
-- **Status:** In Progress
+- **Status:** Done
 - **Description:** Build out a detailed resume-like profile with Work History, Achievements, and Skills. This serves as the foundation for AI matching and automated resume generation.
 
 ### Phase 3 — Frontend MVP
@@ -34,7 +34,7 @@ Jobradar is a full job search command center inspired by career-ops (<https://gi
 
 ### Phase 4 — Job Queue and Worker Engine
 
-- **Status:** Not Started
+- **Status:** Done
 - **Description:** Redis list as queue (LPUSH/BRPOP). Worker goroutines with graceful shutdown via context cancellation. Exponential backoff (1s→2s→4s→8s, max 3 retries). Dead letter queue. Scheduler with time.Ticker.
 
 ### Phase 5 — AI Matching

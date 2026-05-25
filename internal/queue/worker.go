@@ -1,0 +1,104 @@
+package queue
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log"
+	"math"
+	"sync"
+	"time"
+)
+
+type WorkerPool struct {
+	queue    *RedisQueue
+	handlers map[JobType]JobHandler
+	wg       sync.WaitGroup
+	workers  int
+}
+
+func NewWorkerPool(queue *RedisQueue, workers int) *WorkerPool {
+	return &WorkerPool{
+		queue:    queue,
+		handlers: make(map[JobType]JobHandler),
+		workers:  workers,
+	}
+}
+
+// RegisterHandler maps a JobType to its handler function
+func (wp *WorkerPool) RegisterHandler(jobType JobType, handler JobHandler) {
+	wp.handlers[jobType] = handler
+}
+
+// Start spawns the requested number of workers goroutines
+func (wp *WorkerPool) Start(ctx context.Context) {
+	for i := 0; i < wp.workers; i++ {
+		wp.wg.Add(1)
+		go wp.workerLoop(ctx, i)
+	}
+}
+
+// Stop waits for all worker goroutines to clean up and exit
+func (wp *WorkerPool) Stop() {
+	wp.wg.Wait()
+	log.Println("All workers shut down cleanly.")
+}
+
+func (wp *WorkerPool) workerLoop(ctx context.Context, workerID int) {
+	defer wp.wg.Done()
+	log.Printf("Worker %d started", workerID)
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Printf("Worker %d stopping due to context cancellation...", workerID)
+			return
+		default:
+			job, err := wp.queue.Dequeue(ctx, 2*time.Second)
+			// handle context cancelled errors explicitly
+			if err != nil {
+				if errors.Is(err, context.Canceled) {
+					continue
+				}
+				log.Printf("Worker %d: unexpected dequeue error: %v", workerID, err)
+				continue
+			}
+			// If job is nil, loop back to check ctx.Done()
+			if job == nil {
+				continue
+			}
+			// Execute the job
+			if err := wp.executeJob(ctx, job); err != nil {
+				wp.handleJobFailure(job, err)
+			}
+		}
+	}
+}
+
+func (wp *WorkerPool) executeJob(ctx context.Context, job *Job) error {
+	handler, ok := wp.handlers[job.Type]
+	if !ok {
+		return fmt.Errorf("unknown job type: %s", job.Type)
+	}
+	return handler(ctx, job)
+}
+
+func (wp *WorkerPool) handleJobFailure(job *Job, err error) {
+	job.Attempt++
+	if job.Attempt > job.MaxRetry {
+		log.Printf("Job %s exceed max retries (%d). Sending to DLQ. Error: %v", job.ID, job.MaxRetry, err)
+		if err := wp.queue.EnqueueDLQ(context.Background(), job); err != nil {
+			log.Printf("CRITICAL: Failed to push job %s to DLQ. Error: %v", job.ID, err)
+		}
+		return
+	}
+	backoffSec := math.Pow(2, float64(job.Attempt))
+	backoffDur := time.Duration(backoffSec) * time.Second
+	log.Printf("Scheduling retry %d/%d for job %s in %s", job.Attempt, job.MaxRetry, job.ID, backoffDur)
+	go func() {
+		time.Sleep(backoffDur)
+		if err := wp.queue.Enqueue(context.Background(), job); err != nil {
+			log.Printf("Failed to re-enqueue job %s:%v", job.ID, err)
+		}
+	}()
+}

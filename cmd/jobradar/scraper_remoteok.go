@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -13,7 +14,7 @@ import (
 	"github.com/samnodier/jobradar/internal/stringutils"
 )
 
-func (cfg *apiConfig) scrapeRemoteOK(ctx context.Context) {
+func (cfg *apiConfig) scrapeRemoteOK(ctx context.Context) error {
 	log.Println("Starting RemoteOK scrape...")
 
 	url := "https://remoteok.com/api"
@@ -27,7 +28,7 @@ func (cfg *apiConfig) scrapeRemoteOK(ctx context.Context) {
 			JobCountLastRun: convert.ToNullInt32(0),
 		})
 		log.Printf("error fetching the jobs form remoteok: %v", err)
-		return
+		return fmt.Errorf("failed to fetch RemoteOK jobs: %w", err)
 	}
 
 	count := 0
@@ -69,4 +70,5 @@ func (cfg *apiConfig) scrapeRemoteOK(ctx context.Context) {
 		LastError:       convert.ToNullString(""),
 		JobCountLastRun: convert.ToNullInt32(count),
 	})
+	return nil
 }
