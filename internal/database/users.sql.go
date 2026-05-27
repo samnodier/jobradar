@@ -74,6 +74,69 @@ func (q *Queries) DeleteUserByID(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const getFirstUser = `-- name: GetFirstUser :one
+SELECT
+    id,
+    email,
+    username,
+    full_name,
+    avatar_url,
+    phone,
+    user_location,
+    website_url,
+    linkedin_url,
+    github_url,
+    headline,
+    user_summary,
+    availability,
+    min_salary,
+    max_salary,
+    salary_currency,
+    years_of_experience,
+    preferred_job_types,
+    preferred_industries,
+    company_stage_preference,
+    notify_jobs,
+    is_admin,
+    created_at,
+    updated_at
+FROM users
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+func (q *Queries) GetFirstUser(ctx context.Context) (User, error) {
+	row := q.db.QueryRow(ctx, getFirstUser)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Username,
+		&i.FullName,
+		&i.AvatarUrl,
+		&i.Phone,
+		&i.UserLocation,
+		&i.WebsiteUrl,
+		&i.LinkedinUrl,
+		&i.GithubUrl,
+		&i.Headline,
+		&i.UserSummary,
+		&i.Availability,
+		&i.MinSalary,
+		&i.MaxSalary,
+		&i.SalaryCurrency,
+		&i.YearsOfExperience,
+		&i.PreferredJobTypes,
+		&i.PreferredIndustries,
+		&i.CompanyStagePreference,
+		&i.NotifyJobs,
+		&i.IsAdmin,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getUserByID = `-- name: GetUserByID :one
 SELECT
     id,

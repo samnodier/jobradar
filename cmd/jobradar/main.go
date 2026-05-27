@@ -26,6 +26,7 @@ type apiConfig struct {
 	db           *database.Queries
 	rdb          *redis.Client
 	pool         *pgxpool.Pool
+	queue        *queue.RedisQueue
 	IsProduction bool
 }
 
@@ -44,18 +45,25 @@ func main() {
 	rdb := redis.NewClient(&redis.Options{
 		Addr: os.Getenv("REDIS_ADDR"),
 	})
+	q := queue.NewRedisQueue(rdb)
 
 	cfg := &apiConfig{
 		db:           dbClient.Queries,
 		rdb:          rdb,
 		pool:         dbClient.Pool,
+		queue:        q,
 		IsProduction: os.Getenv("APP_ENV") == "production",
 	}
 
-	q := queue.NewRedisQueue(rdb)
 	wp := queue.NewWorkerPool(q, 2)
 	wp.RegisterHandler(queue.JobScrapeRemoteOK, func(ctx context.Context, job *queue.Job) error {
 		return cfg.scrapeRemoteOK(ctx)
+	})
+	wp.RegisterHandler(queue.JobMatchJob, func(ctx context.Context, job *queue.Job) error {
+		return cfg.matchJobWorker(ctx, job)
+	})
+	wp.RegisterHandler(queue.JobMatchJob, func(ctx context.Context, job *queue.Job) error {
+		return cfg.handleMatchJob(ctx, job)
 	})
 
 	ctx, cancel := context.WithCancel(context.Background())

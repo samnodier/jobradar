@@ -90,3 +90,13 @@ WHERE
     (title ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
     AND ($2::TEXT IS NULL OR $2 = ANY(skills))
 ORDER BY created_at DESC;
+
+-- name: UpdateJobMatchingResult :exec
+UPDATE jobs
+SET
+    match_score = $2,
+    ai_summary = $3,
+    matched_skills = $4,
+    missing_skills = $5,
+    updated_at = NOW()
+WHERE id = $1;
