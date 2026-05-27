@@ -11,6 +11,7 @@ import (
 	"github.com/samnodier/jobradar/internal/convert"
 	"github.com/samnodier/jobradar/internal/database"
 	"github.com/samnodier/jobradar/internal/fetcher"
+	"github.com/samnodier/jobradar/internal/queue"
 	"github.com/samnodier/jobradar/internal/stringutils"
 )
 
@@ -37,7 +38,7 @@ func (cfg *apiConfig) scrapeRemoteOK(ctx context.Context) error {
 	for _, rJob := range jobs {
 		cleanTitle := stringutils.SanitizeStrict(rJob.Position)
 
-		_, err := cfg.db.CreateJob(ctx, database.CreateJobParams{
+		createdJob, err := cfg.db.CreateJob(ctx, database.CreateJobParams{
 			ExternalID:  rJob.ID,
 			JobSource:   "remoteok",
 			Title:       cleanTitle,
@@ -59,6 +60,18 @@ func (cfg *apiConfig) scrapeRemoteOK(ctx context.Context) error {
 			log.Printf("could not save job %s: %v", rJob.ID, err)
 		} else {
 			count++
+
+			// Push matching task to queue
+			jobPayload := []byte(createdJob.ID.String())
+			err = cfg.queue.Enqueue(ctx, &queue.Job{
+				ID:       createdJob.ID.String(),
+				Type:     queue.JobMatchJob,
+				Payload:  jobPayload,
+				MaxRetry: 3,
+			})
+			if err != nil {
+				log.Printf("failed to enqueue matching job for %s: %v", createdJob.ID, err)
+			}
 		}
 	}
 	log.Printf("RemoteOK scraping finished!")

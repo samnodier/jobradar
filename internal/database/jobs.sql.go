@@ -358,3 +358,33 @@ func (q *Queries) SearchJobs(ctx context.Context, arg SearchJobsParams) ([]Searc
 	}
 	return items, nil
 }
+
+const updateJobMatchingResult = `-- name: UpdateJobMatchingResult :exec
+UPDATE jobs
+SET
+    match_score = $2,
+    ai_summary = $3,
+    matched_skills = $4,
+    missing_skills = $5,
+    updated_at = NOW()
+WHERE id = $1
+`
+
+type UpdateJobMatchingResultParams struct {
+	ID            uuid.UUID `json:"id"`
+	MatchScore    *int32    `json:"match_score"`
+	AiSummary     *string   `json:"ai_summary"`
+	MatchedSkills []string  `json:"matched_skills"`
+	MissingSkills []string  `json:"missing_skills"`
+}
+
+func (q *Queries) UpdateJobMatchingResult(ctx context.Context, arg UpdateJobMatchingResultParams) error {
+	_, err := q.db.Exec(ctx, updateJobMatchingResult,
+		arg.ID,
+		arg.MatchScore,
+		arg.AiSummary,
+		arg.MatchedSkills,
+		arg.MissingSkills,
+	)
+	return err
+}
