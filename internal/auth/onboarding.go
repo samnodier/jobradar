@@ -4,6 +4,7 @@ package auth
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -75,7 +76,7 @@ func (h *Handler) HandleOnboardingComplete(w http.ResponseWriter, r *http.Reques
 		Username string `json:"username"`
 	}
 	var req request
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err = json.NewDecoder(r.Body).Decode(&req); err != nil {
 		redirectWithError(w, r, "/login", "invalid_request")
 		return
 	}
@@ -90,7 +91,11 @@ func (h *Handler) HandleOnboardingComplete(w http.ResponseWriter, r *http.Reques
 		redirectWithError(w, r, "/login", "server_error")
 		return
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if err = tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			log.Printf("unexpected transaction rollback error: %v", err)
+		}
+	}()
 
 	qtx := h.db.WithTx(tx)
 
@@ -102,7 +107,7 @@ func (h *Handler) HandleOnboardingComplete(w http.ResponseWriter, r *http.Reques
 
 	// Attempt to create the local user
 	user, err := qtx.CreateUser(ctx, database.CreateUserParams{
-		Email:     req.Email,
+		Email:     pending.Email,
 		Username:  req.Username,
 		FullName:  convert.ToNullString(req.Name),
 		AvatarUrl: convert.ToNullString(pending.AvatarURL),
@@ -130,13 +135,13 @@ func (h *Handler) HandleOnboardingComplete(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := tx.Commit(ctx); err != nil {
+	if err = tx.Commit(ctx); err != nil {
 		redirectWithError(w, r, "/login", "commit_failed")
 		return
 	}
 
 	// Delete pending signup
-	if err := h.deletePendingSignup(ctx, token); err != nil {
+	if err = h.deletePendingSignup(ctx, token); err != nil {
 		redirectWithError(w, r, "/login", "cleanup_failed")
 		return
 	}

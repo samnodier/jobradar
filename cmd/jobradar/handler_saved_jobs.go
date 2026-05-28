@@ -17,6 +17,7 @@ type saveJobRequest struct {
 }
 
 func (cfg *apiConfig) handlerJobSave(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1024*1024)
 	// Use helper function to get userID
 	userID, ok := getUserIDFromRequest(w, r)
 	if !ok {

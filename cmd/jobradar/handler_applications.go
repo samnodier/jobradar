@@ -71,6 +71,8 @@ func (cfg *apiConfig) handlerApplicationsGet(w http.ResponseWriter, r *http.Requ
 }
 
 func (cfg *apiConfig) handlerApplicationCreate(w http.ResponseWriter, r *http.Request) {
+	// Preference a big sized application (DOS attach with curl)
+	r.Body = http.MaxBytesReader(w, r.Body, 1024*1024)
 	// Use helper function to get userID
 	userID, ok := getUserIDFromRequest(w, r)
 	if !ok {

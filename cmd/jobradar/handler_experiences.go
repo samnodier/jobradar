@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -15,7 +16,6 @@ import (
 )
 
 type experienceCreateRequest struct {
-	UserID         uuid.UUID               `json:"user_id"`
 	CompanyName    string                  `json:"company_name"`
 	CompanyURL     *string                 `json:"company_url"`
 	RoleTitle      string                  `json:"role_title"`
@@ -31,7 +31,6 @@ type experienceCreateRequest struct {
 }
 
 type experienceUpdateRequest struct {
-	UserID         uuid.UUID               `json:"user_id"`
 	CompanyName    *string                 `json:"company_name"`
 	CompanyURL     *string                 `json:"company_url"`
 	RoleTitle      *string                 `json:"role_title"`
@@ -47,6 +46,7 @@ type experienceUpdateRequest struct {
 }
 
 func (cfg *apiConfig) handlerCreateExperience(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1024*1024)
 	// User helper function to get the UserID
 	userID, ok := getUserIDFromRequest(w, r)
 	if !ok {
@@ -75,7 +75,24 @@ func (cfg *apiConfig) handlerCreateExperience(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	experience, err := cfg.db.CreateUserExperience(r.Context(), database.CreateUserExperienceParams{
+	ctx := r.Context()
+	// Begin transaction
+	tx, err := cfg.pool.Begin(ctx)
+	if err != nil {
+		httpx.RespondError(w, http.StatusInternalServerError, "failed to start transaction")
+		return
+	}
+	defer func() {
+		err = tx.Rollback(ctx)
+		if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			log.Printf("unexpected transaction rollback error: %v", err)
+		}
+	}()
+
+	// Create transaction-scoped queries
+	qtx := cfg.db.WithTx(tx)
+
+	experience, err := qtx.CreateUserExperience(r.Context(), database.CreateUserExperienceParams{
 		UserID:         userID,
 		CompanyName:    req.CompanyName,
 		CompanyUrl:     req.CompanyURL,
@@ -114,11 +131,12 @@ func (cfg *apiConfig) handlerCreateExperience(w http.ResponseWriter, r *http.Req
 
 	// After creating the experience, attach the skills
 	for _, skill := range req.Skills {
-		skillID, err := cfg.db.GetOrCreateSkill(r.Context(), skill.Name)
+		var skillID uuid.UUID
+		skillID, err = qtx.GetOrCreateSkill(r.Context(), skill.Name)
 		if err != nil {
 			continue
 		}
-		_, err = cfg.db.AddSkillToExperience(r.Context(), database.AddSkillToExperienceParams{
+		_, err = qtx.AddSkillToExperience(r.Context(), database.AddSkillToExperienceParams{
 			ExperienceID: experience.ID,
 			SkillID:      skillID,
 		})
@@ -143,6 +161,14 @@ func (cfg *apiConfig) handlerCreateExperience(w http.ResponseWriter, r *http.Req
 			httpx.RespondError(w, http.StatusInternalServerError, "failed to update experience and skill union")
 			return
 		}
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		// log the detailed error
+		log.Printf("Eror committing experiences and skills transaction for the user %s: %v", userID, err)
+		httpx.RespondError(w, http.StatusInternalServerError, "failed to save the changes")
+		return
 	}
 
 	// After insertion, fetch the fully aggregated experience from the database
@@ -207,7 +233,24 @@ func (cfg *apiConfig) handlerUpdateExperience(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	experience, err := cfg.db.UpdateUserExperience(r.Context(), database.UpdateUserExperienceParams{
+	ctx := r.Context()
+	// Begin transaction
+	tx, err := cfg.pool.Begin(ctx)
+	if err != nil {
+		httpx.RespondError(w, http.StatusInternalServerError, "failed to start transaction")
+		return
+	}
+	defer func() {
+		err = tx.Rollback(ctx)
+		if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			log.Printf("unexpected transaction rollback error: %v", err)
+		}
+	}()
+
+	// Create transaction-scoped queries
+	qtx := cfg.db.WithTx(tx)
+
+	experience, err := qtx.UpdateUserExperience(r.Context(), database.UpdateUserExperienceParams{
 		ID:             experienceID,
 		UserID:         userID,
 		CompanyName:    req.CompanyName,
@@ -246,17 +289,18 @@ func (cfg *apiConfig) handlerUpdateExperience(w http.ResponseWriter, r *http.Req
 	}
 
 	// Sync skills: wipe old links, re-attach from payload
-	if err := cfg.db.DeleteSkillsByExperienceID(r.Context(), experience.ID); err != nil {
+	if err = qtx.DeleteSkillsByExperienceID(r.Context(), experience.ID); err != nil {
 		httpx.RespondError(w, http.StatusInternalServerError, "failed to sync skills")
 		return
 	}
 	// After creating the experience, attach the skills
 	for _, skill := range req.Skills {
-		skillID, err := cfg.db.GetOrCreateSkill(r.Context(), skill.Name)
+		var skillID uuid.UUID
+		skillID, err = qtx.GetOrCreateSkill(r.Context(), skill.Name)
 		if err != nil {
 			continue
 		}
-		_, err = cfg.db.AddSkillToExperience(r.Context(), database.AddSkillToExperienceParams{
+		_, err = qtx.AddSkillToExperience(r.Context(), database.AddSkillToExperienceParams{
 			ExperienceID: experience.ID,
 			SkillID:      skillID,
 		})
@@ -284,8 +328,16 @@ func (cfg *apiConfig) handlerUpdateExperience(w http.ResponseWriter, r *http.Req
 		}
 	}
 
+	err = tx.Commit(ctx)
+	if err != nil {
+		// log the detailed error
+		log.Printf("Eror committing experiences and skills transaction for the user %s: %v", userID, err)
+		httpx.RespondError(w, http.StatusInternalServerError, "failed to save the changes")
+		return
+	}
+
 	// fetch the full updated experience from the database after update
-	fullExperience, err := cfg.db.GetExperienceByID(r.Context(), database.GetExperienceByIDParams{
+	fullExperience, err := qtx.GetExperienceByID(r.Context(), database.GetExperienceByIDParams{
 		ID:     experience.ID,
 		UserID: userID,
 	})

@@ -13,6 +13,7 @@ import (
 type WorkerPool struct {
 	queue    *RedisQueue
 	handlers map[JobType]JobHandler
+	ctx      context.Context
 	wg       sync.WaitGroup
 	workers  int
 }
@@ -32,6 +33,7 @@ func (wp *WorkerPool) RegisterHandler(jobType JobType, handler JobHandler) {
 
 // Start spawns the requested number of workers goroutines
 func (wp *WorkerPool) Start(ctx context.Context) {
+	wp.ctx = ctx
 	for i := 0; i < wp.workers; i++ {
 		wp.wg.Add(1)
 		go wp.workerLoop(ctx, i)
@@ -87,18 +89,50 @@ func (wp *WorkerPool) handleJobFailure(job *Job, err error) {
 	job.Attempt++
 	if job.Attempt > job.MaxRetry {
 		log.Printf("Job %s exceed max retries (%d). Sending to DLQ. Error: %v", job.ID, job.MaxRetry, err)
-		if err := wp.queue.EnqueueDLQ(context.Background(), job); err != nil {
+		// Use a timeout context so this doesn't hang forever if Redis is down
+		dlqCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := wp.queue.EnqueueDLQ(dlqCtx, job); err != nil {
 			log.Printf("CRITICAL: Failed to push job %s to DLQ. Error: %v", job.ID, err)
 		}
 		return
 	}
+
 	backoffSec := math.Pow(2, float64(job.Attempt))
 	backoffDur := time.Duration(backoffSec) * time.Second
 	log.Printf("Scheduling retry %d/%d for job %s in %s", job.Attempt, job.MaxRetry, job.ID, backoffDur)
-	go func() {
-		time.Sleep(backoffDur)
-		if err := wp.queue.Enqueue(context.Background(), job); err != nil {
-			log.Printf("Failed to re-enqueue job %s:%v", job.ID, err)
+
+	// Tell the WorkerPool WaitGroup to track this retry goroutine
+	wp.wg.Add(1)
+	go func(j *Job) {
+		// Decrement the WaitGroup when this goroutine finishes
+		defer wp.wg.Done()
+
+		// Create an interruptible timer instead of a blocking sleep
+		timer := time.NewTimer(backoffDur)
+		defer timer.Stop() // Prevents memory leak if the timer is abandoned
+
+		select {
+		case <-wp.ctx.Done():
+			// Server shutdown detected
+			log.Printf("Shutdown detected. Re-enqueuing job %s immediately to avoid data loss.", j.ID)
+			saveCtx, saveCancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer saveCancel()
+			if err := wp.queue.Enqueue(saveCtx, j); err != nil {
+				log.Printf("CRITICAL: Failed to save job %s during shutdown. Error: %v", j.ID, err)
+			}
+
+			time.Sleep(backoffDur)
+			if err := wp.queue.Enqueue(context.Background(), job); err != nil {
+				log.Printf("Failed to re-enqueue job %s:%v", job.ID, err)
+			}
+		case <-timer.C: // Restored: Listen to the backoff timer!
+			enqCtx, enqCancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer enqCancel()
+
+			if err := wp.queue.Enqueue(enqCtx, j); err != nil {
+				log.Printf("Failed to re-enqueue job %s: %v", job.ID, err)
+			}
 		}
-	}()
+	}(job)
 }

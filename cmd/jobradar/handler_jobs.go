@@ -1,11 +1,13 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/samnodier/jobradar/internal/auth"
 	"github.com/samnodier/jobradar/internal/database"
 	"github.com/samnodier/jobradar/internal/httpx"
@@ -46,7 +48,13 @@ func (cfg *apiConfig) handlerJobGetByID(w http.ResponseWriter, r *http.Request) 
 		ID:     jobID,
 	})
 	if err != nil {
-		httpx.RespondError(w, http.StatusNotFound, "Job not found")
+		if errors.Is(err, pgx.ErrNoRows) {
+			httpx.RespondError(w, http.StatusNotFound, "job not found")
+			return
+		}
+		log.Printf("Error fetching job %v: %v", jobID, err)
+
+		httpx.RespondError(w, http.StatusInternalServerError, "failed to fetch the job")
 		return
 	}
 

@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/samnodier/jobradar/internal/database"
 	"github.com/samnodier/jobradar/internal/matcher"
 	"github.com/samnodier/jobradar/internal/queue"
@@ -24,7 +23,7 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 	job, err := cfg.db.GetJobByID(ctx, database.GetJobByIDParams{
 		// GetJobByID needs a user ID because of the left join with saved_jobs/applications.
 		// We can pass a blank UUID since we only need the raw job description/title details
-		UserID: pgtype.UUID{Valid: false},
+		UserID: uuid.Nil,
 		ID:     jobID,
 	})
 	if err != nil {
@@ -74,8 +73,8 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 	var userExps []string
 	for _, exp := range expsRows {
 		text := exp.RoleTitle + " at " + exp.CompanyName
-		if exp.Description.Valid {
-			text += " " + exp.Description.String
+		if exp.Description != nil {
+			text += " " + *exp.Description
 		}
 		for _, ach := range exp.Achievements {
 			text += " " + ach
@@ -85,22 +84,26 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 
 	// Run the match algorithm
 	jobDesc := ""
-	if job.Description.Valid {
-		jobDesc = job.Description.String
+	if job.Description != nil {
+		jobDesc = *job.Description
 	}
 
 	// Jaro-Winkler threshold = 0.55
 	result := matcher.MatchJob(job.Title, jobDesc, desiredRoles, userSkills, userExps, 0.55)
-	var score pgtype.Int4
+	var scoreVal int32
+	var scorePtr *int32
+	var summaryVal string
+	var summaryPtr *string
 	var matchedSkills []string
 	var missingSkills []string
 	if !result.Skipped {
-		score = pgtype.Int4{
-			Int32: int32(result.Score),
-			Valid: true,
-		}
+		scoreVal = int32(result.Score)
+		scorePtr = &scoreVal
 		matchedSkills = result.MatchedSkills
 
+		summaryVal = "Algorithmic match completed"
+		summaryPtr = &summaryVal
+		matchedSkills = result.MatchedSkills
 		// Compute the missing skills (user skills that weren't matched)
 		matchedSet := make(map[string]bool)
 		for _, ms := range result.MatchedSkills {
@@ -111,6 +114,25 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 				missingSkills = append(missingSkills, s)
 			}
 		}
-		
+
+	} else {
+		scoreVal = 0
+		scorePtr = &scoreVal
+		summaryVal = "Skipped due to low title match"
+		summaryPtr = &summaryVal
 	}
+
+	// Update Job in the database with match scores
+	err = cfg.db.UpdateJobMatchingResult(ctx, database.UpdateJobMatchingResultParams{
+		ID:            job.ID,
+		MatchScore:    scorePtr,
+		AiSummary:     summaryPtr,
+		MatchedSkills: matchedSkills,
+		MissingSkills: missingSkills,
+	})
+	if err != nil {
+		return err
+	}
+	log.Printf("Job %s matched for user %s: score=%d, skipped =%v", job.ID, user.Email, scoreVal, result.Skipped)
+	return nil
 }
