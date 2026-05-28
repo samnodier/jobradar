@@ -26,11 +26,23 @@ SELECT
     j.logo_url,
     j.created_at,
     j.updated_at,
+    m.match_score,
+    m.title_score,
+    m.skill_score,
+    m.experience_score,
+    m.matched_skills,
+    m.missing_skills,
+    m.ai_summary,
+    m.is_enriched,
+    m.created_at AS match_created_at,
+    m.updated_at AS match_updated_at,
     (s.id IS NOT NULL)::BOOLEAN AS is_saved,
-    (a.id IS NOT NULL)::BOOLEAN AS is_applied
+    (a.id IS NOT NULL)::BOOLEAN AS is_applied,
+    (m.id IS NOT NULL)::BOOLEAN AS is_matched
 FROM jobs AS j
 LEFT JOIN saved_jobs AS s ON j.id = s.job_id AND s.user_id = $1
 LEFT JOIN applications AS a ON j.id = a.job_id AND a.user_id = $1
+LEFT JOIN user_job_matches AS m ON j.id = m.job_id AND m.user_id = $1
 ORDER BY j.created_at DESC;
 
 -- name: GetJobByID :one
@@ -51,11 +63,23 @@ SELECT
     j.logo_url,
     j.created_at,
     j.updated_at,
+    m.match_score,
+    m.title_score,
+    m.skill_score,
+    m.experience_score,
+    m.matched_skills,
+    m.missing_skills,
+    m.ai_summary,
+    m.is_enriched,
+    m.created_at AS match_created_at,
+    m.updated_at AS match_updated_at,
     (s.id IS NOT NULL)::BOOLEAN AS is_saved,
-    (a.id IS NOT NULL)::BOOLEAN AS is_applied
+    (a.id IS NOT NULL)::BOOLEAN AS is_applied,
+    (m.id IS NOT NULL)::BOOLEAN AS is_matched
 FROM jobs AS j
 LEFT JOIN saved_jobs AS s ON j.id = s.job_id AND s.user_id = $1
 LEFT JOIN applications AS a ON j.id = a.job_id AND a.user_id = $1
+LEFT JOIN user_job_matches AS m ON j.id = m.job_id AND m.user_id = $1
 WHERE j.id = $2;
 
 -- name: GetJobStats :one
@@ -90,13 +114,3 @@ WHERE
     (title ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
     AND ($2::TEXT IS NULL OR $2 = ANY(skills))
 ORDER BY created_at DESC;
-
--- name: UpdateJobMatchingResult :exec
-UPDATE jobs
-SET
-    match_score = $2,
-    ai_summary = $3,
-    matched_skills = $4,
-    missing_skills = $5,
-    updated_at = NOW()
-WHERE id = $1;
