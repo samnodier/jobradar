@@ -12,6 +12,8 @@ up:
 down:
 	docker compose down
 
+build:
+	go build ./cmd/jobradar/...
 run:
 	go run ./cmd/jobradar/...
 

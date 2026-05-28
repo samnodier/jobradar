@@ -35,7 +35,6 @@ func (h *Handler) createSession(ctx context.Context, userID uuid.UUID, email str
 		data,
 		h.cfg.SessionTTL,
 	).Err()
-
 	if err != nil {
 		return "", err
 	}
@@ -55,6 +54,30 @@ func (h *Handler) getSession(ctx context.Context, sessionID string) (*Session, e
 	}
 
 	return &session, nil
+}
+
+// refreshSessionIfNeeded bumbs the session TTL in Redis and the browser if the session is getting old.
+func (h *Handler) refreshSessionIfNeeded(w http.ResponseWriter, ctx context.Context, sessionID string) {
+	sessionKey := "session:" + sessionID
+
+	// Check how much time is left on this session
+	ttl, err := h.rdb.TTL(ctx, sessionKey).Result()
+	if err != nil {
+		return // Silently fail
+	}
+
+	halfTTL := h.cfg.SessionTTL / 2
+
+	// If it is older than half its lifespan, bump it!
+	if ttl < halfTTL {
+		// Update Redis
+		err = h.rdb.Expire(ctx, sessionKey, h.cfg.SessionTTL).Err()
+		if err != nil {
+			return // If Redis fails, don't update the browser cookie
+		}
+		// Update the Browser Cookie using helper
+		h.setSessionCookie(w, sessionID)
+	}
 }
 
 func (h *Handler) deleteSession(ctx context.Context, sessionID string) error {

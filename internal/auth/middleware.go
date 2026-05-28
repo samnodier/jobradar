@@ -9,6 +9,7 @@ import (
 
 func (h *Handler) RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Extract the session token from the cookie
 		cookie, err := r.Cookie("session_id")
 		if err != nil {
 			httpx.RespondError(w, http.StatusUnauthorized, "unauthorized")
@@ -20,6 +21,9 @@ func (h *Handler) RequireAuth(next http.Handler) http.Handler {
 			httpx.RespondError(w, http.StatusUnauthorized, "unauthorized")
 			return
 		}
+
+		// Refresh sthe session if it's getting old
+		h.refreshSessionIfNeeded(w, r.Context(), cookie.Value)
 
 		ctx := context.WithValue(r.Context(), sessionKey, session)
 		next.ServeHTTP(w, r.WithContext(ctx))
@@ -33,6 +37,9 @@ func (h *Handler) TryAuth(next http.Handler) http.Handler {
 		if err == nil {
 			session, err := h.getSession(r.Context(), cookie.Value)
 			if err == nil {
+
+				// Refresh the session
+				h.refreshSessionIfNeeded(w, r.Context(), cookie.Value)
 				ctx := context.WithValue(r.Context(), sessionKey, session)
 				next.ServeHTTP(w, r.WithContext(ctx))
 				return

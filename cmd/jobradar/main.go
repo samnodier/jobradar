@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -60,15 +61,11 @@ func main() {
 		return cfg.scrapeRemoteOK(ctx)
 	})
 	wp.RegisterHandler(queue.JobMatchJob, func(ctx context.Context, job *queue.Job) error {
-		return cfg.matchJobWorker(ctx, job)
-	})
-	wp.RegisterHandler(queue.JobMatchJob, func(ctx context.Context, job *queue.Job) error {
 		return cfg.handleMatchJob(ctx, job)
 	})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wp.Start(ctx)
-	defer wp.Stop()
 	defer cancel()
 
 	// Start a Cron Scheduler
@@ -78,8 +75,13 @@ func main() {
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
+	originsStr := os.Getenv("ALLOWED_ORIGINS")
+	if originsStr == "" {
+		originsStr = "http://localhost:5173,http://127.0.0.1:5173"
+	}
+	allowedOrigins := strings.Split(originsStr, ",")
 	router.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"https://*", "http://*"},
+		AllowedOrigins:   allowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
