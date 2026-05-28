@@ -1,7 +1,7 @@
 ## Current Status
 
 Phase: Phase 5 — AI Matching
-Status: Not Started
+Status: In Progress — algorithmic matcher built, LLM integration pending
 
 ## The Vision — What Jobradar Becomes
 
@@ -39,8 +39,26 @@ Jobradar is a full job search command center inspired by career-ops (<https://gi
 
 ### Phase 5 — AI Matching
 
+- **Status:** In Progress
+- **Built so far:**
+  - Algorithmic matcher in `internal/matcher/`: Jaro-Winkler title similarity, Aho-Corasick skill matching, token sorting for swapped word order
+  - Profile compiler in `worker_match.go`: fetches desired roles, skills, experiences from DB and passes to matcher
+  - `UpdateJobMatchingResult` writes `match_score`, `matched_skills`, `missing_skills`, `ai_summary` back to jobs table
+  - Worker wired to `queue.JobMatchJob` job type
+- **Approach decided:** Filter-then-enrich — algorithm runs on every job (fast, free); LLM enrichment only on jobs scoring ≥ threshold
+- **LLM provider:** Gemini (user-provided API key, not baked in)
+- **Remaining:**
+  - Fix bugs in `main.go` worker registration (duplicate handler, missing `matchJobWorker` method)
+  - Improve algorithmic matcher signal quality
+  - Add `encrypted_gemini_api_key` to user schema for user-provided API keys
+  - LLM enrichment worker for high-scoring jobs (summary + semantic validation)
+  - `GET/PUT /api/users/me/profile` for AI matching preferences
+  - Frontend: display match scores, matched/missing skills on job cards
+
+### Phase 5.5 — User API Key Management
+
 - **Status:** Not Started
-- **Description:** User skills profile. AI scoring worker — job description + skills → JSON with match_score, matched_skills, missing_skills, summary. Prompt engineering for reliable structured output. Store scores in jobs table.
+- **Description:** Let users provide their own Gemini API key from the Settings page. Store encrypted at rest (AES-256, server-side key from env). Never log. Link to aistudio.google.com/apikey. Schema: add `encrypted_gemini_api_key TEXT` column to users.
 
 ### Phase 6 — Auto Resume Generation
 

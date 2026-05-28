@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make:*)",
+      "Bash(go build:*)",
+      "Bash(go test:*)",
+      "Bash(go run:*)",
+      "Bash(sqlc generate)",
+      "Bash(docker compose:*)",
+      "Bash(npm run:*)",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git branch:*)",
+      "Bash(psql:*)",
+      "Bash(redis-cli:*)"
+    ],
+    "deny": [
+      "Bash(git merge:*)",
+      "Bash(rm -rf:*)"
+    ]
+  }
+}
