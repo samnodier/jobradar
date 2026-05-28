@@ -1,8 +1,10 @@
+// Package fether
 package fetcher
 
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 )
@@ -40,7 +42,12 @@ func FetchRemoteOKJobs(url string) ([]RemoteOKJob, error) {
 	if err != nil {
 		return nil, fmt.Errorf("network err: %w", err)
 	}
-	defer res.Body.Close()
+
+	defer func() {
+		if closeErr := res.Body.Close(); closeErr != nil {
+			log.Printf("warning: failed to close response body: %v", closeErr)
+		}
+	}()
 
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("api returned status: %d", res.StatusCode)

@@ -42,18 +42,19 @@ Jobradar is a full job search command center inspired by career-ops (<https://gi
 - **Status:** In Progress
 - **Built so far:**
   - Algorithmic matcher in `internal/matcher/`: Jaro-Winkler title similarity, Aho-Corasick skill matching, token sorting for swapped word order
-  - Profile compiler in `worker_match.go`: fetches desired roles, skills, experiences from DB and passes to matcher
-  - `UpdateJobMatchingResult` writes `match_score`, `matched_skills`, `missing_skills`, `ai_summary` back to jobs table
-  - Worker wired to `queue.JobMatchJob` job type
+  - `user_job_matches` table — per-user match scores replacing the old per-job columns
+  - Scraper fans out one `JobMatchJob` per registered user after each new job saved
+  - Worker payload carries `{job_id, user_id}`; writes to `UpsertMatch` (atomic insert-or-update)
+  - `GetJobs` and `GetJobByID` LEFT JOIN `user_job_matches` — match data flows to API automatically
+  - `SCRAPE_INTERVAL` configurable via env var (default 6h)
 - **Approach decided:** Filter-then-enrich — algorithm runs on every job (fast, free); LLM enrichment only on jobs scoring ≥ threshold
 - **LLM provider:** Gemini (user-provided API key, not baked in)
 - **Remaining:**
-  - Fix bugs in `main.go` worker registration (duplicate handler, missing `matchJobWorker` method)
-  - Improve algorithmic matcher signal quality
+  - Frontend: display match scores, matched/missing skills on job cards
+  - Improve algorithmic matcher signal quality (weight skills by proficiency)
   - Add `encrypted_gemini_api_key` to user schema for user-provided API keys
   - LLM enrichment worker for high-scoring jobs (summary + semantic validation)
-  - `GET/PUT /api/users/me/profile` for AI matching preferences
-  - Frontend: display match scores, matched/missing skills on job cards
+  - `UpdateMatchEnrichment` query for LLM phase (updates `ai_summary` + `is_enriched` only)
 
 ### Phase 5.5 — User API Key Management
 
@@ -70,10 +71,20 @@ Jobradar is a full job search command center inspired by career-ops (<https://gi
 - **Status:** Not Started
 - **Description:** Email alerts via Resend or Mailgun. In-app notification bell. `GET /api/notifications`. Idempotency — never send the same alert twice.
 
+### Phase 5.6 — AI Resume Import
+
+- **Status:** Not Started
+- **Description:** User uploads a resume PDF or paste raw text. LLM extracts and categorizes: skills (with proficiency), work experiences, education, projects, certifications. Populates all Phase 2.5 profile tables in a single DB transaction. Triggers re-matching on all existing jobs for that user. UI: upload button on Profile page with a preview/confirm step before committing.
+
 ### Phase 8 — More Job Sources
 
 - **Status:** Not Started
 - **Description:** Remotive, Adzuna, portal scanner (Greenhouse/Ashby/Lever). Each is a new fetcher only — queue and workers unchanged. Open/closed principle in practice.
+
+### Phase 8.5 — User-Submitted Job Import
+
+- **Status:** Not Started
+- **Description:** User pastes a URL to any job posting (LinkedIn, Greenhouse, Ashby, Lever, company page). Backend fetches and scrapes the page, extracts title/company/description/location/skills using LLM. Creates a job record flagged as user-private (visible only to that user). Enqueues match + enrichment automatically. This gives users matching and resume generation for jobs they find outside Jobradar's feed.
 
 ### Phase 9 — Discord Bot (Optional)
 

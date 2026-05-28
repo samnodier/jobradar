@@ -23,7 +23,7 @@ func TestSanitizeStrict(t *testing.T) {
 		{
 			name:     "unescapes html entities",
 			input:    "We&rsquo;re hiring",
-			expected: "We\u2019re hiring",
+			expected: "We’re hiring",
 		},
 		{
 			name:     "collapses extra whitespace",
@@ -72,7 +72,7 @@ func TestSanitizeDescription(t *testing.T) {
 		{
 			name:     "unescapes html entities",
 			input:    "We&rsquo;re hiring",
-			expected: "We\u2019re hiring", // Smart apostrophe U+2019
+			expected: "We’re hiring", // Smart apostrophe U+2019
 		},
 		{
 			name:     "handles empty string",
@@ -200,6 +200,55 @@ func TestSanitizeStringSlice(t *testing.T) {
 				if v != tt.expected[i] {
 					t.Errorf("SanitizeStringSlice(%v) at index %d got %q, want %q", tt.input, i, v, tt.expected[i])
 				}
+			}
+		})
+	}
+}
+
+func TestFixMojibake(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "Normal ASCII String",
+			input:    "Software Engineer - New York",
+			expected: "Software Engineer - New York",
+		},
+		{
+			name:     "Simple Mojibake Word",
+			input:    "à¤°à¥ˆà¤ªà¥€à¤¡à¥‹",
+			expected: "रैपीडो",
+		},
+		{
+			name:     "Mojibake Emoji",
+			input:    "ðŸš€ ðŸ’°",
+			expected: "🚀 💰",
+		},
+		{
+			// FixMojibake only reverses encoding corruption — HTML stripping is SanitizeStrict's job
+			name:     "More Mojibake Sentence",
+			input:    "Vous Ãªtes Ã  la recherche d'un <strong>job Ã©tudiant</strong>? Devenez professeur avec Voscours.",
+			expected: "Vous êtes à la recherche d'un <strong>job étudiant</strong>? Devenez professeur avec Voscours.",
+		},
+		{
+			// Covers Devanagari + emoji + checkmark in one pass using only bytes defined in Windows-1252.
+			// The full Rapido payload was removed: it contains virama (U+094D, byte 0x8D) and short-u
+			// matra (U+0941, byte 0x81) whose original bytes are undefined in Windows-1252, making
+			// the round-trip encoding impossible.
+			name:     "Mixed Devanagari emoji and ASCII",
+			input:    "Gorakhpur âœ… à¤°à¤¾à¤® ðŸ“¢",
+			expected: "Gorakhpur ✅ राम 📢",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := FixMojibake(tc.input)
+
+			if result != tc.expected {
+				t.Errorf("\nExpected:\n%s\nGot:\n%s", tc.expected, result)
 			}
 		})
 	}

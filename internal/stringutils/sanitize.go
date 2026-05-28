@@ -7,6 +7,10 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"unicode/utf8"
+
+	"golang.org/x/text/encoding/charmap"
 )
 
 var (
@@ -65,4 +69,16 @@ func SanitizeStringSlice(slice []string) []string {
 		return []string{}
 	}
 	return result
+}
+
+// FixMojibake repairs text that was incorrectly interpreted as Windows-1252/Latin-1.
+// It re-encodes the mangled UTF-8 string back to ISO-8859-1 raw bytes,
+// which recovers the original valid UTF-8 encoding.
+func FixMojibake(s string) string {
+	encoder := charmap.Windows1252.NewEncoder()
+	fixed, err := encoder.String(s)
+	if err != nil || !utf8.ValidString(fixed) {
+		return s
+	}
+	return fixed
 }

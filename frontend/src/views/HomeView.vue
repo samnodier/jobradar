@@ -2,7 +2,9 @@
   <div class="flex-1 overflow-y-auto h-full">
     <section class="text-center px-8 py-10 mx-auto">
       <div class="max-w-160 mx-auto text-center">
-        <div class="inline-flex items-center gap-2.5 px-4 py-2 bg-[rgba(94,106,210,0.12)] text-accent text-[0.8rem] mb-5">
+        <div
+          class="inline-flex items-center gap-2.5 px-4 py-2 bg-[rgba(94,106,210,0.12)] text-accent text-[0.8rem] mb-5"
+        >
           <span class="w-1.75 h-1.75 bg-accent"></span>
           {{ eyebrowText }}
         </div>
@@ -18,7 +20,9 @@
         </p>
 
         <!-- Search Bar -->
-        <div class="flex items-center max-w-130 mx-auto border border-ui-border pl-2.5 h-11 gap-2 whitespace-nowrap cursor-pointer shrink-0">
+        <div
+          class="flex items-center max-w-130 mx-auto border border-ui-border pl-2.5 h-11 gap-2 whitespace-nowrap cursor-pointer shrink-0"
+        >
           <Search class="w-4 h-4 text-gray-400" />
           <input
             v-model="searchTerm"
@@ -27,23 +31,35 @@
             placeholder="Search by title, company, or skill"
             class="flex-1 border-none outline-none h-full p-3 text-base text-gray-900 placeholder:text-gray-400"
           />
-          <button @click="goToJobs" class="h-full bg-accent text-white px-6 font-semibold hover:-translate-y-px transition-transform">
+          <button
+            @click="goToJobs"
+            class="h-full bg-accent text-white px-6 font-semibold hover:-translate-y-px transition-transform"
+          >
             Search
           </button>
         </div>
 
         <div class="flex justify-center gap-4 mt-8">
-          <RouterLink to="/jobs" class="px-8 py-3 bg-accent text-white font-semibold hover:-translate-y-px transition-transform text-[0.95rem]">
+          <RouterLink
+            to="/jobs"
+            class="px-8 py-3 bg-accent text-white font-semibold hover:-translate-y-px transition-transform text-[0.95rem]"
+          >
             Browse All Jobs
           </RouterLink>
-          <button @click="goToJobs()" class="px-8 py-3 bg-bg-secondary text-gray-900 border border-ui-border font-semibold hover:-translate-y-px transition-transform text-[0.95rem]">
+          <button
+            @click="goToJobs()"
+            class="px-8 py-3 bg-bg-secondary text-gray-900 border border-ui-border font-semibold hover:-translate-y-px transition-transform text-[0.95rem]"
+          >
             Find Remote Roles
           </button>
         </div>
 
         <div class="flex flex-wrap gap-3 mt-7 items-center justify-center">
-          <span v-for="tag in ['Go Engineer', 'Vue Developer', 'Full Stack', 'Remote']" :key="tag" 
-            class="inline-flex items-center justify-center px-4 py-1 bg-[#f8faff] text-gray-700 border border-ui-border text-[0.9rem]">
+          <span
+            v-for="tag in ['Go Engineer', 'Vue Developer', 'Full Stack', 'Remote']"
+            :key="tag"
+            class="inline-flex items-center justify-center px-4 py-1 bg-[#f8faff] text-gray-700 border border-ui-border text-[0.9rem]"
+          >
             {{ tag }}
           </span>
         </div>
@@ -55,7 +71,9 @@
         <!-- Stats Row -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
           <div class="bg-white p-6 border border-ui-border">
-            <div class="text-[0.75rem] uppercase tracking-widest text-accent mb-3">Jobs tracked</div>
+            <div class="text-[0.75rem] uppercase tracking-widest text-accent mb-3">
+              Jobs tracked
+            </div>
             <div class="text-4xl font-bold text-gray-900">{{ jobsTracked }}</div>
             <div class="mt-2.5 text-gray-600 text-[0.92rem]">+{{ jobsToday }} today</div>
           </div>
@@ -65,7 +83,9 @@
             <div class="mt-2.5 text-gray-600 text-[0.92rem]">RemoteOK · Adzuna</div>
           </div>
           <div class="bg-white p-6 border border-ui-border">
-            <div class="text-[0.75rem] uppercase tracking-widest text-accent mb-3">Latest scrape</div>
+            <div class="text-[0.75rem] uppercase tracking-widest text-accent mb-3">
+              Latest scrape
+            </div>
             <div class="text-4xl font-bold text-gray-900">{{ latestScrape }}</div>
             <div class="mt-2.5 text-gray-600 text-[0.92rem]">Fresh data from the feed</div>
           </div>
@@ -75,30 +95,49 @@
         <div v-if="authStore.user" class="mt-8">
           <div class="flex justify-between items-end mb-4 gap-4">
             <div>
-              <p class="m-0 mb-1.5 uppercase tracking-widest text-[0.78rem] text-gray-600">Matched to your skills</p>
+              <p class="m-0 mb-1.5 uppercase tracking-widest text-[0.78rem] text-gray-600">
+                Matched to your skills
+              </p>
               <h2 class="m-0 text-xl text-gray-900">Recommended for you</h2>
             </div>
-            <RouterLink to="/jobs" class="text-accent text-[0.94rem] font-semibold">View all matches</RouterLink>
+            <RouterLink to="/jobs" class="text-accent text-[0.94rem] font-semibold"
+              >View all matches</RouterLink
+            >
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <article v-for="(job, index) in recommendedJobs" :key="job.id" class="bg-white p-5 grid gap-4 border border-ui-border-soft hover:border-ui-border transition-colors">
+            <article
+              v-for="(job, index) in recommendedJobs"
+              :key="job.id"
+              class="bg-white p-5 grid gap-4 border border-ui-border-soft hover:border-ui-border transition-colors"
+            >
               <div class="flex justify-between items-start gap-4">
-                <h3 class="m-0 text-base text-gray-900 leading-tight font-semibold">{{ job.title }}</h3>
-                <Heart :fill="job.is_saved ? 'currentColor' : 'none'" class="w-6 h-6 text-gray-400 cursor-pointer shrink-0" />
+                <h3 class="m-0 text-base text-gray-900 leading-tight font-semibold">
+                  {{ job.title }}
+                </h3>
+                <Bookmark
+                  :fill="job.is_saved ? 'currentColor' : 'none'"
+                  class="w-6 h-6 text-gray-400 cursor-pointer shrink-0"
+                />
               </div>
               <div class="text-[0.82rem] text-accent font-bold">{{ 92 - index * 4 }}% match</div>
 
               <p class="m-0 mt-1.5 text-gray-700 text-[0.92rem]">{{ job.company_name }}</p>
               <div class="flex flex-wrap gap-2">
-                <span class="px-2 py-1 text-[0.75rem] bg-bg-secondary text-gray-700 border border-ui-border">
+                <span
+                  class="px-2 py-1 text-[0.75rem] bg-bg-secondary text-gray-700 border border-ui-border"
+                >
                   {{ job.is_remote ? 'Remote' : job.job_location || 'On-site' }}
                 </span>
-                <span class="px-2 py-1 text-[0.75rem] bg-bg-secondary text-gray-700 border border-ui-border">
+                <span
+                  class="px-2 py-1 text-[0.75rem] bg-bg-secondary text-gray-700 border border-ui-border"
+                >
                   {{ job.employment_type || 'Full time' }}
                 </span>
               </div>
-              <div class="flex items-center justify-between text-gray-500 text-[0.75rem] pt-2 border-t border-ui-border-soft">
+              <div
+                class="flex items-center justify-between text-gray-500 text-[0.75rem] pt-2 border-t border-ui-border-soft"
+              >
                 <span>{{ formatSalary(job) }}</span>
                 <span>{{ formatWhen(job) }}</span>
               </div>
@@ -110,23 +149,41 @@
         <div class="mt-8">
           <div class="flex justify-between items-end mb-4 gap-4">
             <p class="m-0 uppercase tracking-widest text-[0.78rem] text-gray-600">Latest jobs</p>
-            <RouterLink to="/jobs" class="text-accent text-[0.94rem] font-semibold">View all jobs</RouterLink>
+            <RouterLink to="/jobs" class="text-accent text-[0.94rem] font-semibold"
+              >View all jobs</RouterLink
+            >
           </div>
 
           <div class="bg-white overflow-hidden border border-ui-border">
-            <div v-for="job in latestJobs" :key="job.id" 
-              class="grid grid-cols-[1fr_auto] md:grid-cols-[2.4fr_1fr_0.9fr_0.8fr] gap-4 items-center p-4 border-b border-ui-border last:border-b-0">
+            <div
+              v-for="job in latestJobs"
+              :key="job.id"
+              class="grid grid-cols-[1fr_auto] md:grid-cols-[2.4fr_1fr_0.9fr_0.8fr] gap-4 items-center p-4 border-b border-ui-border last:border-b-0"
+            >
               <div class="flex items-center gap-3.5">
-                <div class="w-2 h-2 shrink-0" :class="job.is_remote ? 'bg-[#5e6ad2]' : 'bg-[#22c55e]'"></div>
+                <div
+                  class="w-2 h-2 shrink-0"
+                  :class="job.is_remote ? 'bg-[#5e6ad2]' : 'bg-[#22c55e]'"
+                ></div>
                 <div>
-                  <a :href="job.source_url" target="_blank" class="text-[0.95rem] font-semibold text-gray-900 hover:text-accent transition-colors">
+                  <a
+                    :href="job.source_url"
+                    target="_blank"
+                    class="text-[0.95rem] font-semibold text-gray-900 hover:text-accent transition-colors"
+                  >
                     {{ job.title }}
                   </a>
                 </div>
               </div>
-              <span class="hidden md:block text-[0.95rem] text-gray-600">{{ job.company_name }}</span>
-              <span class="hidden md:block text-[0.95rem] text-gray-500">{{ job.employment_type || 'Full time' }}</span>
-              <span class="text-[0.95rem] text-gray-400 text-right md:text-left">{{ formatWhen(job) }}</span>
+              <span class="hidden md:block text-[0.95rem] text-gray-600">{{
+                job.company_name
+              }}</span>
+              <span class="hidden md:block text-[0.95rem] text-gray-500">{{
+                job.employment_type || 'Full time'
+              }}</span>
+              <span class="text-[0.95rem] text-gray-400 text-right md:text-left">{{
+                formatWhen(job)
+              }}</span>
             </div>
           </div>
         </div>
@@ -139,7 +196,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { Heart, Search } from '@lucide/vue'
+import { Bookmark, Search } from '@lucide/vue'
 
 type JobStats = {
   total_jobs: number

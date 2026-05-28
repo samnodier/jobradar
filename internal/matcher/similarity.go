@@ -13,8 +13,8 @@ func Jaro(s1, s2 string) float64 {
 	// Calculate the window
 	r1 := []rune(s1)
 	r2 := []rune(s2)
-	len1 := len(s1)
-	len2 := len(s2)
+	len1 := len(r1)
+	len2 := len(r2)
 	if len1 == 0 && len2 == 0 {
 		return 1.0
 	}
@@ -56,7 +56,7 @@ func Jaro(s1, s2 string) float64 {
 		for k < len2 && !r2Matches[k] {
 			k++
 		}
-		if k < len2 && s1[i] != s2[k] {
+		if k < len2 && r1[i] != r2[k] {
 			mismatches++
 		}
 		k++

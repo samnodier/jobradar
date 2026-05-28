@@ -44,28 +44,32 @@ func (cfg *apiConfig) scrapeRemoteOK(ctx context.Context) error {
 	}
 
 	count := 0
+	duplicates := 0
 	remote := true
 
 	for _, rJob := range jobs {
-		cleanTitle := stringutils.SanitizeStrict(rJob.Position)
+		cleanTitle := stringutils.SanitizeStrict(stringutils.FixMojibake(rJob.Position))
+		cleanCompany := stringutils.SanitizeStrict(stringutils.FixMojibake(rJob.Company))
+		cleanDescription := stringutils.SanitizeDescription(stringutils.FixMojibake(rJob.Description))
 
 		createdJob, err := cfg.db.CreateJob(ctx, database.CreateJobParams{
 			ExternalID:  rJob.ID,
 			JobSource:   "remoteok",
 			Title:       cleanTitle,
-			CompanyName: rJob.Company,
-			Description: convert.ToNullString(stringutils.SanitizeDescription(rJob.Description)),
+			CompanyName: cleanCompany,
+			Description: convert.ToNullString(cleanDescription),
 			SourceUrl:   rJob.URL,
 			SalaryMin:   convert.ToNullInt32(rJob.SalaryMin),
 			SalaryMax:   convert.ToNullInt32(rJob.SalaryMax),
 			Currency:    convert.ToNullString(""),
-			JobLocation: convert.ToNullString(rJob.Location),
+			JobLocation: convert.ToNullString(stringutils.FixMojibake(rJob.Location)),
 			IsRemote:    &remote,
 			Skills:      rJob.Tags,
 			LogoUrl:     convert.ToNullString(rJob.Logo),
 		})
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
+				duplicates++
 				continue
 			}
 			log.Printf("could not save job %s: %v", rJob.ID, err)
@@ -105,7 +109,7 @@ func (cfg *apiConfig) scrapeRemoteOK(ctx context.Context) error {
 	log.Printf("RemoteOK scraping finished!")
 
 	// If we got jobs from the API, but successfully saved 0 of them, something is wrong internally.
-	if len(jobs) > 0 && count == 0 {
+	if len(jobs) > 0 && count == 0 && duplicates == 0 {
 		_, healthErr := cfg.db.UpdateServiceHealth(ctx, database.UpdateServiceHealthParams{
 			ServiceName:     "remoteok",
 			LastSuccessAt:   convert.ToNullTime(time.Time{}), // Don't update success time

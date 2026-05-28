@@ -69,7 +69,6 @@ async function completeOnboarding() {
       body: JSON.stringify({
         username: form.username.trim(),
         name: form.name.trim(),
-        email: form.email.trim(),
       }),
     })
     if (!res.ok) {
@@ -116,8 +115,9 @@ async function completeOnboarding() {
               v-model="form.email"
               type="email"
               required
+              disabled="true"
               placeholder="john@example.com"
-              class="px-4 py-3 text-sm text-gray-900 bg-black/4 border border-gray-200 transition-all focus:outline-none focus:bg-white focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-lighter)]"
+              class="px-4 py-2 text-sm text-gray-900 bg-black/4 border border-gray-200 transition-all cursor-not-allowed focus:outline-none focus:bg-white focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-lighter)]"
             />
           </div>
 
@@ -129,7 +129,7 @@ async function completeOnboarding() {
               type="text"
               required
               placeholder="John Doe"
-              class="px-4 py-3 text-sm text-gray-900 bg-black/4 border border-gray-200 transition-all focus:outline-none focus:bg-white focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-lighter)]"
+              class="px-4 py-2 text-sm text-gray-900 border border-gray-200 transition-all focus:outline-none focus:bg-white focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-lighter)]"
             />
           </div>
 
@@ -141,7 +141,7 @@ async function completeOnboarding() {
               type="text"
               required
               placeholder="john_doe"
-              class="px-4 py-3 text-sm text-gray-900 bg-black/4 border border-gray-200 transition-all focus:outline-none focus:bg-white focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-lighter)]"
+              class="px-4 py-2 text-sm text-gray-900 border border-gray-200 transition-all focus:outline-none focus:bg-white focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-lighter)]"
             />
           </div>
 
