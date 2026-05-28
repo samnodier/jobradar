@@ -25,6 +25,7 @@ func NewRedisQueue(rdb *redis.Client) *RedisQueue {
 	}
 }
 
+// Enqueue JSON-encodes a Job and does LPUSH (push to the left of the list)
 func (rq *RedisQueue) Enqueue(ctx context.Context, job *Job) error {
 	jobBytes, err := json.Marshal(job)
 	if err != nil {
@@ -37,6 +38,7 @@ func (rq *RedisQueue) Enqueue(ctx context.Context, job *Job) error {
 	return nil
 }
 
+// EnqueueDLQ same as Enqueue but pushes to the dead letter queue
 func (rq *RedisQueue) EnqueueDLQ(ctx context.Context, job *Job) error {
 	jobBytes, err := json.Marshal(job)
 	if err != nil {
@@ -49,6 +51,7 @@ func (rq *RedisQueue) EnqueueDLQ(ctx context.Context, job *Job) error {
 	return nil
 }
 
+// Dequeue does the BRPOP (pop form the right, blocking right pop up to timeout seconds)
 func (rq *RedisQueue) Dequeue(ctx context.Context, timeout time.Duration) (*Job, error) {
 	result, err := rq.rdb.BRPop(ctx, timeout, QueueName).Result()
 	if err != nil {
