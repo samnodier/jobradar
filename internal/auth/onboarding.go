@@ -72,7 +72,6 @@ func (h *Handler) HandleOnboardingComplete(w http.ResponseWriter, r *http.Reques
 	// Parse request body
 	type request struct {
 		Name     string `json:"name"`
-		Email    string `json:"email"`
 		Username string `json:"username"`
 	}
 	var req request
@@ -81,7 +80,7 @@ func (h *Handler) HandleOnboardingComplete(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if req.Email == "" || req.Name == "" || req.Username == "" {
+	if req.Name == "" || req.Username == "" {
 		redirectWithError(w, r, "/login", "invalid_request")
 		return
 	}
@@ -128,7 +127,7 @@ func (h *Handler) HandleOnboardingComplete(w http.ResponseWriter, r *http.Reques
 		UserID:         user.ID,
 		AuthProvider:   "github",
 		AuthProviderID: strconv.FormatInt(pending.GitHubID, 10),
-		AccessToken:    convert.ToNullString(pending.AccessToken),
+		AccessToken:    nil,
 	})
 	if err != nil {
 		redirectWithError(w, r, "/login", "create_account_failed")

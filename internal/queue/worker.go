@@ -32,6 +32,7 @@ func (wp *WorkerPool) RegisterHandler(jobType JobType, handler JobHandler) {
 }
 
 // Start spawns the requested number of workers goroutines
+// Each running workerLoop
 func (wp *WorkerPool) Start(ctx context.Context) {
 	wp.ctx = ctx
 	for i := 0; i < wp.workers; i++ {
@@ -46,6 +47,8 @@ func (wp *WorkerPool) Stop() {
 	log.Println("All workers shut down cleanly.")
 }
 
+// workerLoop is an infinite loop with a select
+// - either shutdown signal or dequeue
 func (wp *WorkerPool) workerLoop(ctx context.Context, workerID int) {
 	defer wp.wg.Done()
 	log.Printf("Worker %d started", workerID)
@@ -77,6 +80,7 @@ func (wp *WorkerPool) workerLoop(ctx context.Context, workerID int) {
 	}
 }
 
+// executeJob looks up the handler by job.Type in the handlers map and calls it
 func (wp *WorkerPool) executeJob(ctx context.Context, job *Job) error {
 	handler, ok := wp.handlers[job.Type]
 	if !ok {
@@ -85,6 +89,9 @@ func (wp *WorkerPool) executeJob(ctx context.Context, job *Job) error {
 	return handler(ctx, job)
 }
 
+// handleJobFailure increments job.Attempt and
+// either sends to DLQ (max retries hit)
+// or schedules a retry with exponential backoff
 func (wp *WorkerPool) handleJobFailure(job *Job, err error) {
 	job.Attempt++
 	if job.Attempt > job.MaxRetry {
@@ -121,17 +128,12 @@ func (wp *WorkerPool) handleJobFailure(job *Job, err error) {
 			if err := wp.queue.Enqueue(saveCtx, j); err != nil {
 				log.Printf("CRITICAL: Failed to save job %s during shutdown. Error: %v", j.ID, err)
 			}
-
-			time.Sleep(backoffDur)
-			if err := wp.queue.Enqueue(context.Background(), job); err != nil {
-				log.Printf("Failed to re-enqueue job %s:%v", job.ID, err)
-			}
 		case <-timer.C: // Restored: Listen to the backoff timer!
 			enqCtx, enqCancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer enqCancel()
 
 			if err := wp.queue.Enqueue(enqCtx, j); err != nil {
-				log.Printf("Failed to re-enqueue job %s: %v", job.ID, err)
+				log.Printf("Failed to re-enqueue job %s: %v", j.ID, err)
 			}
 		}
 	}(job)

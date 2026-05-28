@@ -69,8 +69,15 @@ func main() {
 	defer cancel()
 
 	// Start a Cron Scheduler
+	scrapeInterval := 6 * time.Hour
+	if val := os.Getenv("SCRAPE_INTERVAL"); val != "" {
+		scrapeInterval, err = time.ParseDuration(val)
+		if err != nil {
+			log.Fatalf("Invalid SCRAPE_INTERVAL format: %v", err)
+		}
+	}
 	sched := queue.NewScheduler(q)
-	sched.StartCron(ctx, queue.JobScrapeRemoteOK, 6*time.Hour)
+	sched.StartCron(ctx, queue.JobScrapeRemoteOK, scrapeInterval)
 
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)

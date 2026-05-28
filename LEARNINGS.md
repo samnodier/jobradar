@@ -209,7 +209,7 @@ Atomic: One giant request creates the experience AND all its skills in one datab
 
 SQLC COALESCE Pattern: While COALESCE(sqlc.narg('field'), field) is great for partial updates (PATCH), it makes it impossible to explicitly set a field to NULL. Using a CASE statement tied to a boolean (like is_current) is a clean way to handle mandatory nullification.
 
-Date Normalization: When bridging HTML5 <input type="month"> and SQL DATE types, normalization (appending -01) should happen at the boundary (the conversion helper) to maintain type safety without cluttering the business logic.
+Date Normalization: When bridging HTML5 `<input type="month">` and SQL DATE types, normalization (appending -01) should happen at the boundary (the conversion helper) to maintain type safety without cluttering the business logic.
 
 You should note the difference between PUT (replace the whole resource) and PATCH (update specific fields) and why we use PATCH for profile updates.
 
@@ -243,3 +243,15 @@ When dealing with queues, a job should never exist only in server memory unless 
 Why You Cannot Blanket-Return 404s HTTP status codes are the primary way a backend communicates with the outside world (frontends, mobile apps, other microservices). 404 (Not Found): This tells the frontend, "The ID you gave me does not exist. Do not try this exact request again, because it will never work." The frontend might then redirect the user to a "Page Not Found" screen. 500 (Internal Server Error): This tells the frontend, "You did everything right, but my database is down or something broke on my end. Try again in a few minutes." The frontend might then show a "Server is experiencing issues, please try again" toast notification. The Danger: If your database crashes and you return 404s, your frontend will think the jobs were deleted and might show the user a "Job not found" page. Worse, your server monitoring tools (like Datadog or Sentry) will just see a bunch of 404s—which are normal—and will not trigger any alarms that your database is actually offline.
 
 Your reviewer is completely right. What you currently have is an Absolute Timeout (the session dies exactly 7 days after creation, no matter what). What modern applications use is an Idle Timeout or Sliding Session (the session dies only if the user is inactive for 7 days). Fixing this requires updating two things, not just one. You need to extend the TTL in Redis, and you need to extend the expiration date of the cookie in the user's browser. If you only update Redis, the browser will automatically delete the cookie after 7 days anyway, logging them out.
+
+BRPOP fixes both. It sleeps the goroutine at the Redis level — 0% CPU — and wakes it instantly the moment a job is pushed. The 2-second timeout isn't a grace period — it's the max time the worker sleeps before waking up to check ctx.Done(). If the timeout were infinite (BRPOP queue 0), the goroutine would sleep forever and you'd never get a clean shutdown. Write this in LEARNINGS.md — specifically the contrast: RPOP = poll loop + sleep = CPU waste + latency. BRPOP = sleep at DB level = 0% CPU + instant wakeup. The timeout exists for shutdown awareness.
+
+Write this in LEARNINGS.md: When filtering on a LEFT JOIN's outer table, the filter must go in the ON clause. Putting it in WHERE silently converts the LEFT JOIN to an INNER JOIN by discarding rows where the outer table had no match.
+
+Write this in LEARNINGS.md. Specifically: why COALESCE in PATCH updates, why NOT in system writes, and the stale-data trap that would happen if you misapplied it.
+
+json.Unmarshal works on a []byte already in memory, json.NewDecoder wraps an io.Reader for streaming — HTTP bodies, files, anything where you don't want to load the whole thing into memory first. For a queue payload that's already a []byte field in a struct, json.Unmarshal is the right call.
+
+Background workers have no HTTP context. They can't use middleware like TryAuth because there's no request. When they need user data, they query the database directly. This is the fundamental difference between a request handler and a background worker.
+
+In Go, a struct's zero value has all fields set to their type's zero. For pgx nullable types like pgtype.Float8, the zero value means NULL because Valid defaults to false. This is why pgtype.Float8{} works as NULL without any helper function.
