@@ -69,20 +69,13 @@
         <ExternalLink :size="13" />
       </a>
       <button
-        class="h-8 px-14px border text-sm cursor-pointer transition-all whitespace-nowrap"
-        :class="
-          job.is_saved
-            ? 'text-white border-transparent'
-            : 'border-gray-200 bg-black/0.04 text-gray-900'
-        "
-        :style="
-          job.is_saved
-            ? { background: 'var(--color-accent)', borderColor: 'var(--color-accent)' }
-            : {}
-        "
+        class="h-8 px-14px text-sm cursor-pointer transition-all whitespace-nowrap"
         @click="$emit('save', job)"
       >
-        {{ job.is_saved ? 'Saved' : 'Save' }}
+        <Bookmark
+          :fill="job.is_saved ? 'var(--color-accent)' : 'none'"
+          :color="job.is_saved ? 'var(--color-accent)' : 'currentColor'"
+        />
       </button>
       <button
         class="w-8 h-8 border border-gray-200 bg-black/0.04 text-gray-900 text-sm cursor-pointer flex items-center justify-center shrink-0 transition-all"
@@ -93,7 +86,98 @@
         <Link2 v-else :size="14" />
       </button>
     </div>
+    <!-- Match Analysis (collapsible) -->
+    <div v-if="job.is_matched" class="px-4 shrink-0">
+      <!-- Toggle bar -->
+      <button
+        class="w-full flex items-center gap-2 px-3 py-2.5 border border-indigo-100 bg-indigo-50 cursor-pointer transition-colors"
+        :class="analysisOpen ? 'border-b-0' : ''"
+        @click="toggleAnalysis"
+      >
+        <!-- Pulsing dot -->
+        <span class="relative flex size-3 shrink-0">
+          <span
+            v-if="!analysisSeen"
+            class="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75"
+          ></span>
+          <span
+            class="relative inline-flex size-3 rounded-full"
+            :class="analysisSeen ? 'bg-indigo-300' : 'bg-indigo-500'"
+          ></span>
+        </span>
 
+        <div class="flex items-center gap-1.5 flex-1 min-w-0">
+          <Sparkles :size="12" class="text-indigo-500 shrink-0" />
+          <span class="text-xs font-semibold text-indigo-600 uppercase tracking-wide">
+            JobRadar Analysis
+          </span>
+        </div>
+
+        <!-- Score badge (always visible) -->
+        <span
+          v-if="job.match_score != null"
+          :class="[
+            'inline-flex items-center px-2 h-5 text-xs font-bold shrink-0',
+            scoreBadgeClass(job.match_score ?? 0),
+          ]"
+        >
+          {{ job.match_score }}% match
+        </span>
+
+        <ChevronDown
+          :size="14"
+          class="text-indigo-400 shrink-0 transition-transform duration-200"
+          :class="analysisOpen ? 'rotate-180' : ''"
+        />
+      </button>
+
+      <!-- Expandable body -->
+      <div
+        class="overflow-hidden transition-all duration-300 ease-in-out border border-t-0 border-indigo-100 bg-indigo-50"
+        :style="{ maxHeight: analysisOpen ? '500px' : '0px' }"
+      >
+        <div class="px-3 py-3 flex flex-col gap-3">
+          <!-- Matched skills -->
+          <template v-if="job.matched_skills?.length">
+            <div>
+              <p class="text-xs font-medium text-indigo-400 uppercase mb-1.5 m-0">Matched Skills</p>
+              <div class="flex flex-wrap gap-1.5">
+                <span
+                  v-for="skill in job.matched_skills"
+                  :key="skill"
+                  class="h-5 px-2 text-xs flex items-center capitalize border"
+                  style="color: #166534; background: #f0fdf4; border-color: #86efac"
+                  >{{ skill }}</span
+                >
+              </div>
+            </div>
+          </template>
+
+          <!-- Missing skills -->
+          <template v-if="job.missing_skills?.length">
+            <div>
+              <p class="text-xs font-medium text-indigo-400 uppercase mb-1.5 m-0">Missing Skills</p>
+              <div class="flex flex-wrap gap-1.5">
+                <span
+                  v-for="skill in job.missing_skills"
+                  :key="skill"
+                  class="h-5 px-2 text-xs flex items-center capitalize border border-gray-300 bg-gray-100 text-gray-500"
+                  >{{ skill }}</span
+                >
+              </div>
+            </div>
+          </template>
+
+          <!-- AI summary -->
+          <p
+            v-if="job.is_enriched && job.ai_summary"
+            class="text-xs text-indigo-700 leading-relaxed m-0 border-t border-indigo-100 pt-2"
+          >
+            {{ job.ai_summary }}
+          </p>
+        </div>
+      </div>
+    </div>
     <!-- Skills -->
     <div v-if="job.skills?.length" class="px-4 py-4">
       <p class="text-xs font-medium text-gray-500 uppercase mb-2">Skills</p>
@@ -133,31 +217,36 @@
 
 <script setup lang="ts">
 import type { Job } from '@/types/job'
-import { Check, ExternalLink, Link2, X } from '@lucide/vue'
-import { ref } from 'vue'
+import {
+  MapPin,
+  Briefcase,
+  Check,
+  ChevronDown,
+  Clock,
+  DollarSign,
+  ExternalLink,
+  Bookmark,
+  Link2,
+  Sparkles,
+  X,
+} from '@lucide/vue'
+import { ref, watch } from 'vue'
 import DOMPurify from 'dompurify'
+import { useJobFormatting } from '@/composables/useJobFormatting'
+const { scoreBadgeClass, formatSalary, timeAgo } = useJobFormatting()
 
 const props = defineProps<{ job: Job }>()
 defineEmits(['close', 'save'])
 
+const analysisOpen = ref(false)
+const analysisSeen = ref(false)
+
+function toggleAnalysis() {
+  analysisOpen.value = !analysisOpen.value
+  if (!analysisSeen.value) analysisSeen.value = true
+}
+
 const copied = ref(false)
-
-function formatSalary(job: Job) {
-  const currency = job.currency || 'USD'
-  return `${currency} ${job.salary_min ?? 0} - ${job.salary_max ?? 0}`
-}
-
-function timeAgo(date: string | null | undefined): string {
-  if (!date) return 'Recently posted'
-  const diff = Date.now() - new Date(date).getTime()
-  const hours = Math.floor(diff / 3600000)
-  if (hours < 1) return 'Just now'
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days === 1) return 'Yesterday'
-  if (days < 7) return `${days}d ago`
-  return new Date(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-}
 
 async function copyLink() {
   try {
@@ -166,6 +255,14 @@ async function copyLink() {
     setTimeout(() => (copied.value = false), 2000)
   } catch {}
 }
+
+watch(
+  () => props.job,
+  () => {
+    analysisOpen.value = false
+    analysisSeen.value = false
+  },
+)
 </script>
 
 <style scoped>

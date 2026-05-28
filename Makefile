@@ -30,5 +30,11 @@ migrate-create:
 sqlc:
 	sqlc generate
 
-.PHONY: up down migrate-up migrate-down migrate-create sqlc
+exec:
+	docker compose exec db psql -U ${DB_USER} -d ${DB_NAME}
+
+test:
+	go test ./...
+
+.PHONY: up down migrate-up migrate-down migrate-create sqlc exec test
 # end
