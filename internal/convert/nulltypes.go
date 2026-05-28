@@ -3,6 +3,8 @@ package convert
 
 import (
 	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func ToNullString(s string) *string {
@@ -29,6 +31,13 @@ func FromNullInt32(val *int32) int32 {
 func ToNullInt32(val int) *int32 {
 	v := int32(val)
 	return &v
+}
+
+func ToFloat8(f float64) pgtype.Float8 {
+	return pgtype.Float8{
+		Float64: f,
+		Valid:   true,
+	}
 }
 
 func FromNullTime(val *time.Time) string {

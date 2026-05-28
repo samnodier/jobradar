@@ -53,10 +53,6 @@ type Job struct {
 	CreatedAt       *time.Time `json:"created_at"`
 	UpdatedAt       *time.Time `json:"updated_at"`
 	LogoUrl         *string    `json:"logo_url"`
-	MatchScore      *int32     `json:"match_score"`
-	AiSummary       *string    `json:"ai_summary"`
-	MatchedSkills   []string   `json:"matched_skills"`
-	MissingSkills   []string   `json:"missing_skills"`
 }
 
 type ProjectSkill struct {
@@ -193,6 +189,22 @@ type UserExperience struct {
 	IsCurrent      *bool       `json:"is_current"`
 	CreatedAt      *time.Time  `json:"created_at"`
 	UpdatedAt      *time.Time  `json:"updated_at"`
+}
+
+type UserJobMatch struct {
+	ID              uuid.UUID     `json:"id"`
+	UserID          uuid.UUID     `json:"user_id"`
+	JobID           uuid.UUID     `json:"job_id"`
+	MatchScore      *int32        `json:"match_score"`
+	TitleScore      pgtype.Float8 `json:"title_score"`
+	SkillScore      pgtype.Float8 `json:"skill_score"`
+	ExperienceScore pgtype.Float8 `json:"experience_score"`
+	MatchedSkills   []string      `json:"matched_skills"`
+	MissingSkills   []string      `json:"missing_skills"`
+	AiSummary       *string       `json:"ai_summary"`
+	IsEnriched      *bool         `json:"is_enriched"`
+	CreatedAt       *time.Time    `json:"created_at"`
+	UpdatedAt       *time.Time    `json:"updated_at"`
 }
 
 type UserLanguage struct {

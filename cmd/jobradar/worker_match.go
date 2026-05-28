@@ -2,21 +2,42 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/samnodier/jobradar/internal/convert"
 	"github.com/samnodier/jobradar/internal/database"
 	"github.com/samnodier/jobradar/internal/matcher"
 	"github.com/samnodier/jobradar/internal/queue"
 )
 
+/*
+handleMatchJob is the handler
+1. Parses the job UUID from the payload
+2. Fetches the job from the DB
+3. Fetches the user's profile (roles, skills, experiences)
+4. Runs matcher.MatchJob()
+5. Writes the result back with UpsertMatch
+*/
 func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error {
-	jobIDStr := string(qJob.Payload)
+	var matchJobPayload MatchJobPayload
+	err := json.Unmarshal(qJob.Payload, &matchJobPayload)
+	if err != nil {
+		return errors.New("failed to unmarshall payload")
+	}
+	jobIDStr, userIDStr := matchJobPayload.JobID, matchJobPayload.UserID
 	jobID, err := uuid.Parse(jobIDStr)
 	if err != nil {
 		return errors.New("invalid job UUID in payload")
+	}
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return errors.New("invalid user UUID in payload")
 	}
 
 	// Fetch the job
@@ -34,19 +55,9 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 		return err
 	}
 
-	// Fetch the primary user the first user in our system
-	user, err := cfg.db.GetFirstUser(ctx)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			log.Printf("No users registered in the system yet. Skipping match")
-			return nil
-		}
-		return err
-	}
-
 	// Compile the user's profile
 	// Desired Roles
-	desiredRolesRow, err := cfg.db.GetUserDesiredRoles(ctx, user.ID)
+	desiredRolesRow, err := cfg.db.GetUserDesiredRoles(ctx, userID)
 	if err != nil {
 		return err
 	}
@@ -56,7 +67,7 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 	}
 
 	// Skills
-	skillsRow, err := cfg.db.GetUserSkillsByUserID(ctx, user.ID)
+	skillsRow, err := cfg.db.GetUserSkillsByUserID(ctx, userID)
 	if err != nil {
 		return err
 	}
@@ -66,20 +77,21 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 	}
 
 	// Experiences
-	expsRows, err := cfg.db.GetExperiencesByUserID(ctx, user.ID)
+	expsRows, err := cfg.db.GetExperiencesByUserID(ctx, userID)
 	if err != nil {
 		return err
 	}
 	var userExps []string
 	for _, exp := range expsRows {
-		text := exp.RoleTitle + " at " + exp.CompanyName
+		var text strings.Builder
+		text.WriteString(exp.RoleTitle + " at " + exp.CompanyName)
 		if exp.Description != nil {
-			text += " " + *exp.Description
+			text.WriteString(" " + *exp.Description)
 		}
 		for _, ach := range exp.Achievements {
-			text += " " + ach
+			text.WriteString(" " + ach)
 		}
-		userExps = append(userExps, text)
+		userExps = append(userExps, text.String())
 	}
 
 	// Run the match algorithm
@@ -90,23 +102,22 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 
 	// Jaro-Winkler threshold = 0.55
 	result := matcher.MatchJob(job.Title, jobDesc, desiredRoles, userSkills, userExps, 0.55)
-	var scoreVal int32
-	var scorePtr *int32
-	var summaryVal string
-	var summaryPtr *string
-	var matchedSkills []string
-	var missingSkills []string
+	var score int32
+	titleScore := pgtype.Float8{}
+	skillScore := pgtype.Float8{}
+	expScore := pgtype.Float8{}
+	matchedSkills := []string{}
+	missingSkills := []string{}
+	notEnriched := false
 	if !result.Skipped {
-		scoreVal = int32(result.Score)
-		scorePtr = &scoreVal
-		matchedSkills = result.MatchedSkills
-
-		summaryVal = "Algorithmic match completed"
-		summaryPtr = &summaryVal
+		score = int32(result.Score)
+		titleScore = convert.ToFloat8(result.TitleScore)
+		skillScore = convert.ToFloat8(result.SkillScore)
+		expScore = convert.ToFloat8(result.ExpScore)
 		matchedSkills = result.MatchedSkills
 		// Compute the missing skills (user skills that weren't matched)
 		matchedSet := make(map[string]bool)
-		for _, ms := range result.MatchedSkills {
+		for _, ms := range matchedSkills {
 			matchedSet[ms] = true
 		}
 		for _, s := range userSkills {
@@ -116,23 +127,25 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 		}
 
 	} else {
-		scoreVal = 0
-		scorePtr = &scoreVal
-		summaryVal = "Skipped due to low title match"
-		summaryPtr = &summaryVal
+		score = 0
 	}
 
 	// Update Job in the database with match scores
-	err = cfg.db.UpdateJobMatchingResult(ctx, database.UpdateJobMatchingResultParams{
-		ID:            job.ID,
-		MatchScore:    scorePtr,
-		AiSummary:     summaryPtr,
-		MatchedSkills: matchedSkills,
-		MissingSkills: missingSkills,
+	err = cfg.db.UpsertMatch(ctx, database.UpsertMatchParams{
+		UserID:          userID,
+		JobID:           jobID,
+		MatchScore:      &score,
+		TitleScore:      titleScore,
+		SkillScore:      skillScore,
+		ExperienceScore: expScore,
+		MatchedSkills:   matchedSkills,
+		MissingSkills:   missingSkills,
+		AiSummary:       nil,
+		IsEnriched:      &notEnriched,
 	})
 	if err != nil {
 		return err
 	}
-	log.Printf("Job %s matched for user %s: score=%d, skipped =%v", job.ID, user.Email, scoreVal, result.Skipped)
+	log.Printf("Job %s matched for user %s: score=%d, skipped =%v", job.ID, userID, score, result.Skipped)
 	return nil
 }

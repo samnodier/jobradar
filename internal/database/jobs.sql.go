@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createJob = `-- name: CreateJob :one
@@ -20,7 +21,7 @@ INSERT INTO jobs (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
 )
 ON CONFLICT (external_id, job_source) DO NOTHING
-RETURNING id, external_id, job_source, title, company_name, description, source_url, salary_min, salary_max, currency, job_location, is_remote, job_status, employment_type, experience_level, skills, posted_at, expires_at, created_at, updated_at, logo_url, match_score, ai_summary, matched_skills, missing_skills
+RETURNING id, external_id, job_source, title, company_name, description, source_url, salary_min, salary_max, currency, job_location, is_remote, job_status, employment_type, experience_level, skills, posted_at, expires_at, created_at, updated_at, logo_url
 `
 
 type CreateJobParams struct {
@@ -78,10 +79,6 @@ func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, erro
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.LogoUrl,
-		&i.MatchScore,
-		&i.AiSummary,
-		&i.MatchedSkills,
-		&i.MissingSkills,
 	)
 	return i, err
 }
@@ -104,11 +101,23 @@ SELECT
     j.logo_url,
     j.created_at,
     j.updated_at,
+    m.match_score,
+    m.title_score,
+    m.skill_score,
+    m.experience_score,
+    m.matched_skills,
+    m.missing_skills,
+    m.ai_summary,
+    m.is_enriched,
+    m.created_at AS match_created_at,
+    m.updated_at AS match_updated_at,
     (s.id IS NOT NULL)::BOOLEAN AS is_saved,
-    (a.id IS NOT NULL)::BOOLEAN AS is_applied
+    (a.id IS NOT NULL)::BOOLEAN AS is_applied,
+    (m.id IS NOT NULL)::BOOLEAN AS is_matched
 FROM jobs AS j
 LEFT JOIN saved_jobs AS s ON j.id = s.job_id AND s.user_id = $1
 LEFT JOIN applications AS a ON j.id = a.job_id AND a.user_id = $1
+LEFT JOIN user_job_matches AS m ON j.id = m.job_id AND m.user_id = $1
 WHERE j.id = $2
 `
 
@@ -118,24 +127,35 @@ type GetJobByIDParams struct {
 }
 
 type GetJobByIDRow struct {
-	ID          uuid.UUID  `json:"id"`
-	ExternalID  string     `json:"external_id"`
-	JobSource   string     `json:"job_source"`
-	Title       string     `json:"title"`
-	CompanyName string     `json:"company_name"`
-	Description *string    `json:"description"`
-	SourceUrl   string     `json:"source_url"`
-	SalaryMin   *int32     `json:"salary_min"`
-	SalaryMax   *int32     `json:"salary_max"`
-	Currency    *string    `json:"currency"`
-	JobLocation *string    `json:"job_location"`
-	IsRemote    *bool      `json:"is_remote"`
-	Skills      []string   `json:"skills"`
-	LogoUrl     *string    `json:"logo_url"`
-	CreatedAt   *time.Time `json:"created_at"`
-	UpdatedAt   *time.Time `json:"updated_at"`
-	IsSaved     bool       `json:"is_saved"`
-	IsApplied   bool       `json:"is_applied"`
+	ID              uuid.UUID     `json:"id"`
+	ExternalID      string        `json:"external_id"`
+	JobSource       string        `json:"job_source"`
+	Title           string        `json:"title"`
+	CompanyName     string        `json:"company_name"`
+	Description     *string       `json:"description"`
+	SourceUrl       string        `json:"source_url"`
+	SalaryMin       *int32        `json:"salary_min"`
+	SalaryMax       *int32        `json:"salary_max"`
+	Currency        *string       `json:"currency"`
+	JobLocation     *string       `json:"job_location"`
+	IsRemote        *bool         `json:"is_remote"`
+	Skills          []string      `json:"skills"`
+	LogoUrl         *string       `json:"logo_url"`
+	CreatedAt       *time.Time    `json:"created_at"`
+	UpdatedAt       *time.Time    `json:"updated_at"`
+	MatchScore      *int32        `json:"match_score"`
+	TitleScore      pgtype.Float8 `json:"title_score"`
+	SkillScore      pgtype.Float8 `json:"skill_score"`
+	ExperienceScore pgtype.Float8 `json:"experience_score"`
+	MatchedSkills   []string      `json:"matched_skills"`
+	MissingSkills   []string      `json:"missing_skills"`
+	AiSummary       *string       `json:"ai_summary"`
+	IsEnriched      *bool         `json:"is_enriched"`
+	MatchCreatedAt  *time.Time    `json:"match_created_at"`
+	MatchUpdatedAt  *time.Time    `json:"match_updated_at"`
+	IsSaved         bool          `json:"is_saved"`
+	IsApplied       bool          `json:"is_applied"`
+	IsMatched       bool          `json:"is_matched"`
 }
 
 func (q *Queries) GetJobByID(ctx context.Context, arg GetJobByIDParams) (GetJobByIDRow, error) {
@@ -158,8 +178,19 @@ func (q *Queries) GetJobByID(ctx context.Context, arg GetJobByIDParams) (GetJobB
 		&i.LogoUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MatchScore,
+		&i.TitleScore,
+		&i.SkillScore,
+		&i.ExperienceScore,
+		&i.MatchedSkills,
+		&i.MissingSkills,
+		&i.AiSummary,
+		&i.IsEnriched,
+		&i.MatchCreatedAt,
+		&i.MatchUpdatedAt,
 		&i.IsSaved,
 		&i.IsApplied,
+		&i.IsMatched,
 	)
 	return i, err
 }
@@ -205,33 +236,56 @@ SELECT
     j.logo_url,
     j.created_at,
     j.updated_at,
+    m.match_score,
+    m.title_score,
+    m.skill_score,
+    m.experience_score,
+    m.matched_skills,
+    m.missing_skills,
+    m.ai_summary,
+    m.is_enriched,
+    m.created_at AS match_created_at,
+    m.updated_at AS match_updated_at,
     (s.id IS NOT NULL)::BOOLEAN AS is_saved,
-    (a.id IS NOT NULL)::BOOLEAN AS is_applied
+    (a.id IS NOT NULL)::BOOLEAN AS is_applied,
+    (m.id IS NOT NULL)::BOOLEAN AS is_matched
 FROM jobs AS j
 LEFT JOIN saved_jobs AS s ON j.id = s.job_id AND s.user_id = $1
 LEFT JOIN applications AS a ON j.id = a.job_id AND a.user_id = $1
+LEFT JOIN user_job_matches AS m ON j.id = m.job_id AND m.user_id = $1
 ORDER BY j.created_at DESC
 `
 
 type GetJobsRow struct {
-	ID          uuid.UUID  `json:"id"`
-	ExternalID  string     `json:"external_id"`
-	JobSource   string     `json:"job_source"`
-	Title       string     `json:"title"`
-	CompanyName string     `json:"company_name"`
-	Description *string    `json:"description"`
-	SourceUrl   string     `json:"source_url"`
-	SalaryMin   *int32     `json:"salary_min"`
-	SalaryMax   *int32     `json:"salary_max"`
-	Currency    *string    `json:"currency"`
-	JobLocation *string    `json:"job_location"`
-	IsRemote    *bool      `json:"is_remote"`
-	Skills      []string   `json:"skills"`
-	LogoUrl     *string    `json:"logo_url"`
-	CreatedAt   *time.Time `json:"created_at"`
-	UpdatedAt   *time.Time `json:"updated_at"`
-	IsSaved     bool       `json:"is_saved"`
-	IsApplied   bool       `json:"is_applied"`
+	ID              uuid.UUID     `json:"id"`
+	ExternalID      string        `json:"external_id"`
+	JobSource       string        `json:"job_source"`
+	Title           string        `json:"title"`
+	CompanyName     string        `json:"company_name"`
+	Description     *string       `json:"description"`
+	SourceUrl       string        `json:"source_url"`
+	SalaryMin       *int32        `json:"salary_min"`
+	SalaryMax       *int32        `json:"salary_max"`
+	Currency        *string       `json:"currency"`
+	JobLocation     *string       `json:"job_location"`
+	IsRemote        *bool         `json:"is_remote"`
+	Skills          []string      `json:"skills"`
+	LogoUrl         *string       `json:"logo_url"`
+	CreatedAt       *time.Time    `json:"created_at"`
+	UpdatedAt       *time.Time    `json:"updated_at"`
+	MatchScore      *int32        `json:"match_score"`
+	TitleScore      pgtype.Float8 `json:"title_score"`
+	SkillScore      pgtype.Float8 `json:"skill_score"`
+	ExperienceScore pgtype.Float8 `json:"experience_score"`
+	MatchedSkills   []string      `json:"matched_skills"`
+	MissingSkills   []string      `json:"missing_skills"`
+	AiSummary       *string       `json:"ai_summary"`
+	IsEnriched      *bool         `json:"is_enriched"`
+	MatchCreatedAt  *time.Time    `json:"match_created_at"`
+	MatchUpdatedAt  *time.Time    `json:"match_updated_at"`
+	IsSaved         bool          `json:"is_saved"`
+	IsApplied       bool          `json:"is_applied"`
+	IsMatched       bool          `json:"is_matched"`
 }
 
 func (q *Queries) GetJobs(ctx context.Context, userID uuid.UUID) ([]GetJobsRow, error) {
@@ -260,8 +314,19 @@ func (q *Queries) GetJobs(ctx context.Context, userID uuid.UUID) ([]GetJobsRow, 
 			&i.LogoUrl,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.MatchScore,
+			&i.TitleScore,
+			&i.SkillScore,
+			&i.ExperienceScore,
+			&i.MatchedSkills,
+			&i.MissingSkills,
+			&i.AiSummary,
+			&i.IsEnriched,
+			&i.MatchCreatedAt,
+			&i.MatchUpdatedAt,
 			&i.IsSaved,
 			&i.IsApplied,
+			&i.IsMatched,
 		); err != nil {
 			return nil, err
 		}
@@ -357,34 +422,4 @@ func (q *Queries) SearchJobs(ctx context.Context, arg SearchJobsParams) ([]Searc
 		return nil, err
 	}
 	return items, nil
-}
-
-const updateJobMatchingResult = `-- name: UpdateJobMatchingResult :exec
-UPDATE jobs
-SET
-    match_score = $2,
-    ai_summary = $3,
-    matched_skills = $4,
-    missing_skills = $5,
-    updated_at = NOW()
-WHERE id = $1
-`
-
-type UpdateJobMatchingResultParams struct {
-	ID            uuid.UUID `json:"id"`
-	MatchScore    *int32    `json:"match_score"`
-	AiSummary     *string   `json:"ai_summary"`
-	MatchedSkills []string  `json:"matched_skills"`
-	MissingSkills []string  `json:"missing_skills"`
-}
-
-func (q *Queries) UpdateJobMatchingResult(ctx context.Context, arg UpdateJobMatchingResultParams) error {
-	_, err := q.db.Exec(ctx, updateJobMatchingResult,
-		arg.ID,
-		arg.MatchScore,
-		arg.AiSummary,
-		arg.MatchedSkills,
-		arg.MissingSkills,
-	)
-	return err
 }
