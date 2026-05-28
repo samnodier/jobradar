@@ -55,3 +55,9 @@ frontend/node_modules/
 
 # Agent CLI metadata
 .antigravitycli/
+
+# Claude Code personal overrides
+.claude/settings.local.json
+
+# Memory seed (copied to ~/.claude/projects/ — not committed)
+memory/
