@@ -17,6 +17,7 @@
   --spacing-6: 24px;
   --spacing-8: 32px;
 
+  --font-serif: 'Newsreader', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
   --font-base:
     ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
 }
