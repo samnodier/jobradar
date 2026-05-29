@@ -7,25 +7,31 @@ import (
 func TestMatchJob(t *testing.T) {
 	desiredRoles := []string{"Go Developer", "Backend Engineer"}
 	userSkills := []string{"Go", "PostgreSQL", "Vue.js", "Docker"}
+	jobSkills := []string{"Go", "SQL", "React"}
 	userExps := []string{
 		"Built scalable backend systems and web applications with Go and Vue.",
 		"Optimized relational databases like PostgreSQL and Docker container deployments.",
 	}
 
 	tests := []struct {
-		jobTitle string
-
-		jobDesc string
-
+		jobTitle        string
+		jobDesc         string
 		expectedSkipped bool
-
 		expectHighMatch bool // Expect score > 50 if true, else score < 50
+		expectScoreMax  int
 	}{
 		{
 			jobTitle:        "Senior Go Software Engineer",
 			jobDesc:         "Looking for a backend  engineer who works with Go, PostgreSQL, and Docker containers.",
 			expectedSkipped: false,
 			expectHighMatch: true,
+		},
+		{
+			jobTitle:        "Fullstack Developer",
+			jobDesc:         "Looking for a fullstack developer who has experience with Go, SQL, React, PostgreSQL, docker, and AWS.",
+			expectedSkipped: false,
+			expectHighMatch: true,
+			expectScoreMax:  100,
 		},
 
 		{
@@ -36,7 +42,7 @@ func TestMatchJob(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		res := MatchJob(tt.jobTitle, tt.jobDesc, desiredRoles, userSkills, userExps, 0.55)
+		res := MatchJob(tt.jobTitle, tt.jobDesc, desiredRoles, userSkills, jobSkills, userExps, 0.55)
 
 		if res.Skipped != tt.expectedSkipped {
 			t.Errorf("MatchJob(%q) Skipped = %v; want %v", tt.jobTitle, res.Skipped, tt.expectedSkipped)
@@ -48,6 +54,9 @@ func TestMatchJob(t *testing.T) {
 			}
 			if !tt.expectHighMatch && res.Score > 50 {
 				t.Errorf("MatchJob(%q) Score = %d; expected a low match (<=50)", tt.jobTitle, res.Score)
+			}
+			if tt.expectScoreMax > 0 && res.Score > tt.expectScoreMax {
+				t.Errorf("MatchJob(%q) Score = %d; exceeded max of %d", tt.jobTitle, res.Score, tt.expectScoreMax)
 			}
 		} else {
 			if res.Score != 0 {

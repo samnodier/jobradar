@@ -66,14 +66,32 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 		desiredRoles = append(desiredRoles, r.RoleTitle)
 	}
 
-	// Skills
-	skillsRow, err := cfg.db.GetUserSkillsByUserID(ctx, userID)
+	// User skills
+	dbUserSkills, err := cfg.db.GetUserSkillsByUserID(ctx, userID)
 	if err != nil {
 		return err
 	}
+	// Experiences skills
+	dbExpSkills, err := cfg.db.GetExperiencesSkillsByUserID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
 	var userSkills []string
-	for _, s := range skillsRow {
-		userSkills = append(userSkills, s.SkillName)
+	seenSkills := make(map[string]struct{})
+	for _, userSkill := range dbUserSkills {
+		lower := strings.ToLower(userSkill.SkillName)
+		if _, ok := seenSkills[lower]; !ok {
+			seenSkills[lower] = struct{}{}
+			userSkills = append(userSkills, userSkill.SkillName)
+		}
+	}
+	for _, expSkill := range dbExpSkills {
+		lower := strings.ToLower(expSkill.SkillName)
+		if _, ok := seenSkills[lower]; !ok {
+			seenSkills[lower] = struct{}{}
+			userSkills = append(userSkills, expSkill.SkillName)
+		}
 	}
 
 	// Experiences
@@ -101,7 +119,7 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 	}
 
 	// Jaro-Winkler threshold = 0.55
-	result := matcher.MatchJob(job.Title, jobDesc, desiredRoles, userSkills, userExps, 0.55)
+	result := matcher.MatchJob(job.Title, jobDesc, desiredRoles, userSkills, job.Skills, userExps, 0.55)
 	var score int32
 	titleScore := pgtype.Float8{}
 	skillScore := pgtype.Float8{}

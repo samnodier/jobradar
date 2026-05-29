@@ -847,6 +847,43 @@ func (q *Queries) GetExperiencesByUserID(ctx context.Context, userID uuid.UUID) 
 	return items, nil
 }
 
+const getExperiencesSkillsByUserID = `-- name: GetExperiencesSkillsByUserID :many
+SELECT
+    es.experience_id,
+    es.skill_id,
+    s.skill_name
+FROM experience_skills AS es
+INNER JOIN skills AS s ON es.skill_id = s.id
+INNER JOIN user_experiences AS ue ON es.experience_id = ue.id
+WHERE ue.user_id = $1
+`
+
+type GetExperiencesSkillsByUserIDRow struct {
+	ExperienceID uuid.UUID `json:"experience_id"`
+	SkillID      uuid.UUID `json:"skill_id"`
+	SkillName    string    `json:"skill_name"`
+}
+
+func (q *Queries) GetExperiencesSkillsByUserID(ctx context.Context, userID uuid.UUID) ([]GetExperiencesSkillsByUserIDRow, error) {
+	rows, err := q.db.Query(ctx, getExperiencesSkillsByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetExperiencesSkillsByUserIDRow
+	for rows.Next() {
+		var i GetExperiencesSkillsByUserIDRow
+		if err := rows.Scan(&i.ExperienceID, &i.SkillID, &i.SkillName); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getLanguagesByUserID = `-- name: GetLanguagesByUserID :many
 SELECT
     user_id,
