@@ -171,7 +171,7 @@ Hoisting in `<script setup>`: Why constants like formatters must be defined at t
 
 The "Stale State" Problem: Why the parent needs to update its list when a child updates a single item (and how the Spread Operator helps keep joined data intact).
 
-Debouncing: Why we use clearTimeout and setTimeout to protect the server from excessive API calls.
+Debouncing: Why we use clearTimeout and setTimeout to protect the server from excessive API calls.The pattern is: When the user types, cancel the previous pending timer Start a new timer for 800ms If they don't type again before it fires, save Not ref — correct. ref() creates a reactive container that Vue watches for changes to update the DOM. A timer ID is never read in the template, so reactivity is wasted overhead. Plain let is enough. Not const — correct. The value reassigns on every keystroke (each setTimeout returns a new ID). Not inside the function — this is the one you partially got. The real reason: every time a function is called, its local variables are created from scratch. If debounceTimer lives inside, each call starts at null. clearTimeout(null) is a no-op. You need the ID from the previous call to cancel it — which means the variable must outlive the function invocation. Module scope is the only place that persists between calls.
 
 SQL Data Loss: Why RETURNING \* in an update doesn't return joined columns.
 
@@ -267,3 +267,15 @@ In production you can't reset — adding a uniqueness constraint to a column tha
 Skill score denominator flaw — matched/userSkills penalizes broad skill sets; matched/jobSkills is the correct signal
 
 Production uniqueness constraint caveat — can't add a UNIQUE constraint to a column with existing duplicates; requires a data-cleanup migration first (repoint FKs, delete dupes, then add constraint)
+
+"Background workers have no HTTP context." The enqueue is conceptually background work that you're kicking off from a handler. You don't want it killed because the user closed their tab. context.Background() (or better, a context derived from your app's root context that dies on server shutdown) is the right call for the enqueue loop — even though the DB query and transaction above it correctly used r.Context().
+
+A handler can run two kinds of work: work that belongs to the request (use r.Context() — cancellable when the user leaves) and work that's merely triggered by the request but outlives it (use context.Background() or the app root context — must survive the user disconnecting). The transaction is the former; the fire-and-forget re-match enqueue is the latter. Passing r.Context() to background work is a silent bug: it half-completes when the client disconnects.
+
+Storing the app root context on apiConfig (rootCtx) lets handlers kick off background work with a lifetime tied to the server, not the request. Using context.Background() as that root is fine — it just never cancels, so in-flight work isn't interrupted on shutdown. Getting true shutdown-cancellation would mean storing the cancellable context derived from the root, but that's a chicken-and-egg with struct construction order and not worth it for a fast enqueue loop. Knowing the gap is the lesson; context.Background() on rootCtx is the right call here.
+
+Re-matching scale, part 1 (coalescing): Re-match-everything-on-every-change is O(jobs × saves). Fine at portfolio scale, a fire at production scale — auto-save makes it trivial to fire 10 saves in 10 seconds, and with 10,000 jobs that's 100,000 enqueues. First defense is to not enqueue on every save: mark the user "dirty" and enqueue one re-match after a quiet period (server-side debounce). Ten toggles become one job, not ten thousand.
+
+Re-matching scale, part 2 (move the fan-out into the worker, and pipeline): Two more techniques beyond coalescing. (a) Instead of enqueueing N per-job match jobs from the handler, enqueue ONE batch job — RematchUser{user_id} — and let the worker loop over all jobs internally. The queue holds 1 item, not 200; the fan-out happens where you control concurrency, not where it explodes. (b) If you do push many items, use a Redis pipeline/MULTI so they go in one network round-trip instead of N. The current loop does N separate Enqueue calls = N round-trips. Order of reach: coalesce first (cheapest, biggest win), then batch-job fan-out, then pipelining only if a single operation still pushes a lot.
+
+Background activity shouldn't depend on the browser context" is the what. The why it matters for the logs you're about to watch: if you'd left it as r.Context() and the loop is pushing 200 jobs when the response finishes, the context dies mid-loop and the remaining Enqueue calls fail silently — you'd see match jobs for some jobs in the logs, not all, and no error explaining why. With rootCtx you'll see all of them process regardless. That partial-completion-with-no-error is exactly the silent bug.

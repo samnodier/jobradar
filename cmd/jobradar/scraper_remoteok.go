@@ -84,7 +84,6 @@ func (cfg *apiConfig) scrapeRemoteOK(ctx context.Context) error {
 			}
 			for _, userID := range userIDs {
 
-				// Push matching task to queue
 				payloadData := MatchJobPayload{
 					JobID:  createdJob.ID.String(),
 					UserID: userID.String(),
@@ -94,6 +93,7 @@ func (cfg *apiConfig) scrapeRemoteOK(ctx context.Context) error {
 					log.Printf("Failed to marshal match job payload: %v", err)
 					continue
 				}
+				// Push matching task to queue
 				err = cfg.queue.Enqueue(ctx, &queue.Job{
 					ID:       createdJob.ID.String() + "-" + userID.String(),
 					Type:     queue.JobMatchJob,
