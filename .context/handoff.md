@@ -4,37 +4,67 @@
 
 ## Date
 
-<!-- YYYY-MM-DD -->
+2026-05-28
 
 ## Branch
 
-<!-- Current git branch -->
+`feature/ai-matching`
 
 ## Accomplished
 
-<!-- Bullet list — be specific: file names, function names, route names -->
--
+- `FixMojibake` in `internal/stringutils/sanitize.go` with table-driven tests
+- Scraper sanitization chain fixed: `FixMojibake` → `SanitizeStrict`/`SanitizeDescription` before DB write
+- `JobDetail.vue` — collapsible Jobradar Analysis section (score badge, matched/missing chips, AI summary placeholder)
+- `useJobFormatting.ts` composable — `scoreBadgeClass`, `timeAgo`, `formatSalary`
+- Tailwind v4 `@source "../composables"` in `globals.css` — fixes purged dynamic classes
+- `JobRow.vue` score badge — fixed `scoreBadgeClass(job.match_score ?? 0)` call, added border classes
+- `skills.skill_name` TEXT → CITEXT — case-insensitive uniqueness at DB level
+- `GetExperiencesSkillsByUserID` — new query scoped by `user_id` via JOIN through `user_experiences`
+- Worker: merges standalone skills + experience skills with lowercase dedup map
+- Matcher: denominator flipped `len(userSkills)` → `len(jobSkills)` (broad skill sets no longer penalized)
+- `math.Min(skillScore, 1.0)` cap + zero division guard in matcher
+- `PreferencesTab.vue` extracted from `ProfileView.vue` (was 1277 lines) — owns its own store access
+- `make exec`, `make test` added to Makefile with env var references
+- Phase 5.6 (AI Resume Import) and Phase 8.5 (User Job Import) added to plan and backlog
 
 ## Current State
 
-<!-- One paragraph: is it working? any known bugs? last stable state? -->
+Build passes cleanly. All Go tests pass. `PreferencesTab.vue` is extracted and working but still has a Save Changes button — auto-save not yet implemented. Two commits on `feature/ai-matching` this session.
 
 ## What Didn't Work
 
-<!-- What was tried and abandoned, and why — critical for next session -->
--
+Nothing abandoned. Skills migration was reset intentionally (dev environment, no real data).
 
 ## Next Steps
 
-<!-- Ordered list, specific enough to pick up immediately -->
-1.
+1. **Auto-save `PreferencesTab.vue`** — remove Save Changes button, add:
+   - Checkboxes + selects → save immediately on `@change`
+   - Salary inputs → debounce ~800ms on `@input`
+   - Tag fields (roles, industries, skills) → trigger save inside add/remove functions after mutation
+   - `updatePreferences` from `usePreferencesStore` is the save action
+2. Icon polish: better semantic icon for track-application in `JobRow.vue`
+3. Location preference matching in matcher
+4. Re-enqueue match jobs on profile update (desired roles / skills change)
+5. Reduce match logging: single summary per user instead of one line per job
+6. LLM enrichment worker (Phase 5 main feature)
+7. Phase 5.5 — encrypted Gemini API key storage
 
 ## Open Questions
 
-<!-- Decisions pending, things unclear, things to research -->
--
+- Jaro-Winkler threshold at 0.55 — needs validation against real job data before tuning
+- LLM enrichment score threshold: 60 suggested, not yet decided
 
 ## Files Changed
 
-<!-- Run: git diff --name-only HEAD -->
--
+- `internal/stringutils/sanitize.go` + `sanitize_test.go`
+- `internal/matcher/matcher.go` + `matcher_test.go`
+- `cmd/jobradar/worker_match.go`, `scraper_remoteok.go`
+- `sql/queries/profile.sql`, `sql/schema/20260508000104_skills.sql`
+- `internal/database/profile.sql.go`
+- `frontend/src/components/JobDetail.vue`, `JobRow.vue`
+- `frontend/src/components/PreferencesTab.vue` (new)
+- `frontend/src/composables/useJobFormatting.ts` (new)
+- `frontend/src/styles/globals.css`
+- `frontend/src/views/ProfileView.vue`
+- `frontend/src/types/job.ts`
+- `.context/PLAN.md`, `backlog.md`, `LEARNINGS.md`, `Makefile`

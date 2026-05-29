@@ -263,3 +263,7 @@ A sanitization function should never return something worse than its input.
 Now, the WHY of the encoding direction — think through it step by step: Byte 0xE0 is a raw byte in the original UTF-8 text. A broken pipeline reads those bytes using Windows-1252 and asks: "what Unicode character is byte 0xE0?" The answer is U+00E0 — the character à. So 0xE0 becomes à in the mangled string. Now you have à (U+00E0) and you need to get back to byte 0xE0. You ask the Windows-1252 encoder: "what byte represents U+00E0?" Answer: 0xE0. You're back to the original byte. The round-trip works because mojibake is its own inverse — the same table that broke the text can un-break it, just run in the other direction. Decoder maps bytes → characters. Encoder maps characters → bytes. Same table, opposite direction.
 
 In production you can't reset — adding a uniqueness constraint to a column that already has duplicates requires a data-cleanup migration first. That's a real interview answer.
+
+Skill score denominator flaw — matched/userSkills penalizes broad skill sets; matched/jobSkills is the correct signal
+
+Production uniqueness constraint caveat — can't add a UNIQUE constraint to a column with existing duplicates; requires a data-cleanup migration first (repoint FKs, delete dupes, then add constraint)
