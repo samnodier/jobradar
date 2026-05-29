@@ -34,7 +34,7 @@ exec:
 	docker compose exec db psql -U ${DB_USER} -d ${DB_NAME}
 
 test:
-	go test ./...
+	go test ./internal/... ./cmd/...
 
 .PHONY: up down migrate-up migrate-down migrate-create sqlc exec test
 # end

@@ -106,6 +106,16 @@ INSERT INTO experience_skills (
 ) VALUES ($1, $2)
 RETURNING *;
 
+-- name: GetExperiencesSkillsByUserID :many
+SELECT
+    es.experience_id,
+    es.skill_id,
+    s.skill_name
+FROM experience_skills AS es
+INNER JOIN skills AS s ON es.skill_id = s.id
+INNER JOIN user_experiences AS ue ON es.experience_id = ue.id
+WHERE ue.user_id = $1;
+
 -- name: GetOrCreateSkill :one
 INSERT INTO skills (
     skill_name

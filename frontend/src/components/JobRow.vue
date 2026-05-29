@@ -21,13 +21,13 @@
     <span
       v-if="job.is_matched"
       :class="[
-        'min-w-2 text-xs font-medium  h-5 px-1.75  flex items-center shrink-0',
-        scoreBadgeClass,
+        'w-12 text-xs font-medium  h-5 px-1.75  flex items-center justify-center  shrink-0',
+        scoreBadgeClass(job.match_score ?? 0),
       ]"
     >
       {{ job.is_matched ? `${job.match_score}%` : '' }}
     </span>
-    <span v-else class="min-w-2 h-5 px-1.75 flex items-center shrink-0"> </span>
+    <span v-else class="w-12 h-5 px-1.75 flex items-center justify-center shrink-0"> </span>
 
     <span class="text-xs text-zinc-200 w-17.5 text-right shrink-0">
       {{ timeAgo(job.posted_at) }}

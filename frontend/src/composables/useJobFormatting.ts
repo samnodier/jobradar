@@ -1,8 +1,8 @@
 export function useJobFormatting() {
   function scoreBadgeClass(score: number) {
-    if (score >= 70) return 'bg-green-100 text-green-800'
-    if (score >= 40) return 'bg-yellow-100 text-yellow-800'
-    return 'bg-gray-100 text-gray-800'
+    if (score >= 70) return 'bg-green-100 text-green-800 border border-green-300'
+    if (score >= 40) return 'bg-yellow-100 text-yellow-800 border border-yellow-300'
+    return 'bg-gray-100 text-gray-800 border border-gray-300'
   }
 
   function timeAgo(dateStr: string | null | undefined): string {

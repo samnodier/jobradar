@@ -1,5 +1,7 @@
 package matcher
 
+import "math"
+
 // MatchResult holds the combined matching scores and outcomes.
 type MatchResult struct {
 	Score         int      // Final score (0 to 100)
@@ -16,6 +18,7 @@ func MatchJob(
 	jobDesc string,
 	desiredRoles []string,
 	userSkills []string,
+	jobSkills []string,
 	userExps []string,
 	titleThreshold float64,
 ) MatchResult {
@@ -42,7 +45,10 @@ func MatchJob(
 	if len(userSkills) > 0 {
 		sm := NewSkillMatcher(userSkills)
 		matchedSkills = sm.FindSkills(jobDesc)
-		skillScore = float64(len(matchedSkills)) / float64(len(userSkills))
+		if len(jobSkills) > 0 {
+		skillScore = float64(len(matchedSkills)) / float64(len(jobSkills))
+		}
+		skillScore = math.Min(skillScore, 1.0)
 	}
 
 	// 3. Experience Matching

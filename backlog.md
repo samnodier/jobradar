@@ -33,8 +33,8 @@ Current phase: **Phase 5 — AI Matching**
 - [ ] [Phase 5.5] Write LEARNINGS.md entry: encrypting secrets at rest, key management tradeoffs
 
 ### Frontend — matching display
-- [ ] [Phase 5] Fix JobRow score badge alignment and styling (border, fixed width, `%` suffix)
-- [ ] [Phase 5] Show matched_skills (green chips) and missing_skills (grey chips) in JobDetail
+- [x] [Phase 5] Fix JobRow score badge alignment and styling (border, fixed width, `%` suffix)
+- [x] [Phase 5] Show matched_skills (green chips) and missing_skills (grey chips) in JobDetail
 - [ ] [Phase 5] Auto-save for profile preference sections — debounced 5s timer on field change, same pattern as ApplicationDetail notes
 - [ ] [Phase 5] Icon polish: Bookmark icon for save (instead of heart), better semantic icon for track-application
 
