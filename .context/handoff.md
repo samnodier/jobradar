@@ -4,7 +4,7 @@
 
 ## Date
 
-2026-05-28
+2026-05-29
 
 ## Branch
 
@@ -12,59 +12,51 @@
 
 ## Accomplished
 
-- `FixMojibake` in `internal/stringutils/sanitize.go` with table-driven tests
-- Scraper sanitization chain fixed: `FixMojibake` → `SanitizeStrict`/`SanitizeDescription` before DB write
-- `JobDetail.vue` — collapsible Jobradar Analysis section (score badge, matched/missing chips, AI summary placeholder)
-- `useJobFormatting.ts` composable — `scoreBadgeClass`, `timeAgo`, `formatSalary`
-- Tailwind v4 `@source "../composables"` in `globals.css` — fixes purged dynamic classes
-- `JobRow.vue` score badge — fixed `scoreBadgeClass(job.match_score ?? 0)` call, added border classes
-- `skills.skill_name` TEXT → CITEXT — case-insensitive uniqueness at DB level
-- `GetExperiencesSkillsByUserID` — new query scoped by `user_id` via JOIN through `user_experiences`
-- Worker: merges standalone skills + experience skills with lowercase dedup map
-- Matcher: denominator flipped `len(userSkills)` → `len(jobSkills)` (broad skill sets no longer penalized)
-- `math.Min(skillScore, 1.0)` cap + zero division guard in matcher
-- `PreferencesTab.vue` extracted from `ProfileView.vue` (was 1277 lines) — owns its own store access
-- `make exec`, `make test` added to Makefile with env var references
-- Phase 5.6 (AI Resume Import) and Phase 8.5 (User Job Import) added to plan and backlog
+- **Auto-save `PreferencesTab.vue`** — removed the Save Changes button and `saved` ref; replaced inline success paragraph with `toast.success`
+  - Checkboxes + selects → `@change="handleSavePreferences"` (immediate save)
+  - Salary inputs → `@input="handleSalarySave"` with an 800ms debounce (`let debounceTimer` at module scope)
+  - All six tag add/remove functions (roles, industries, skills) call `handleSavePreferences()` after mutation
+  - Dropped unused `isSaving` from `storeToRefs`
+- **Re-match on profile change** — new `enqueueMatchJobsForUser(ctx, userID)` helper in `worker_match.go`
+  - New SQL query `GetAllJobIDs` (`SELECT id FROM jobs`), `sqlc generate` run
+  - Helper loops all job IDs, pushes one `{job_id, user_id}` `JobMatchJob` per job; best-effort, logs per-job failures
+  - `handlerUpdatePreferences` calls it after commit, guarded by `if req.Skills != nil || req.DesiredRoles != nil`, logs returned error
+  - Uses `cfg.rootCtx` (not `r.Context()`) so the enqueue survives client disconnect
+- **App root context plumbing** — added `rootCtx context.Context` to `apiConfig`, assigned `context.Background()` in `main`, worker context now derives via `context.WithCancel(cfg.rootCtx)`
+- Fixed `%v` → `%w` in the helper's error wrap; rewrote the stale doc comment that still described `handleMatchJob`
+- LEARNINGS.md: context-for-background-work nuance + re-matching scale parts 1 (coalescing) and 2 (worker-side fan-out + Redis pipelining)
 
 ## Current State
 
-Build passes cleanly. All Go tests pass. `PreferencesTab.vue` is extracted and working but still has a Save Changes button — auto-save not yet implemented. Two commits on `feature/ai-matching` this session.
+`go build ./cmd/... ./internal/...` passes clean (exit 0). The `./...` form errors only on the `postgres_data` Docker volume dir — not a code issue. Re-match-on-profile-change feature is complete and wired with correct context handling and consistent error flow.
 
 ## What Didn't Work
 
-Nothing abandoned. Skills migration was reset intentionally (dev environment, no real data).
+Nothing abandoned.
 
 ## Next Steps
 
-1. **Auto-save `PreferencesTab.vue`** — remove Save Changes button, add:
-   - Checkboxes + selects → save immediately on `@change`
-   - Salary inputs → debounce ~800ms on `@input`
-   - Tag fields (roles, industries, skills) → trigger save inside add/remove functions after mutation
-   - `updatePreferences` from `usePreferencesStore` is the save action
-2. Icon polish: better semantic icon for track-application in `JobRow.vue`
-3. Location preference matching in matcher
-4. Re-enqueue match jobs on profile update (desired roles / skills change)
-5. Reduce match logging: single summary per user instead of one line per job
-6. LLM enrichment worker (Phase 5 main feature)
-7. Phase 5.5 — encrypted Gemini API key storage
+1. **Manual verify** — update a skill in the UI, watch worker logs: match jobs should process for every job after save, response shouldn't hang
+2. **Phase 5.5 — encrypted Gemini API key storage** — `encrypted_gemini_api_key TEXT` on users, AES-256 at rest (server key from env), Settings UI, never logged. Must land before the LLM worker (worker needs a key).
+3. **LLM enrichment worker** — main Phase 5 feature. Calls Gemini for jobs above threshold, writes `ai_summary` + `is_enriched` via new `UpdateMatchEnrichment` query.
+
+## Known Tech Debt / Future Scale Work
+
+- Re-match-everything-on-every-change is O(jobs × saves) — fine now, a fire at production scale. Fix path (in LEARNINGS.md): server-side coalescing → single `RematchUser` batch job (fan-out inside worker) → Redis pipelining. Not needed yet.
+- `enqueueMatchJobsForUser` does N separate `Enqueue` calls = N round-trips. Pipeline candidate later.
+- `cfg.rootCtx` is `context.Background()` — never cancelled, so an in-flight enqueue isn't interrupted on shutdown. Acceptable for a fast loop; documented in LEARNINGS.md.
 
 ## Open Questions
 
-- Jaro-Winkler threshold at 0.55 — needs validation against real job data before tuning
+- Jaro-Winkler threshold at 0.55 — still needs validation against real job data
 - LLM enrichment score threshold: 60 suggested, not yet decided
 
 ## Files Changed
 
-- `internal/stringutils/sanitize.go` + `sanitize_test.go`
-- `internal/matcher/matcher.go` + `matcher_test.go`
-- `cmd/jobradar/worker_match.go`, `scraper_remoteok.go`
-- `sql/queries/profile.sql`, `sql/schema/20260508000104_skills.sql`
-- `internal/database/profile.sql.go`
-- `frontend/src/components/JobDetail.vue`, `JobRow.vue`
-- `frontend/src/components/PreferencesTab.vue` (new)
-- `frontend/src/composables/useJobFormatting.ts` (new)
-- `frontend/src/styles/globals.css`
-- `frontend/src/views/ProfileView.vue`
-- `frontend/src/types/job.ts`
-- `.context/PLAN.md`, `backlog.md`, `LEARNINGS.md`, `Makefile`
+- `frontend/src/components/PreferencesTab.vue`
+- `cmd/jobradar/worker_match.go` (new `enqueueMatchJobsForUser`)
+- `cmd/jobradar/handler_preferences.go` (enqueue call after commit)
+- `cmd/jobradar/main.go` (`rootCtx` on `apiConfig`)
+- `sql/queries/jobs.sql` (`GetAllJobIDs`)
+- `internal/database/jobs.sql.go` (sqlc generated)
+- `LEARNINGS.md`

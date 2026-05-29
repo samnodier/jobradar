@@ -45,6 +45,9 @@ LEFT JOIN applications AS a ON j.id = a.job_id AND a.user_id = $1
 LEFT JOIN user_job_matches AS m ON j.id = m.job_id AND m.user_id = $1
 ORDER BY j.created_at DESC;
 
+-- name: GetAllJobIDs :many
+SELECT id FROM jobs;
+
 -- name: GetJobByID :one
 SELECT
     j.id,

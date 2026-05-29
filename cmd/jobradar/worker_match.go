@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"strings"
 
@@ -164,6 +165,46 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 	if err != nil {
 		return err
 	}
-	log.Printf("Job %s matched for user %s: score=%d, skipped =%v", job.ID, userID, score, result.Skipped)
+	// Don't log for every match
+	// log.Printf("Job %s matched for user %s: score=%d, skipped =%v", job.ID, userID, score, result.Skipped)
+	return nil
+}
+
+/*
+enqueueMatchJobsForUser re-enqueues a match job for the given user against every
+job in the DB. Used after a profile change (skills or desired roles) makes the
+user's existing match scores stale. It only enqueues — the worker (handleMatchJob)
+does the actual fetching and scoring later.
+1. Fetches all job IDs from the DB
+2. For each job, pushes a {job_id, user_id} payload onto the queue
+Best-effort: per-job failures are logged and skipped, not fatal.
+*/
+func (cfg *apiConfig) enqueueMatchJobsForUser(ctx context.Context, userID uuid.UUID) error {
+	// Fetch all job IDs
+	jobsIDs, err := cfg.db.GetAllJobIDs(ctx)
+	if err != nil {
+		return fmt.Errorf("error fetching job IDs for rematching: %w", err)
+	}
+	for _, jobID := range jobsIDs {
+		payloadData := MatchJobPayload{
+			JobID:  jobID.String(),
+			UserID: userID.String(),
+		}
+		matchJobPayload, err := json.Marshal(payloadData)
+		if err != nil {
+			log.Printf("Failed to marshal match job payload: %v", err)
+			continue
+		}
+		// Push matching task to queue
+		err = cfg.queue.Enqueue(ctx, &queue.Job{
+			ID:       jobID.String() + "-" + userID.String(),
+			Type:     queue.JobMatchJob,
+			Payload:  matchJobPayload,
+			MaxRetry: 3,
+		})
+		if err != nil {
+			log.Printf("failed to enqueue matching job for %s: %v", jobID, err)
+		}
+	}
 	return nil
 }

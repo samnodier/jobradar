@@ -365,7 +365,7 @@ func (cfg *apiConfig) handlerUpdatePreferences(w http.ResponseWriter, r *http.Re
 		}
 	}
 
-	// wiping and inserting desired roles
+	// Wiping and inserting desired roles
 	if req.DesiredRoles != nil {
 		err = qtx.ClearUserDesiredRoles(ctx, userID)
 		if err != nil {
@@ -401,9 +401,16 @@ func (cfg *apiConfig) handlerUpdatePreferences(w http.ResponseWriter, r *http.Re
 	err = tx.Commit(ctx)
 	if err != nil {
 		// log the actual detailed error to server stderr for debugging purposes
-		log.Printf("Eror committing preferences transation for the user %s: %v", userID, err)
+		log.Printf("Error committing preferences transation for the user %s: %v", userID, err)
 		httpx.RespondError(w, http.StatusInternalServerError, "failed to save the changes")
 		return
+	}
+
+	if req.Skills != nil || req.DesiredRoles != nil {
+		err := cfg.enqueueMatchJobsForUser(cfg.rootCtx, userID)
+		if err != nil {
+			log.Printf("Error matching the jobs for the user %s: %v", userID, err)
+		}
 	}
 
 	cfg.handlerGetPreferences(w, r)

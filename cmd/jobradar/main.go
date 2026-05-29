@@ -28,6 +28,7 @@ type apiConfig struct {
 	rdb          *redis.Client
 	pool         *pgxpool.Pool
 	queue        *queue.RedisQueue
+	rootCtx      context.Context
 	IsProduction bool
 }
 
@@ -47,12 +48,12 @@ func main() {
 		Addr: os.Getenv("REDIS_ADDR"),
 	})
 	q := queue.NewRedisQueue(rdb)
-
 	cfg := &apiConfig{
 		db:           dbClient.Queries,
 		rdb:          rdb,
 		pool:         dbClient.Pool,
 		queue:        q,
+		rootCtx:      context.Background(),
 		IsProduction: os.Getenv("APP_ENV") == "production",
 	}
 
@@ -64,7 +65,7 @@ func main() {
 		return cfg.handleMatchJob(ctx, job)
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(cfg.rootCtx)
 	wp.Start(ctx)
 	defer cancel()
 

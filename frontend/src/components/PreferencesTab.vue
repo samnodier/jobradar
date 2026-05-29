@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { ref, computed } from 'vue'
-import { usePreferencesStore } from '@/stores/preferences'
+import { computed } from 'vue'
+import { X } from '@lucide/vue'
 import { useToast } from '@/composables/useToast'
 import type { DesiredRolePreference, SkillPreference } from '@/types/preferences'
+import { usePreferencesStore } from '@/stores/preferences'
 
 const preferencesStore = usePreferencesStore()
-const { preferences, isSaving } = storeToRefs(preferencesStore)
+const { preferences } = storeToRefs(preferencesStore)
 const toast = useToast()
-const saved = ref(false)
 const props = defineProps<{ activeTab: string }>()
+
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
 const removeIndustry = (name: string) => {
   if (preferences?.value && preferences.value.preferred_industries) {
@@ -17,6 +19,7 @@ const removeIndustry = (name: string) => {
       (i: string) => i !== name,
     )
   }
+  handleSavePreferences()
 }
 
 const addIndustry = (e: Event) => {
@@ -33,6 +36,7 @@ const addIndustry = (e: Event) => {
       preferences.value.preferred_industries.push(val)
     }
     target.value = ''
+    handleSavePreferences()
   }
 }
 
@@ -72,6 +76,7 @@ const removeRole = (roleTitle: string) => {
       (r: DesiredRolePreference) => r.role_title !== roleTitle,
     )
   }
+  handleSavePreferences()
 }
 
 const addRole = (e: Event) => {
@@ -91,6 +96,7 @@ const addRole = (e: Event) => {
       })
     }
     target.value = ''
+    handleSavePreferences()
   }
 }
 
@@ -100,6 +106,7 @@ const removeSkill = (skillName: string) => {
       (s: SkillPreference) => s.skill_name !== skillName,
     )
   }
+  handleSavePreferences()
 }
 
 const addSkill = (e: Event) => {
@@ -125,15 +132,22 @@ const addSkill = (e: Event) => {
       })
     }
     target.value = ''
+    handleSavePreferences()
   }
+}
+
+function handleSalarySave() {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    handleSavePreferences()
+  }, 800)
 }
 
 async function handleSavePreferences() {
   if (!preferences?.value) return
   try {
     await preferencesStore.updatePreferences(preferences.value)
-    saved.value = true
-    setTimeout(() => (saved.value = false), 2500)
+    toast.success('Preferences saved.')
   } catch (err) {
     toast.error(err instanceof Error ? err.message : 'Failed to save preferences.')
   }
@@ -158,6 +172,7 @@ async function handleSavePreferences() {
               <input
                 :id="type"
                 v-model="preferences.preferred_job_types"
+                @change="handleSavePreferences"
                 type="checkbox"
                 :value="type"
                 class="w-4 h-4 cursor-pointer"
@@ -198,6 +213,7 @@ async function handleSavePreferences() {
           <label class="text-sm font-semibold text-gray-900">Work Location</label>
           <select
             v-model="preferredLocationSelect"
+            @change="handleSavePreferences"
             class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
           >
             <option>Remote</option>
@@ -212,6 +228,7 @@ async function handleSavePreferences() {
             <label class="text-sm font-semibold text-gray-900">Min Salary</label>
             <input
               v-model="preferences.min_salary"
+              @input="handleSalarySave"
               type="number"
               placeholder="Min"
               class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
@@ -221,6 +238,7 @@ async function handleSavePreferences() {
             <label class="text-sm font-semibold text-gray-900">Max Salary</label>
             <input
               v-model="preferences.max_salary"
+              @input="handleSalarySave"
               type="number"
               placeholder="Max"
               class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
@@ -231,6 +249,7 @@ async function handleSavePreferences() {
 
             <select
               v-model="preferences.salary_currency"
+              @change="handleSavePreferences"
               class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transitional-all"
             >
               <option value="USD">USD ($)</option>
@@ -261,6 +280,7 @@ async function handleSavePreferences() {
               <input
                 :id="stage.id"
                 v-model="preferences.company_stage_preference"
+                @change="handleSavePreferences"
                 type="checkbox"
                 :value="stage.value"
                 class="w-4 h-4 cursor-pointer"
@@ -327,15 +347,6 @@ async function handleSavePreferences() {
           />
         </div>
       </section>
-    </div>
-
-    <div class="text-center p-6 bg-white border border-gray-200">
-      <button class="button button-primary" :disabled="isSaving" @click="handleSavePreferences">
-        {{ isSaving ? 'Saving Changes...' : 'Save Changes' }}
-      </button>
-      <p v-if="saved && !isSaving" class="mt-3 text-sm font-medium text-green-600">
-        Preferences saved successfully
-      </p>
     </div>
   </section>
 </template>
