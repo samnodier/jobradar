@@ -35,6 +35,13 @@ func MatchJob(
 	}
 
 	// Early exit check
+	// TODO: (policy decision) if desiredRoles is empty, bestTitleScore stays 0
+	// and EVERY job is skipped — a user with skills + experience but no roles
+	// set gets zero matches, silently. This is inconsistent with skills/exp,
+	// which drop out (renormalize) when absent. Decide: (A) when no roles,
+	// skip the gate and let title drop out of the accumulator like the others,
+	// or (B) keep this and surface a UI nudge ("set a desired role to get
+	// matches"). Leaning B; not yet implemented.
 	if bestTitleScore < titleThreshold {
 		return MatchResult{
 			Score:   0,
@@ -45,6 +52,10 @@ func MatchJob(
 	activeWeight += 0.45
 
 	// 2. Skill Matching
+	// NOTE: matchedSkills is computed for DISPLAY whenever the user has skills,
+	// even if jobSkills is empty (so the skill dimension contributes nothing to
+	// the score). This means MatchedSkills can be non-empty while SkillScore is
+	// 0 — the two are separate concerns. Do not infer one from the other.
 	var matchedSkills []string
 	skillScore := 0.0
 	if len(userSkills) > 0 {
