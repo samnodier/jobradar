@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math"
 	"net/http"
 	"os"
 	"os/signal"
@@ -79,7 +78,7 @@ func main() {
 			log.Fatalf("Invalid AI_MATCH_THRESHOLD format: %v", err)
 		}
 	}
-	aiMatchThreshold = int(math.Max(0, math.Min(1, float64(aiMatchThreshold))))
+	aiMatchThreshold = max(0, min(100, aiMatchThreshold))
 
 	// Start a Cron Scheduler
 	scrapeInterval := 6 * time.Hour

@@ -134,13 +134,21 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 		skillScore = convert.ToFloat8(result.SkillScore)
 		expScore = convert.ToFloat8(result.ExpScore)
 		matchedSkills = result.MatchedSkills
-		// Compute the missing skills (user skills that weren't matched)
+		// Compute the missing skills: the job's required skills the user
+		// hasn't demonstrated (case-insensitive). These are the gaps the
+		// user would need to fill to qualify.
+		// NOTE: (design debt) matchedSet is description-derived — it holds the
+		// user's skills found in the job's prose, not the user's full skill
+		// set. So a skill the user genuinely has can be flagged "missing" if
+		// the description never spells it out. Revisit the canonical skill
+		// universe before the LLM prompt consumes matched/missing skills.
 		matchedSet := make(map[string]bool)
 		for _, ms := range matchedSkills {
-			matchedSet[ms] = true
+			matchedSet[strings.ToLower(ms)] = true
 		}
-		for _, s := range userSkills {
-			if !matchedSet[s] {
+		for _, s := range job.Skills {
+			jobSkillLower := strings.ToLower(s)
+			if !matchedSet[jobSkillLower] {
 				missingSkills = append(missingSkills, s)
 			}
 		}
@@ -148,6 +156,14 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 	} else {
 		score = 0
 	}
+	// TODO: (scale / re-match correctness) we currently upsert a score=0 row
+	// even for skipped (non-matching) jobs, so user_job_matches grows to
+	// jobs × users including all non-matches. The cleaner design is to NOT
+	// write skips. BUT do not ship "don't write skips" alone — if a job that
+	// previously scored above threshold drops below it on a profile re-match,
+	// the stale high-score row would linger. "Don't write skips" must arrive
+	// together with a DeleteMatch query. Fold this into the re-match-scale
+	// work (coalescing → batch RematchUser job), see LEARNINGS.md.
 
 	// Update Job in the database with match scores
 	err = cfg.db.UpsertMatch(ctx, database.UpsertMatchParams{

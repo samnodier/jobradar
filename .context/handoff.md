@@ -4,59 +4,49 @@
 
 ## Date
 
-2026-05-29
+2026-05-30
 
 ## Branch
 
-`feature/ai-matching`
+`feature/ai-matching` (committed + pushed as `c3faa98`)
 
 ## Accomplished
 
-- **Auto-save `PreferencesTab.vue`** — removed the Save Changes button and `saved` ref; replaced inline success paragraph with `toast.success`
-  - Checkboxes + selects → `@change="handleSavePreferences"` (immediate save)
-  - Salary inputs → `@input="handleSalarySave"` with an 800ms debounce (`let debounceTimer` at module scope)
-  - All six tag add/remove functions (roles, industries, skills) call `handleSavePreferences()` after mutation
-  - Dropped unused `isSaving` from `storeToRefs`
-- **Re-match on profile change** — new `enqueueMatchJobsForUser(ctx, userID)` helper in `worker_match.go`
-  - New SQL query `GetAllJobIDs` (`SELECT id FROM jobs`), `sqlc generate` run
-  - Helper loops all job IDs, pushes one `{job_id, user_id}` `JobMatchJob` per job; best-effort, logs per-job failures
-  - `handlerUpdatePreferences` calls it after commit, guarded by `if req.Skills != nil || req.DesiredRoles != nil`, logs returned error
-  - Uses `cfg.rootCtx` (not `r.Context()`) so the enqueue survives client disconnect
-- **App root context plumbing** — added `rootCtx context.Context` to `apiConfig`, assigned `context.Background()` in `main`, worker context now derives via `context.WithCancel(cfg.rootCtx)`
-- Fixed `%v` → `%w` in the helper's error wrap; rewrote the stale doc comment that still described `handleMatchJob`
-- LEARNINGS.md: context-for-background-work nuance + re-matching scale parts 1 (coalescing) and 2 (worker-side fan-out + Redis pipelining)
+- **Fixed the match-score deflation bug in `MatchJob` (`internal/matcher/matcher.go`)** — the algorithmic matcher was scoring every job far too low. Root cause: a missing signal was scored as `0` and still charged its full weight, so a near-perfect title still capped in the 50s.
+  - Reworked scoring into a **renormalizing accumulator**: `weightedSum` + `activeWeight`. Each dimension, if applicable, adds `weight × score` to `weightedSum` and `weight` to `activeWeight`; final = `weightedSum / activeWeight`. A missing dimension drops out of *both* numerator and denominator instead of scoring 0.
+  - Weights changed to **Title 0.45 / Skills 0.30 / Experience 0.25** (was 0.30/0.40/0.30) — title now leads.
+  - **Applicability rules:** title always counts (it's the early-exit gate, so `activeWeight ≥ 0.45` always — no divide-by-zero). Skill dimension counts only when `len(userSkills) > 0 && len(jobSkills) > 0` (drops out if *either* job or user has no skill data). Experience counts only when `len(userExps) > 0` (switched from `!= nil`, which let an empty-but-non-nil slice score a false 0).
+  - Removed the redundant `else` after the early-exit `return`.
+  - Verified by hand-trace: title/skill/exp = 1.0/0.5/0.4 → `0.70 / 1.0` → **70** (was producing ~40 under the bug).
+- **Added `AI_MATCH_THRESHOLD` env var (`cmd/jobradar/main.go:74-82`)** — float, default `0.6`, `log.Fatalf` on parse error, clamped to `[0,1]`. Mirrors the `SCRAPE_INTERVAL` loading pattern. This is the future enrichment gate (filter-then-enrich); **not yet wired into the enrichment path.**
+- **LEARNINGS.md** — added the renormalization lesson: a missing signal is "unknown," not 0 or 1; the accumulator denominator must collect *weights* of active dimensions, not the running weighted sum (the first dimension masks the bug because its weight equals its contribution); `0-because-no-data` vs `0-because-no-overlap` must be distinguished.
 
 ## Current State
 
-`go build ./cmd/... ./internal/...` passes clean (exit 0). The `./...` form errors only on the `postgres_data` Docker volume dir — not a code issue. Re-match-on-profile-change feature is complete and wired with correct context handling and consistent error flow.
+Matcher math is **correct and complete**. `go build ./internal/matcher/` passes and `go test ./internal/matcher/` is green. The renormalization handles every present/missing combination of the three signals; missing data no longer drags scores down. Committed and pushed as `c3faa98`. This is a stable stopping point — no half-finished work in the tree.
 
 ## What Didn't Work
 
-Nothing abandoned.
+Nothing abandoned. Two *rejected* approaches worth recording so they aren't re-tried:
+- **Substituting `1.0` for a missing skill score** — rejected: it's the mirror of the original bug (inflates instead of deflates; junk jobs with empty skill arrays would float to the top). Renormalization is the correct answer.
+- **A hardcoded "two-variable" formula** for the missing-experience case — rejected: only handles one missing dimension. Skills *or* experience *or* both can be missing; the accumulator handles all combinations with one code path.
 
 ## Next Steps
 
-1. **Manual verify** — update a skill in the UI, watch worker logs: match jobs should process for every job after save, response shouldn't hang
-2. **Phase 5.5 — encrypted Gemini API key storage** — `encrypted_gemini_api_key TEXT` on users, AES-256 at rest (server key from env), Settings UI, never logged. Must land before the LLM worker (worker needs a key).
-3. **LLM enrichment worker** — main Phase 5 feature. Calls Gemini for jobs above threshold, writes `ai_summary` + `is_enriched` via new `UpdateMatchEnrichment` query.
-
-## Known Tech Debt / Future Scale Work
-
-- Re-match-everything-on-every-change is O(jobs × saves) — fine now, a fire at production scale. Fix path (in LEARNINGS.md): server-side coalescing → single `RematchUser` batch job (fan-out inside worker) → Redis pipelining. Not needed yet.
-- `enqueueMatchJobsForUser` does N separate `Enqueue` calls = N round-trips. Pipeline candidate later.
-- `cfg.rootCtx` is `context.Background()` — never cancelled, so an in-flight enqueue isn't interrupted on shutdown. Acceptable for a fast loop; documented in LEARNINGS.md.
+1. **Run a scrape and eyeball the real score distribution** now that the math is fixed — confirm scores look sane and decide where obvious junk falls off.
+2. **Set the enrichment threshold** based on that distribution (placeholder is `0.6`). Treat `AI_MATCH_THRESHOLD` as the dial.
+3. **Fix the unit mismatch before wiring enrichment** — `MatchResult.Score` is a `0–100 int`, but `AI_MATCH_THRESHOLD` is a `0–1 float`. Comparing them directly is always true. Either store the threshold as 0–100 or divide score by 100 at the comparison point.
+4. **Phase 5.5 — encrypted Gemini API key storage** (fresh-brain task, do not start tired): add `encrypted_gemini_api_key TEXT` to users via a new migration, AES-256 at rest with server key from env, Settings UI, never logged. Must land before the LLM worker (worker needs a key).
+5. **LLM enrichment worker** — the Phase 5 headline. Calls Gemini for jobs above threshold, writes `ai_summary` + `is_enriched` via a new `UpdateMatchEnrichment` query (updates only those two columns).
 
 ## Open Questions
 
-- Jaro-Winkler threshold at 0.55 — still needs validation against real job data
-- LLM enrichment score threshold: 60 suggested, not yet decided
+- **Enrichment threshold value** — `0.6` placeholder, undecided until the post-fix score distribution is seen.
+- **Jaro-Winkler title threshold** — `0.55` (in `worker_match.go`), still not validated against real job data.
+- **Weights `0.45/0.30/0.25`** — sensible starting ratio, not yet validated against real jobs. Note: with renormalization, the *ratios* matter more than the absolute values.
 
 ## Files Changed
 
-- `frontend/src/components/PreferencesTab.vue`
-- `cmd/jobradar/worker_match.go` (new `enqueueMatchJobsForUser`)
-- `cmd/jobradar/handler_preferences.go` (enqueue call after commit)
-- `cmd/jobradar/main.go` (`rootCtx` on `apiConfig`)
-- `sql/queries/jobs.sql` (`GetAllJobIDs`)
-- `internal/database/jobs.sql.go` (sqlc generated)
+- `internal/matcher/matcher.go`
+- `cmd/jobradar/main.go`
 - `LEARNINGS.md`
