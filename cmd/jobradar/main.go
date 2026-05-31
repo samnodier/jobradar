@@ -5,9 +5,11 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -68,6 +70,16 @@ func main() {
 	ctx, cancel := context.WithCancel(cfg.rootCtx)
 	wp.Start(ctx)
 	defer cancel()
+
+	// Match threshold for AI enqueueing
+	aiMatchThreshold := 60
+	if val := os.Getenv("AI_MATCH_THRESHOLD"); val != "" {
+		aiMatchThreshold, err = strconv.Atoi(val)
+		if err != nil {
+			log.Fatalf("Invalid AI_MATCH_THRESHOLD format: %v", err)
+		}
+	}
+	aiMatchThreshold = int(math.Max(0, math.Min(1, float64(aiMatchThreshold))))
 
 	// Start a Cron Scheduler
 	scrapeInterval := 6 * time.Hour

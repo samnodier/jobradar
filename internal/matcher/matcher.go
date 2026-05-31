@@ -22,6 +22,9 @@ func MatchJob(
 	userExps []string,
 	titleThreshold float64,
 ) MatchResult {
+	weightedSum := 0.0
+	activeWeight := 0.0
+
 	// 1. Title Matching (Early Exit)
 	bestTitleScore := 0.0
 	for _, role := range desiredRoles {
@@ -38,6 +41,8 @@ func MatchJob(
 			Skipped: true,
 		}
 	}
+	weightedSum += 0.45 * bestTitleScore
+	activeWeight += 0.45
 
 	// 2. Skill Matching
 	var matchedSkills []string
@@ -46,21 +51,32 @@ func MatchJob(
 		sm := NewSkillMatcher(userSkills)
 		matchedSkills = sm.FindSkills(jobDesc)
 		if len(jobSkills) > 0 {
-		skillScore = float64(len(matchedSkills)) / float64(len(jobSkills))
+			skillScore = float64(len(matchedSkills)) / float64(len(jobSkills))
 		}
 		skillScore = math.Min(skillScore, 1.0)
 	}
 
-	// 3. Experience Matching
-	expScore := ExperienceMatch(userExps, jobDesc)
+	if len(jobSkills) > 0 && len(userSkills) > 0 {
+		weightedSum += 0.3 * skillScore
+		activeWeight += 0.3
+	}
 
-	// 4. Calculate weighted score (0 to 100)
-	// Weights: Title (30%), Skills (40%), Experience (30%)
-	weightedScore := (bestTitleScore * 0.3) + (skillScore * 0.4) + (expScore * 0.3)
+	// 3. Experience Matching
+	expScore := 0.0
+	if len(userExps) != 0 {
+		expScore = ExperienceMatch(userExps, jobDesc)
+		weightedSum += 0.25 * expScore
+		activeWeight += 0.25
+	}
+
+	// 4. Calculate final weighted score (0 to 100)
+	// Weights: Title (45%), Skills (30%), Experience (25%)
+	// activeWeight >= 0.45 always; title is unconditional past the gate
+	finalWeightedScore := weightedSum / activeWeight
 	scoreInt := max(
 		// Clamp between 0 and 100
 		min(
-			int(weightedScore*100), 100,
+			int(finalWeightedScore*100), 100,
 		), 0,
 	)
 
