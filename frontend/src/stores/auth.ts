@@ -67,6 +67,55 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
+    async deleteAccount() {
+      this.isSaving = true
+      this.error = null
+
+      try {
+        const response = await fetch('/api/users/me', { method: 'DELETE', credentials: 'include' })
+        if (!response.ok) {
+          const data = await response.json().catch(() => null)
+          throw new Error(data?.error ?? 'Failed to delete account. Please try again.')
+        }
+        // Purge the user state from memory immediately upon success
+        this.user = null
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Something went wrong. Please try again'
+        throw err
+      } finally {
+        this.isSaving = false
+      }
+    },
+
+    async setGeminiKey(key: string) {
+      this.isSaving = true
+      this.error = null
+
+      try {
+        const response = await fetch('/api/users/me/gemini-key', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            key: key,
+          }),
+        })
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => null)
+          throw new Error(data?.error ?? "Failed to add user's api key")
+        }
+
+        if (this.user) this.user.has_gemini_key = true
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to add the api key'
+      } finally {
+        this.isSaving = false
+      }
+    },
+
     async logout() {
       await fetch('/auth/logout', {
         method: 'POST',

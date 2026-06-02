@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strings"
 
@@ -31,6 +32,10 @@ type userUpdateRequest struct {
 	PreferredIndustries    []string `json:"preferred_industries"`
 	CompanyStagePreference []string `json:"company_stage_preference"`
 	NotifyJobs             *bool    `json:"notify_jobs"`
+}
+
+type geminiKeyRequest struct {
+	Key *string `json:"key"`
 }
 
 func (cfg *apiConfig) handlerUserGet(w http.ResponseWriter, r *http.Request) {
@@ -155,5 +160,49 @@ func (cfg *apiConfig) HandleDeleteAccount(w http.ResponseWriter, r *http.Request
 	// Respond with success
 	httpx.RespondJSON(w, http.StatusOK, map[string]string{
 		"message": "account deleted successfully",
+	})
+}
+
+func (cfg *apiConfig) handlerUserSetGeminiKey(w http.ResponseWriter, r *http.Request) {
+	userID, ok := getUserIDFromRequest(w, r)
+	if !ok {
+		return
+	}
+
+	var req geminiKeyRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.RespondError(w, http.StatusBadRequest, "invalid gemini key request body")
+		return
+	}
+
+	if req.Key == nil || strings.TrimSpace(*req.Key) == "" {
+		httpx.RespondError(w, http.StatusBadRequest, "api key is required")
+		return
+	}
+
+	// Get the key in plain text
+	plainTextGeminiKey := *req.Key
+
+	// Encrypt the key
+	encryptedGeminiKey, err := cfg.crypto.Encrypt(plainTextGeminiKey)
+	if err != nil {
+		log.Printf("[ERROR] failed to encrypt gemini key for user %s: %v\n", userID, err)
+		httpx.RespondError(w, http.StatusInternalServerError, "internal error while securing the key")
+		return
+	}
+
+	// Set the gemini api key
+	err = cfg.db.SetGeminiKeyByUserID(r.Context(), database.SetGeminiKeyByUserIDParams{
+		ID:                    userID,
+		EncryptedGeminiApiKey: &encryptedGeminiKey,
+	})
+	if err != nil {
+		httpx.RespondError(w, http.StatusInternalServerError, "failed to set the api key")
+		log.Printf("[ERROR] failed to save gemini key for user %s: %v\n", userID, err)
+		return
+	}
+
+	httpx.RespondJSON(w, http.StatusOK, map[string]string{
+		"message": "saved",
 	})
 }

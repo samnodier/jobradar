@@ -55,5 +55,11 @@ export const usePreferencesStore = defineStore('preferences', {
         this.isSaving = false
       }
     },
+
+    async toggleNotifyJobs() {
+      if (!this.preferences) return
+      const newVal = !this.preferences.notify_jobs
+      await this.updatePreferences({ notify_jobs: newVal })
+    },
   },
 })

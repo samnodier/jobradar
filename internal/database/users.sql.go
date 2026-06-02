@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -17,7 +18,7 @@ INSERT INTO users (
 ) VALUES (
     $1, $2, $3, $4
 )
-RETURNING id, email, username, full_name, avatar_url, phone, user_location, website_url, linkedin_url, github_url, headline, user_summary, availability, min_salary, max_salary, salary_currency, years_of_experience, preferred_job_types, preferred_industries, company_stage_preference, notify_jobs, is_admin, created_at, updated_at
+RETURNING id, email, username, full_name, avatar_url, phone, user_location, website_url, linkedin_url, github_url, headline, user_summary, availability, min_salary, max_salary, salary_currency, years_of_experience, preferred_job_types, preferred_industries, company_stage_preference, notify_jobs, is_admin, created_at, updated_at, encrypted_gemini_api_key
 `
 
 type CreateUserParams struct {
@@ -60,6 +61,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.IsAdmin,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.EncryptedGeminiApiKey,
 	)
 	return i, err
 }
@@ -99,6 +101,26 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]uuid.UUID, error) {
 	return items, nil
 }
 
+const getGeminiKeyByUserID = `-- name: GetGeminiKeyByUserID :one
+SELECT
+    id,
+    encrypted_gemini_api_key
+FROM users
+WHERE id = $1
+`
+
+type GetGeminiKeyByUserIDRow struct {
+	ID                    uuid.UUID `json:"id"`
+	EncryptedGeminiApiKey *string   `json:"encrypted_gemini_api_key"`
+}
+
+func (q *Queries) GetGeminiKeyByUserID(ctx context.Context, id uuid.UUID) (GetGeminiKeyByUserIDRow, error) {
+	row := q.db.QueryRow(ctx, getGeminiKeyByUserID, id)
+	var i GetGeminiKeyByUserIDRow
+	err := row.Scan(&i.ID, &i.EncryptedGeminiApiKey)
+	return i, err
+}
+
 const getUserByID = `-- name: GetUserByID :one
 SELECT
     id,
@@ -123,15 +145,44 @@ SELECT
     company_stage_preference,
     notify_jobs,
     is_admin,
+    (encrypted_gemini_api_key IS NOT NULL)::boolean AS has_gemini_key,
     created_at,
     updated_at
 FROM users
 WHERE id = $1
 `
 
-func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
+type GetUserByIDRow struct {
+	ID                     uuid.UUID  `json:"id"`
+	Email                  string     `json:"email"`
+	Username               string     `json:"username"`
+	FullName               *string    `json:"full_name"`
+	AvatarUrl              *string    `json:"avatar_url"`
+	Phone                  *string    `json:"phone"`
+	UserLocation           *string    `json:"user_location"`
+	WebsiteUrl             *string    `json:"website_url"`
+	LinkedinUrl            *string    `json:"linkedin_url"`
+	GithubUrl              *string    `json:"github_url"`
+	Headline               *string    `json:"headline"`
+	UserSummary            *string    `json:"user_summary"`
+	Availability           *string    `json:"availability"`
+	MinSalary              *int32     `json:"min_salary"`
+	MaxSalary              *int32     `json:"max_salary"`
+	SalaryCurrency         *string    `json:"salary_currency"`
+	YearsOfExperience      *int32     `json:"years_of_experience"`
+	PreferredJobTypes      []string   `json:"preferred_job_types"`
+	PreferredIndustries    []string   `json:"preferred_industries"`
+	CompanyStagePreference []string   `json:"company_stage_preference"`
+	NotifyJobs             *bool      `json:"notify_jobs"`
+	IsAdmin                *bool      `json:"is_admin"`
+	HasGeminiKey           bool       `json:"has_gemini_key"`
+	CreatedAt              *time.Time `json:"created_at"`
+	UpdatedAt              *time.Time `json:"updated_at"`
+}
+
+func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (GetUserByIDRow, error) {
 	row := q.db.QueryRow(ctx, getUserByID, id)
-	var i User
+	var i GetUserByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
@@ -155,6 +206,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.CompanyStagePreference,
 		&i.NotifyJobs,
 		&i.IsAdmin,
+		&i.HasGeminiKey,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -197,9 +249,36 @@ type GetUserByProviderIdentityParams struct {
 	AuthProviderID string `json:"auth_provider_id"`
 }
 
-func (q *Queries) GetUserByProviderIdentity(ctx context.Context, arg GetUserByProviderIdentityParams) (User, error) {
+type GetUserByProviderIdentityRow struct {
+	ID                     uuid.UUID  `json:"id"`
+	Email                  string     `json:"email"`
+	Username               string     `json:"username"`
+	FullName               *string    `json:"full_name"`
+	AvatarUrl              *string    `json:"avatar_url"`
+	Phone                  *string    `json:"phone"`
+	UserLocation           *string    `json:"user_location"`
+	WebsiteUrl             *string    `json:"website_url"`
+	LinkedinUrl            *string    `json:"linkedin_url"`
+	GithubUrl              *string    `json:"github_url"`
+	Headline               *string    `json:"headline"`
+	UserSummary            *string    `json:"user_summary"`
+	Availability           *string    `json:"availability"`
+	MinSalary              *int32     `json:"min_salary"`
+	MaxSalary              *int32     `json:"max_salary"`
+	SalaryCurrency         *string    `json:"salary_currency"`
+	YearsOfExperience      *int32     `json:"years_of_experience"`
+	PreferredJobTypes      []string   `json:"preferred_job_types"`
+	PreferredIndustries    []string   `json:"preferred_industries"`
+	CompanyStagePreference []string   `json:"company_stage_preference"`
+	NotifyJobs             *bool      `json:"notify_jobs"`
+	IsAdmin                *bool      `json:"is_admin"`
+	CreatedAt              *time.Time `json:"created_at"`
+	UpdatedAt              *time.Time `json:"updated_at"`
+}
+
+func (q *Queries) GetUserByProviderIdentity(ctx context.Context, arg GetUserByProviderIdentityParams) (GetUserByProviderIdentityRow, error) {
 	row := q.db.QueryRow(ctx, getUserByProviderIdentity, arg.AuthProvider, arg.AuthProviderID)
-	var i User
+	var i GetUserByProviderIdentityRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
@@ -227,6 +306,22 @@ func (q *Queries) GetUserByProviderIdentity(ctx context.Context, arg GetUserByPr
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const setGeminiKeyByUserID = `-- name: SetGeminiKeyByUserID :exec
+UPDATE users
+SET encrypted_gemini_api_key = $2
+WHERE id = $1
+`
+
+type SetGeminiKeyByUserIDParams struct {
+	ID                    uuid.UUID `json:"id"`
+	EncryptedGeminiApiKey *string   `json:"encrypted_gemini_api_key"`
+}
+
+func (q *Queries) SetGeminiKeyByUserID(ctx context.Context, arg SetGeminiKeyByUserIDParams) error {
+	_, err := q.db.Exec(ctx, setGeminiKeyByUserID, arg.ID, arg.EncryptedGeminiApiKey)
+	return err
 }
 
 const updateUser = `-- name: UpdateUser :one
@@ -258,7 +353,7 @@ SET
     notify_jobs = COALESCE($19, notify_jobs),
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, email, username, full_name, avatar_url, phone, user_location, website_url, linkedin_url, github_url, headline, user_summary, availability, min_salary, max_salary, salary_currency, years_of_experience, preferred_job_types, preferred_industries, company_stage_preference, notify_jobs, is_admin, created_at, updated_at
+RETURNING id, email, username, full_name, avatar_url, phone, user_location, website_url, linkedin_url, github_url, headline, user_summary, availability, min_salary, max_salary, salary_currency, years_of_experience, preferred_job_types, preferred_industries, company_stage_preference, notify_jobs, is_admin, created_at, updated_at, encrypted_gemini_api_key
 `
 
 type UpdateUserParams struct {
@@ -331,6 +426,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.IsAdmin,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.EncryptedGeminiApiKey,
 	)
 	return i, err
 }

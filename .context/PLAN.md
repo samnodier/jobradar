@@ -58,8 +58,16 @@ Jobradar is a full job search command center inspired by career-ops (<https://gi
 
 ### Phase 5.5 — User API Key Management
 
-- **Status:** Not Started
+- **Status:** Done
 - **Description:** Let users provide their own Gemini API key from the Settings page. Store encrypted at rest (AES-256, server-side key from env). Never log. Link to aistudio.google.com/apikey. Schema: add `encrypted_gemini_api_key TEXT` column to users.
+- **Built:**
+  - `encrypted_gemini_api_key TEXT` column on `users` (migration `20260531153511`)
+  - `internal/crypto` — AES-256-GCM service; `ENCRYPTION_KEY` (base64, 32 bytes) loaded from env, `log.Fatalf` on missing/invalid key (fail-loud)
+  - `PUT /api/users/me/gemini-key` — validates, encrypts, stores ciphertext; never logs the key
+  - `SetGeminiKeyByUserID` (store) and `GetGeminiKeyByUserID` (read for worker) queries
+  - `has_gemini_key` boolean derived in SQL (`encrypted_gemini_api_key IS NOT NULL`) — exposes "key set" state to the frontend without ever sending the ciphertext
+  - `SettingsTab.vue` — password-masked input, "Key Configured / Replace" state, optimistic `has_gemini_key` flip, link to aistudio.google.com/apikey
+- **Note:** Decryption is NOT part of 5.5 — it happens where the key is *consumed*, in the Phase 5 LLM enrichment worker (`crypto.Decrypt`, handle the no-key case).
 
 ### Phase 6 — Auto Resume Generation
 
