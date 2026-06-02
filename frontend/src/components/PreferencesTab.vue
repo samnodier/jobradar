@@ -9,7 +9,6 @@ import { usePreferencesStore } from '@/stores/preferences'
 const preferencesStore = usePreferencesStore()
 const { preferences } = storeToRefs(preferencesStore)
 const toast = useToast()
-const props = defineProps<{ activeTab: string }>()
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -155,7 +154,7 @@ async function handleSavePreferences() {
 </script>
 
 <template>
-  <section v-if="activeTab === props.activeTab && preferences" class="flex flex-col gap-6">
+  <section v-if="preferences" class="flex flex-col gap-6">
     <div class="grid gap-6" style="grid-template-columns: repeat(auto-fit, minmax(400px, 1fr))">
       <!-- Job Preferences -->
       <section class="p-6 bg-white border border-gray-200">
@@ -348,5 +347,9 @@ async function handleSavePreferences() {
         </div>
       </section>
     </div>
+  </section>
+
+  <section v-else class="flex items-center justify-center py-12 text-sm text-gray-400">
+    <span class="animate-pulse">Loading preferences…</span>
   </section>
 </template>

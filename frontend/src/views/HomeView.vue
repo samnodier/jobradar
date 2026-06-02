@@ -31,27 +31,12 @@
             placeholder="Search by title, company, or skill"
             class="flex-1 border-none outline-none h-full p-3 text-base text-gray-900 placeholder:text-gray-400"
           />
-          <button
-            @click="goToJobs"
-            class="h-full bg-accent text-white px-6 font-semibold hover:-translate-y-px transition-transform"
-          >
-            Search
-          </button>
+          <button @click="goToJobs" class="h-full button button-primary">Search</button>
         </div>
 
         <div class="flex justify-center gap-4 mt-8">
-          <RouterLink
-            to="/jobs"
-            class="px-8 py-3 bg-accent text-white font-semibold hover:-translate-y-px transition-transform text-[0.95rem]"
-          >
-            Browse All Jobs
-          </RouterLink>
-          <button
-            @click="goToJobs()"
-            class="px-8 py-3 bg-bg-secondary text-gray-900 border border-ui-border font-semibold hover:-translate-y-px transition-transform text-[0.95rem]"
-          >
-            Find Remote Roles
-          </button>
+          <RouterLink to="/jobs" class="button button-primary"> Browse All Jobs </RouterLink>
+          <button @click="goToJobs()" class="button button-secondary">Find Remote Roles</button>
         </div>
 
         <div class="flex flex-wrap gap-3 mt-7 items-center justify-center">
@@ -169,19 +154,17 @@
                   <a
                     :href="job.source_url"
                     target="_blank"
-                    class="text-[0.95rem] font-semibold text-gray-900 hover:text-accent transition-colors"
+                    class="text-sm font-semibold text-gray-900 hover:text-accent transition-colors line-clamp-1"
                   >
                     {{ job.title }}
                   </a>
                 </div>
               </div>
-              <span class="hidden md:block text-[0.95rem] text-gray-600">{{
-                job.company_name
-              }}</span>
-              <span class="hidden md:block text-[0.95rem] text-gray-500">{{
+              <span class="hidden md:block text-sm text-gray-600">{{ job.company_name }}</span>
+              <span class="hidden md:block text-sm text-gray-500">{{
                 job.employment_type || 'Full time'
               }}</span>
-              <span class="text-[0.95rem] text-gray-400 text-right md:text-left">{{
+              <span class="text-sm text-gray-400 text-right md:text-left">{{
                 formatWhen(job)
               }}</span>
             </div>

@@ -6,7 +6,6 @@ import { useToast } from '@/composables/useToast'
 import { MapPin, Plus, SquarePen } from '@lucide/vue'
 import { ensureAbsoluteUrl } from '@/utils/url'
 import { useAuthStore } from '@/stores/auth'
-import { useRouter } from 'vue-router'
 import { useProfileStore } from '@/stores/profile'
 import ExperienceCard from '@/components/ExperienceCard.vue'
 import ExperienceForm from '@/components/ExperienceForm.vue'
@@ -20,6 +19,8 @@ import CertificationForm from '@/components/CertificationForm.vue'
 import LanguageCard from '@/components/LanguageCard.vue'
 import LanguageForm from '@/components/LanguageForm.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
+import PreferencesTab from '@/components/PreferencesTab.vue'
+import SettingsTab from '@/components/SettingsTab.vue'
 
 import type { Education, EducationInput } from '@/types/education'
 import type { Project, ProjectInput } from '@/types/project'
@@ -27,11 +28,9 @@ import type { Certification, CertificationInput } from '@/types/certification'
 import type { Language, LanguageInput } from '@/types/language'
 import type { Experience, ExperienceInput } from '@/types/experience'
 import type { User } from '@/types/user'
-import PreferencesTab from '@/components/PreferencesTab.vue'
 
-type ProfileTab = 'overview' | 'experience' | 'preferences' | 'settings'
+type ProfileTab = 'overview' | 'resume details' | 'preferences' | 'settings'
 
-const router = useRouter()
 const authStore = useAuthStore()
 const profileStore = useProfileStore()
 const { experiences, educations, projects, certifications, languages } = storeToRefs(profileStore)
@@ -40,9 +39,6 @@ const toast = useToast()
 const activeTab = ref<ProfileTab>('overview')
 const savedJobsCount = ref(0)
 const applicationsCount = ref(0)
-const isDeleteConfirmVisible = ref(false)
-const typedEmail = ref('')
-const deleteError = ref('')
 const isEditExperienceOpen = ref(false)
 const isEditProfileOpen = ref(false)
 const selectedExperience = ref<Experience | undefined>(undefined)
@@ -65,7 +61,7 @@ const { preferences } = storeToRefs(preferencesStore)
 
 const tabs: Array<{ key: ProfileTab; label: string }> = [
   { key: 'overview', label: 'Overview' },
-  { key: 'experience', label: 'Resume Details' },
+  { key: 'resume details', label: 'Resume Details' },
   { key: 'preferences', label: 'Preferences' },
   { key: 'settings', label: 'Settings' },
 ]
@@ -133,46 +129,6 @@ async function handleSaveProfile(payload: Partial<User>) {
   } else {
     toast.success('User updated successfully')
     isEditProfileOpen.value = false
-  }
-}
-
-async function toggleNotifyJobs() {
-  if (!preferences?.value) return
-  preferences.value.notify_jobs = !preferences.value.notify_jobs
-  try {
-    await preferencesStore.updatePreferences(preferences.value)
-    toast.success(
-      preferences.value.notify_jobs ? 'Job notifications enabled' : 'Job notifications disabled',
-    )
-  } catch (err) {
-    // revert on failure
-    preferences.value.notify_jobs = !preferences.value.notify_jobs
-    toast.error('Failed to update notification setting' + err)
-  }
-}
-
-function cancelDelete() {
-  isDeleteConfirmVisible.value = false
-  typedEmail.value = ''
-  deleteError.value = ''
-}
-
-async function deleteAccount() {
-  if (typedEmail.value !== authStore.user?.email) {
-    deleteError.value = 'Please enter your email address to confirm account deletion.'
-    return
-  }
-  try {
-    const response = await fetch('/api/users/me', { method: 'DELETE', credentials: 'include' })
-    if (!response.ok) {
-      deleteError.value = 'Failed to delete account. Please try again.'
-      return
-    }
-    authStore.user = null
-    router.push('/login')
-  } catch (err) {
-    deleteError.value =
-      'Something went wrong. Please try again' + (err instanceof Error ? err.message : String(err))
   }
 }
 
@@ -626,7 +582,7 @@ onMounted(async () => {
           </section>
 
           <!-- Experience -->
-          <section v-if="activeTab === 'experience'" class="flex flex-col">
+          <section v-if="activeTab === 'resume details'" class="flex flex-col">
             <!-- Work History Section -->
 
             <div class="mt-2 mb-2 p-6 border border-gray-200">
@@ -768,81 +724,10 @@ onMounted(async () => {
           </section>
 
           <!-- Preferences -->
-          <PreferencesTab :active-tab="activeTab" />
+          <PreferencesTab v-if="activeTab === 'preferences'" :preferences="preferences" />
 
           <!-- Settings -->
-          <section v-if="activeTab === 'settings' && preferences" class="flex flex-col gap-6">
-            <div
-              class="grid gap-6"
-              style="grid-template-columns: repeat(auto-fit, minmax(400px, 1fr))"
-            >
-              <!-- Notifications -->
-              <section class="p-6 bg-white border border-gray-200">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">Notifications</h2>
-                <div class="flex flex-row justify-between items-center gap-2 mb-4">
-                  <div class="flex flex-col gap-0.5">
-                    <label class="text-sm font-semibold text-gray-900">Job Recommendations</label>
-                    <span class="text-xs text-gray-400"
-                      >Receive notifications about matching jobs</span
-                    >
-                  </div>
-                  <button
-                    class="toggle-switch"
-                    role="switch"
-                    :aria-checked="preferences.notify_jobs"
-                    @click="toggleNotifyJobs"
-                  />
-                </div>
-              </section>
-
-              <!-- Privacy & Account -->
-              <section class="p-6 bg-white border border-gray-200">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">Privacy & Account</h2>
-
-                <div class="flex flex-col gap-2 mb-4">
-                  <button class="button button-secondary">Download My Data</button>
-                </div>
-
-                <div v-if="!isDeleteConfirmVisible" class="flex flex-col gap-2">
-                  <button class="button button-danger" @click="isDeleteConfirmVisible = true">
-                    Delete My Account
-                  </button>
-                </div>
-
-                <div v-else class="flex flex-col gap-2">
-                  <p class="text-xs" :style="{ color: 'var(--color-accent)' }">
-                    This action is permanent and cannot be undone.
-                  </p>
-                  <label class="text-sm font-semibold text-gray-900"
-                    >Type your email to confirm</label
-                  >
-                  <input
-                    v-model="typedEmail"
-                    type="email"
-                    placeholder="your@email.com"
-                    class="px-4 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
-                  />
-                  <p v-if="deleteError" class="text-xs text-red-600">{{ deleteError }}</p>
-                  <div class="flex gap-2 mt-1">
-                    <button class="button button-secondary" @click="cancelDelete">Cancel</button>
-                    <button
-                      class="button button-primary"
-                      :disabled="typedEmail !== authStore.user?.email"
-                      @click="deleteAccount"
-                    >
-                      Confirm Delete
-                    </button>
-                  </div>
-                </div>
-              </section>
-            </div>
-          </section>
-          <div
-            v-else-if="(activeTab === 'settings' || activeTab === 'preferences') && !preferences"
-            class="flex items-center justify-center py-12 text-sm text-gray-400"
-          >
-            <span class="animate-pulse">Loading preferences…</span>
-          </div>
+          <SettingsTab v-if="activeTab === 'settings'" :user="authStore.user" />
         </div>
       </div>
     </main>

@@ -113,6 +113,7 @@ type User struct {
 	IsAdmin                *bool      `json:"is_admin"`
 	CreatedAt              *time.Time `json:"created_at"`
 	UpdatedAt              *time.Time `json:"updated_at"`
+	EncryptedGeminiApiKey  *string    `json:"encrypted_gemini_api_key"`
 }
 
 type UserAccount struct {

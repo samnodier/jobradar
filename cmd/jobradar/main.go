@@ -20,6 +20,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 	"github.com/samnodier/jobradar/internal/auth"
+	"github.com/samnodier/jobradar/internal/crypto"
 	"github.com/samnodier/jobradar/internal/database"
 	"github.com/samnodier/jobradar/internal/queue"
 )
@@ -30,6 +31,7 @@ type apiConfig struct {
 	pool         *pgxpool.Pool
 	queue        *queue.RedisQueue
 	rootCtx      context.Context
+	crypto       *crypto.Service
 	IsProduction bool
 }
 
@@ -45,6 +47,14 @@ func main() {
 		log.Fatalf("failed to create a db client: %v", err)
 	}
 
+	// Get the encryption key
+	encKey := os.Getenv("ENCRYPTION_KEY")
+	// Initialize the crypto service - Fail Loud
+	cryptoService, err := crypto.New(encKey)
+	if err != nil {
+		log.Fatalf("CRITICAL: Failed to initialize crypto service: %v", err)
+	}
+
 	rdb := redis.NewClient(&redis.Options{
 		Addr: os.Getenv("REDIS_ADDR"),
 	})
@@ -55,6 +65,7 @@ func main() {
 		pool:         dbClient.Pool,
 		queue:        q,
 		rootCtx:      context.Background(),
+		crypto:       cryptoService,
 		IsProduction: os.Getenv("APP_ENV") == "production",
 	}
 
@@ -195,6 +206,7 @@ func main() {
 			r.Get("/users/me", cfg.handlerUserGet)
 			r.Patch("/users/me", cfg.handlerUserUpdate)
 			r.Delete("/users/me", cfg.HandleDeleteAccount)
+			r.Put("/users/me/gemini-key", cfg.handlerUserSetGeminiKey)
 		})
 	})
 

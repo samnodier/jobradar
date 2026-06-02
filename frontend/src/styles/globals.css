@@ -54,7 +54,7 @@ body {
 }
 
 .button-secondary {
-  @apply bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100 hover:text-gray-900 hover:-translate-y-px active:translate-y-0 active:scale-[0.98] shadow-sm;
+  @apply bg-gray-50 border border-gray-300 text-gray-700 hover:bg-gray-100 hover:text-gray-900 hover:-translate-y-px active:translate-y-0 active:scale-[0.98];
 }
 
 .button-danger {
