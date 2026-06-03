@@ -292,6 +292,20 @@ Smart (container) vs dumb (presentational) Vue components. A dumb component take
 
 Don't check the same condition in two places. If a parent gates a child with `v-if="cond"`, the child can't also own a `v-else` loading branch for `!cond` — that branch is dead code, because the child only mounts when `cond` is already true. Pick one owner of the condition. Corollary: passing a prop a component is already gated on is dead weight, and passing a prop the child doesn't declare silently becomes a fallthrough HTML attribute on the child's root element.
 
-Vue Router `router.push({ name })` needs the registered route *name*, not a path. If routes are named `'login'`/`'home'`, then `{ name: '/login' }` matches nothing — navigation silently fails with only a console warning. TypeScript won't catch it because names are plain strings. Use the exact registered name, or push the path as a string (`router.push('/login')`).
+Vue Router `router.push({ name })` needs the registered route _name_, not a path. If routes are named `'login'`/`'home'`, then `{ name: '/login' }` matches nothing — navigation silently fails with only a console warning. TypeScript won't catch it because names are plain strings. Use the exact registered name, or push the path as a string (`router.push('/login')`).
 
 Pick one error-propagation convention per store and stick to it. Either actions rethrow (and components wrap calls in try/catch) or actions swallow and set `this.error` (and components read the flag after awaiting). Mixing both in the same store — one action rethrows, another swallows — forces future-you to guess which pattern each action uses.
+
+A queue job's payload is a contract between enqueuer and handler. Give each job type its own payload struct — even when they're identical today — so each contract evolves for its own reasons (low coupling). The cost is duplication now; the justification is expected divergence, which you must be able to name. Duplicating without that reason is premature abstraction.
+
+Don't enqueue work that's guaranteed to fail — gate it at the producer (same instinct as validating at the API edge before hitting the DB). A pre-enqueue check can go stale by the time the job runs, so the handler must still validate defensively. The pre-check is an optimization; the handler's check is the guarantee.
+
+Producer and consumer of a queue job can live in different files. The enqueue decision belongs with whoever triggers it (the match handler); the job's processing logic belongs in its own file per job type. Keeps each file single-concern and makes "add a job type" mean "add a file," not "grow a file."
+
+Retry granularity — a handler that returns an error retries the whole handler, not the failed line. Before return err, ask "what re-runs?" If a cheap sub-step fails but retrying re-does expensive work that already succeeded (and is idempotent), return nil and let a higher-level mechanism recover it. Match the retry to the cost of the work it repeats.
+
+A registered handler is a runtime wiring step, not a compile-time one — forgetting RegisterHandler compiles green but the job type silently has no consumer. "It builds" never proves the plumbing is connected; only running it and seeing the log does.
+
+When the same resource is served by two endpoints — one returning the raw DB struct, one returning a hand-mapped DTO — a new column added to the query appears automatically on the raw endpoint but is silently dropped by the DTO until you add the field by hand. Two response shapes for one resource = a drift hazard. Either converge on one shape, or treat "add field to every DTO" as part of the migration checklist.
+
+In filter-then-enrich, the cheap filter must own the score — because the score is what gates the expensive step. If the LLM produced the score, you'd have to run the LLM on everything to decide whether to run the LLM, and the filter collapses. The expensive stage can only ever see pre-filtered inputs.

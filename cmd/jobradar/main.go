@@ -26,13 +26,14 @@ import (
 )
 
 type apiConfig struct {
-	db           *database.Queries
-	rdb          *redis.Client
-	pool         *pgxpool.Pool
-	queue        *queue.RedisQueue
-	rootCtx      context.Context
-	crypto       *crypto.Service
-	IsProduction bool
+	db               *database.Queries
+	rdb              *redis.Client
+	pool             *pgxpool.Pool
+	queue            *queue.RedisQueue
+	rootCtx          context.Context
+	crypto           *crypto.Service
+	aiMatchThreshold int32
+	IsProduction     bool
 }
 
 func main() {
@@ -59,14 +60,28 @@ func main() {
 		Addr: os.Getenv("REDIS_ADDR"),
 	})
 	q := queue.NewRedisQueue(rdb)
+
+	// Match threshold for AI enqueueing
+	var aiMatchThreshold int32 = 60
+	if val := os.Getenv("AI_MATCH_THRESHOLD"); val != "" {
+		var parsed int
+		parsed, err = strconv.Atoi(val)
+		if err != nil {
+			log.Fatalf("Invalid AI_MATCH_THRESHOLD format: %v", err)
+		}
+		aiMatchThreshold = int32(parsed)
+	}
+	aiMatchThreshold = max(int32(0), min(int32(100), aiMatchThreshold))
+
 	cfg := &apiConfig{
-		db:           dbClient.Queries,
-		rdb:          rdb,
-		pool:         dbClient.Pool,
-		queue:        q,
-		rootCtx:      context.Background(),
-		crypto:       cryptoService,
-		IsProduction: os.Getenv("APP_ENV") == "production",
+		db:               dbClient.Queries,
+		rdb:              rdb,
+		pool:             dbClient.Pool,
+		queue:            q,
+		rootCtx:          context.Background(),
+		crypto:           cryptoService,
+		aiMatchThreshold: aiMatchThreshold,
+		IsProduction:     os.Getenv("APP_ENV") == "production",
 	}
 
 	wp := queue.NewWorkerPool(q, 2)
@@ -76,20 +91,13 @@ func main() {
 	wp.RegisterHandler(queue.JobMatchJob, func(ctx context.Context, job *queue.Job) error {
 		return cfg.handleMatchJob(ctx, job)
 	})
+	wp.RegisterHandler(queue.JobEnrichMatch, func(ctx context.Context, job *queue.Job) error {
+		return cfg.handleEnrichJob(ctx, job)
+	})
 
 	ctx, cancel := context.WithCancel(cfg.rootCtx)
 	wp.Start(ctx)
 	defer cancel()
-
-	// Match threshold for AI enqueueing
-	aiMatchThreshold := 60
-	if val := os.Getenv("AI_MATCH_THRESHOLD"); val != "" {
-		aiMatchThreshold, err = strconv.Atoi(val)
-		if err != nil {
-			log.Fatalf("Invalid AI_MATCH_THRESHOLD format: %v", err)
-		}
-	}
-	aiMatchThreshold = max(0, min(100, aiMatchThreshold))
 
 	// Start a Cron Scheduler
 	scrapeInterval := 6 * time.Hour

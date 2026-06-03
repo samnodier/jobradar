@@ -64,7 +64,7 @@ SELECT
     u.company_stage_preference,
     u.notify_jobs,
     u.is_admin,
-    (encrypted_gemini_api_key IS NOT NULL)::boolean AS has_gemini_key,
+    (u.encrypted_gemini_api_key IS NOT NULL)::boolean AS has_gemini_key,
     u.created_at,
     u.updated_at
 FROM users AS u

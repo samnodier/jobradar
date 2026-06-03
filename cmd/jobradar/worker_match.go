@@ -29,7 +29,8 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 	var matchJobPayload MatchJobPayload
 	err := json.Unmarshal(qJob.Payload, &matchJobPayload)
 	if err != nil {
-		return errors.New("failed to unmarshall payload")
+		log.Printf("handleMatchJob: failed to unmarshall payload")
+		return nil
 	}
 	jobIDStr, userIDStr := matchJobPayload.JobID, matchJobPayload.UserID
 	jobID, err := uuid.Parse(jobIDStr)
@@ -181,6 +182,36 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 	if err != nil {
 		return err
 	}
+	// If this match scored high enough And the user has a Gemini key
+	// Push an enrich job
+	if score >= cfg.aiMatchThreshold {
+		user, err := cfg.db.GetUserByID(ctx, userID)
+		if err != nil {
+			log.Printf("handlerMatchJob: failed to fetch user %s: %v", userID, err)
+			return nil
+		}
+		if user.HasGeminiKey {
+			enrichPayload, err := json.Marshal(EnrichJobPayload{
+				JobID:  jobID.String(),
+				UserID: userID.String(),
+			})
+			if err != nil {
+				log.Printf("handleMatchJob: failed to marshal enrich payload: %v", err)
+				return nil
+			}
+			err = cfg.queue.Enqueue(ctx, &queue.Job{
+				ID:       jobID.String() + "-" + userID.String() + "-enrich",
+				Type:     queue.JobEnrichMatch,
+				Payload:  enrichPayload,
+				MaxRetry: 3,
+			})
+			if err != nil {
+				log.Printf("handleMatchJob: failed to enqueue enrich job: %v", err)
+			}
+		}
+
+	}
+
 	// Don't log for every match
 	// log.Printf("Job %s matched for user %s: score=%d, skipped =%v", job.ID, userID, score, result.Skipped)
 	return nil
@@ -199,7 +230,7 @@ func (cfg *apiConfig) enqueueMatchJobsForUser(ctx context.Context, userID uuid.U
 	// Fetch all job IDs
 	jobsIDs, err := cfg.db.GetAllJobIDs(ctx)
 	if err != nil {
-		return fmt.Errorf("error fetching job IDs for rematching: %w", err)
+		return fmt.Errorf("enqueueMatchJobsForUser: error fetching job IDs for rematching: %w", err)
 	}
 	for _, jobID := range jobsIDs {
 		payloadData := MatchJobPayload{
@@ -208,7 +239,7 @@ func (cfg *apiConfig) enqueueMatchJobsForUser(ctx context.Context, userID uuid.U
 		}
 		matchJobPayload, err := json.Marshal(payloadData)
 		if err != nil {
-			log.Printf("Failed to marshal match job payload: %v", err)
+			log.Printf("enqueueMatchJobsForUser: Failed to marshal match job payload: %v", err)
 			continue
 		}
 		// Push matching task to queue
@@ -219,7 +250,7 @@ func (cfg *apiConfig) enqueueMatchJobsForUser(ctx context.Context, userID uuid.U
 			MaxRetry: 3,
 		})
 		if err != nil {
-			log.Printf("failed to enqueue matching job for %s: %v", jobID, err)
+			log.Printf("enqueueMatchJobsForUser: failed to enqueue matching job for %s: %v", jobID, err)
 		}
 	}
 	return nil

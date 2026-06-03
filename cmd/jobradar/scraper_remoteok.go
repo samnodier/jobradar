@@ -21,6 +21,11 @@ type MatchJobPayload struct {
 	UserID string `json:"user_id"`
 }
 
+type EnrichJobPayload struct {
+	JobID  string `json:"job_id"`
+	UserID string `json:"user_id"`
+}
+
 func (cfg *apiConfig) scrapeRemoteOK(ctx context.Context) error {
 	log.Println("Starting RemoteOK scrape...")
 

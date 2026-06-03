@@ -29,6 +29,7 @@ type UserResponse struct {
 	SalaryCurrency    string `json:"salary_currency"`
 	YearsOfExperience int32  `json:"years_of_experience"`
 	IsAdmin           bool   `json:"is_admin"`
+	HasGeminiKey      bool   `json:"has_gemini_key"`
 	CreatedAt         string `json:"created_at"`
 }
 
@@ -71,6 +72,7 @@ func (h *Handler) HandlerUserGet(w http.ResponseWriter, r *http.Request) {
 		SalaryCurrency:    convert.FromNullString(user.SalaryCurrency),
 		YearsOfExperience: convert.FromNullInt32(user.YearsOfExperience),
 		IsAdmin:           user.IsAdmin != nil && *user.IsAdmin,
+		HasGeminiKey:      user.HasGeminiKey,
 		CreatedAt:         convert.FromNullTime(user.CreatedAt),
 	}
 
