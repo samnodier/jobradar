@@ -11,6 +11,7 @@ type JobType string
 const (
 	JobScrapeRemoteOK JobType = "scrape:remoteok"
 	JobMatchJob       JobType = "match:job"
+	JobEnrichMatch    JobType = "enrich:match"
 )
 
 type Job struct {
