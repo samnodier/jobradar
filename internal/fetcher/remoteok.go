@@ -1,4 +1,4 @@
-// Package fether
+// Package fetcher
 package fetcher
 
 import (

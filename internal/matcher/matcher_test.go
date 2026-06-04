@@ -8,7 +8,7 @@ func TestMatchJob(t *testing.T) {
 	desiredRoles := []string{"Go Developer", "Backend Engineer"}
 	userSkills := []string{"Go", "PostgreSQL", "Vue.js", "Docker"}
 	jobSkills := []string{"Go", "SQL", "React"}
-	userExps := []string{
+	userExperiences := []string{
 		"Built scalable backend systems and web applications with Go and Vue.",
 		"Optimized relational databases like PostgreSQL and Docker container deployments.",
 	}
@@ -42,7 +42,7 @@ func TestMatchJob(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		res := MatchJob(tt.jobTitle, tt.jobDesc, desiredRoles, userSkills, jobSkills, userExps, 0.55)
+		res := MatchJob(tt.jobTitle, tt.jobDesc, desiredRoles, userSkills, jobSkills, userExperiences, 0.55)
 
 		if res.Skipped != tt.expectedSkipped {
 			t.Errorf("MatchJob(%q) Skipped = %v; want %v", tt.jobTitle, res.Skipped, tt.expectedSkipped)
