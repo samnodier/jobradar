@@ -237,6 +237,7 @@ SELECT
     u.company_stage_preference,
     u.notify_jobs,
     u.is_admin,
+    (u.encrypted_gemini_api_key IS NOT NULL)::boolean AS has_gemini_key,
     u.created_at,
     u.updated_at
 FROM users AS u
@@ -272,6 +273,7 @@ type GetUserByProviderIdentityRow struct {
 	CompanyStagePreference []string   `json:"company_stage_preference"`
 	NotifyJobs             *bool      `json:"notify_jobs"`
 	IsAdmin                *bool      `json:"is_admin"`
+	HasGeminiKey           bool       `json:"has_gemini_key"`
 	CreatedAt              *time.Time `json:"created_at"`
 	UpdatedAt              *time.Time `json:"updated_at"`
 }
@@ -302,6 +304,7 @@ func (q *Queries) GetUserByProviderIdentity(ctx context.Context, arg GetUserByPr
 		&i.CompanyStagePreference,
 		&i.NotifyJobs,
 		&i.IsAdmin,
+		&i.HasGeminiKey,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

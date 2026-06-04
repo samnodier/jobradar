@@ -12,6 +12,26 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const updateMatchEnrichment = `-- name: UpdateMatchEnrichment :exec
+UPDATE user_job_matches
+SET
+    ai_summary = $3,
+    is_enriched = TRUE,
+    updated_at = NOW()
+WHERE user_id = $1 AND job_id = $2
+`
+
+type UpdateMatchEnrichmentParams struct {
+	UserID    uuid.UUID `json:"user_id"`
+	JobID     uuid.UUID `json:"job_id"`
+	AiSummary *string   `json:"ai_summary"`
+}
+
+func (q *Queries) UpdateMatchEnrichment(ctx context.Context, arg UpdateMatchEnrichmentParams) error {
+	_, err := q.db.Exec(ctx, updateMatchEnrichment, arg.UserID, arg.JobID, arg.AiSummary)
+	return err
+}
+
 const upsertMatch = `-- name: UpsertMatch :exec
 INSERT INTO user_job_matches (
     user_id,

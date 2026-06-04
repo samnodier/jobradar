@@ -48,7 +48,9 @@ Jobradar is a full job search command center inspired by career-ops (<https://gi
   - `GetJobs` and `GetJobByID` LEFT JOIN `user_job_matches` — match data flows to API automatically
   - `SCRAPE_INTERVAL` configurable via env var (default 6h)
 - **Approach decided:** Filter-then-enrich — algorithm runs on every job (fast, free); LLM enrichment only on jobs scoring ≥ threshold
-- **LLM provider:** Gemini (user-provided API key, not baked in)
+- **LLM provider:** Gemini (user-provided API key, not baked in), accessed through a project-owned `Enricher` interface so other providers can be added later without touching the worker
+- **Enrichment scope (now):** LLM returns only what we can persist today — a one-line `ai_summary`. The gemini package returns its own result type (`EnrichmentResult{Summary}`); the worker maps it into `UpdateMatchEnrichment` and sets `is_enriched = TRUE` itself (the LLM never knows about persistence state).
+- **Enrichment scope (future, not built):** (a) a semantic-validation signal — LLM judges whether the algorithmic match actually holds up — needs a new column before it can be stored; (b) richer match inputs (location, etc.) as more scrapers supply those fields, enabling the matcher/enricher to reason over more of the user profile.
 - **Remaining:**
   - Frontend: display match scores, matched/missing skills on job cards
   - Improve algorithmic matcher signal quality (weight skills by proficiency)

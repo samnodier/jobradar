@@ -207,7 +207,7 @@ Decoupled (What we are doing): Skills and Experiences have their own endpoints. 
 
 Atomic: One giant request creates the experience AND all its skills in one database transaction. Great for data integrity (like a bank transfer), but more complex to code and harder to build a snappy "tagging" UI for.
 
-SQLC COALESCE Pattern: While COALESCE(sqlc.narg('field'), field) is great for partial updates (PATCH), it makes it impossible to explicitly set a field to NULL. Using a CASE statement tied to a boolean (like is_current) is a clean way to handle mandatory nullification.
+SQLC COALESCE Pattern: While COALESCE(sqlc.narg('field'), field) is great for partial updates (PATCH), it makes it impossible to explicitly set a field to NULL. Using a CASE statement tied to a boolean (like is_current) is a clean way to handle mandatory nullification. The deciding question isn't "is this column nullable?" — it's "can the caller legitimately have no value to write?" PATCH from a client: yes → COALESCE. System write after a successful operation: no → write the value directly, so a missing value surfaces as a bug instead of silently preserving stale data.
 
 Date Normalization: When bridging HTML5 `<input type="month">` and SQL DATE types, normalization (appending -01) should happen at the boundary (the conversion helper) to maintain type safety without cluttering the business logic.
 
@@ -309,3 +309,7 @@ A registered handler is a runtime wiring step, not a compile-time one — forget
 When the same resource is served by two endpoints — one returning the raw DB struct, one returning a hand-mapped DTO — a new column added to the query appears automatically on the raw endpoint but is silently dropped by the DTO until you add the field by hand. Two response shapes for one resource = a drift hazard. Either converge on one shape, or treat "add field to every DTO" as part of the migration checklist.
 
 In filter-then-enrich, the cheap filter must own the score — because the score is what gates the expensive step. If the LLM produced the score, you'd have to run the LLM on everything to decide whether to run the LLM, and the filter collapses. The expensive stage can only ever see pre-filtered inputs.
+
+A vendor SDK couples you to that vendor — it does not make swapping vendors easier; it makes it harder. Provider-portability comes from your own interface (Enricher) that the rest of the app depends on, with the SDK hidden behind one implementation. Open/closed: a new provider = a new implementation of your interface, not edits to the caller. The SDK reduces per-vendor boilerplate; your interface buys the portability.
+
+`var _ Iface = (*T)(nil)` is a compile-time assertion that `*T` implements `Iface`. Go interfaces are satisfied implicitly, so without it a mismatch only surfaces at the call site; with it, the error appears on the type itself, immediately, and documents the intent. Typed nil = a zero-cost value of the right type; the whole line vanishes at compile time.

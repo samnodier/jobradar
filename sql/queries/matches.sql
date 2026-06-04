@@ -23,3 +23,11 @@ ON CONFLICT (user_id, job_id) DO UPDATE SET
     ai_summary = excluded.ai_summary,
     is_enriched = excluded.is_enriched,
     updated_at = NOW();
+
+-- name: UpdateMatchEnrichment :exec
+UPDATE user_job_matches
+SET
+    ai_summary = $3,
+    is_enriched = TRUE,
+    updated_at = NOW()
+WHERE user_id = $1 AND job_id = $2;
