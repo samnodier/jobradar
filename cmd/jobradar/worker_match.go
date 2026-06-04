@@ -101,7 +101,7 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 	if err != nil {
 		return err
 	}
-	var userExps []string
+	var userExperiences []string
 	for _, exp := range expsRows {
 		var text strings.Builder
 		text.WriteString(exp.RoleTitle + " at " + exp.CompanyName)
@@ -111,7 +111,7 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 		for _, ach := range exp.Achievements {
 			text.WriteString(" " + ach)
 		}
-		userExps = append(userExps, text.String())
+		userExperiences = append(userExperiences, text.String())
 	}
 
 	// Run the match algorithm
@@ -121,7 +121,7 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 	}
 
 	// Jaro-Winkler threshold = 0.55
-	result := matcher.MatchJob(job.Title, jobDesc, desiredRoles, userSkills, job.Skills, userExps, 0.55)
+	result := matcher.MatchJob(job.Title, jobDesc, desiredRoles, userSkills, job.Skills, userExperiences, 0.55)
 	var score int32
 	titleScore := pgtype.Float8{}
 	skillScore := pgtype.Float8{}
