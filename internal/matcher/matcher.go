@@ -19,7 +19,7 @@ func MatchJob(
 	desiredRoles []string,
 	userSkills []string,
 	jobSkills []string,
-	userExps []string,
+	userExperiences []string,
 	titleThreshold float64,
 ) MatchResult {
 	weightedSum := 0.0
@@ -74,8 +74,8 @@ func MatchJob(
 
 	// 3. Experience Matching
 	expScore := 0.0
-	if len(userExps) != 0 {
-		expScore = ExperienceMatch(userExps, jobDesc)
+	if len(userExperiences) != 0 {
+		expScore = ExperienceMatch(userExperiences, jobDesc)
 		weightedSum += 0.25 * expScore
 		activeWeight += 0.25
 	}
