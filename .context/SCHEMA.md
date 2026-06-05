@@ -1,6 +1,6 @@
 ## Database Schema
 
-**users** — `id`, `email`, `username`, `full_name`, `avatar_url`, `phone`, `user_location`, `website_url`, `linkedin_url`, `github_url`, `headline`, `user_summary`, `availability`, `min_salary`, `max_salary`, `salary_currency`, `years_of_experience`, `preferred_job_types`, `preferred_industries`, `company_stage_preference`, `notify_jobs`, `is_admin`, `created_at`, `updated_at`
+**users** — `id`, `email`, `username`, `full_name`, `avatar_url`, `phone`, `user_location`, `website_url`, `linkedin_url`, `github_url`, `headline`, `user_summary`, `availability`, `min_salary`, `max_salary`, `salary_currency`, `years_of_experience`, `preferred_job_types`, `preferred_industries`, `company_stage_preference`, `notify_jobs`, `is_admin`, `encrypted_gemini_api_key` (AES-256-GCM ciphertext; never sent to client), `created_at`, `updated_at`
 
 **user_accounts** — `id`, `user_id` (FK→users CASCADE), `auth_provider`, `auth_provider_id`, `access_token`, `created_at`
 
@@ -24,10 +24,10 @@
 
 **jobs:** `CreateJob`, `GetJobs` (LEFT JOINs saved_jobs + applications + user_job_matches), `GetJobByID`, `GetJobStats`, `SearchJobs`
 
-**user_job_matches:** `UpsertMatch`
+**user_job_matches:** `UpsertMatch`, `UpdateMatchEnrichment` (narrow: sets `ai_summary` + `is_enriched = TRUE` only, scoped by user_id AND job_id)
 
 **saved_jobs:** `GetSavedJobsForUser`, `SaveJob`, `UnSaveJob`
 
 **applications:** `CreateApplication`, `GetApplicationByID`, `GetApplicationByUserAndJob`, `GetApplicationsByUserID`, `UpdateApplicationStatus`, `UpdateApplicationNotes`, `UpdateApplicationFollowUp`, `DeleteApplication`
 
-**users:** `CreateUser`, `GetUserByID`, `GetUserByProviderIdentity`, `UpdateUser`, `DeleteUserByID`, `GetAllUsers`
+**users:** `CreateUser`, `GetUserByID` (derives `has_gemini_key` boolean in SQL; never selects the ciphertext), `GetUserByProviderIdentity`, `UpdateUser`, `DeleteUserByID`, `GetAllUsers`, `SetGeminiKeyByUserID` (store ciphertext), `GetGeminiKeyByUserID` (read ciphertext for the enrichment worker only)
