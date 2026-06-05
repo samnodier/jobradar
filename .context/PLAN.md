@@ -1,7 +1,7 @@
 ## Current Status
 
 Phase: Phase 5 — AI Matching
-Status: In Progress — algorithmic matcher built, LLM integration pending
+Status: In Progress — enrichment scaffolding built (Enricher interface + gemini client + queue plumbing); live wiring pending
 
 ## The Vision — What Jobradar Becomes
 
@@ -47,16 +47,18 @@ Jobradar is a full job search command center inspired by career-ops (<https://gi
   - Worker payload carries `{job_id, user_id}`; writes to `UpsertMatch` (atomic insert-or-update)
   - `GetJobs` and `GetJobByID` LEFT JOIN `user_job_matches` — match data flows to API automatically
   - `SCRAPE_INTERVAL` configurable via env var (default 6h)
+  - `UpdateMatchEnrichment` query — narrow write (`ai_summary` + `is_enriched = TRUE` only); no COALESCE (system write is authoritative)
+  - `internal/llm` package — provider-agnostic `Enricher` interface, `EnrichmentInput`/`EnrichmentResult` types, and `geminiEnricher` implementing it via `google.golang.org/genai` with structured output (`ResponseSchema`) and defensive JSON parsing
+  - Enrich-job queue plumbing — `JobEnrichMatch` type + dedicated `EnrichJobPayload`; `handleMatchJob` gates enqueue at the producer (`score ≥ aiMatchThreshold && has_gemini_key`); `handleEnrichJob` stub registered in `main.go` (Gemini call not yet wired)
 - **Approach decided:** Filter-then-enrich — algorithm runs on every job (fast, free); LLM enrichment only on jobs scoring ≥ threshold
 - **LLM provider:** Gemini (user-provided API key, not baked in), accessed through a project-owned `Enricher` interface so other providers can be added later without touching the worker
 - **Enrichment scope (now):** LLM returns only what we can persist today — a one-line `ai_summary`. The gemini package returns its own result type (`EnrichmentResult{Summary}`); the worker maps it into `UpdateMatchEnrichment` and sets `is_enriched = TRUE` itself (the LLM never knows about persistence state).
 - **Enrichment scope (future, not built):** (a) a semantic-validation signal — LLM judges whether the algorithmic match actually holds up — needs a new column before it can be stored; (b) richer match inputs (location, etc.) as more scrapers supply those fields, enabling the matcher/enricher to reason over more of the user profile.
 - **Remaining:**
-  - Frontend: display match scores, matched/missing skills on job cards
+  - Wire `Enrich` into `handleEnrichJob` — decrypt key (`crypto.Decrypt`, handle no-key), build `EnrichmentInput`, call `Enrich`, persist via `UpdateMatchEnrichment`
+  - Failure taxonomy in the enrich handler — bad/revoked key → drop (no retry); 429/timeout → return err and let backoff retry
+  - Frontend: display match scores, matched/missing skills, and `ai_summary` on job cards
   - Improve algorithmic matcher signal quality (weight skills by proficiency)
-  - Add `encrypted_gemini_api_key` to user schema for user-provided API keys
-  - LLM enrichment worker for high-scoring jobs (summary + semantic validation)
-  - `UpdateMatchEnrichment` query for LLM phase (updates `ai_summary` + `is_enriched` only)
 
 ### Phase 5.5 — User API Key Management
 
