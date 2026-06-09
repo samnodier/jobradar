@@ -9,7 +9,7 @@ type EnrichmentInput struct {
 	JobSkills      []string
 	JobLocation    string
 
-	UserRoles       []string
+	DesiredRoles    []string
 	UserSkills      []string
 	UserExperiences []string
 }

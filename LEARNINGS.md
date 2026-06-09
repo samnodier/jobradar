@@ -313,3 +313,5 @@ In filter-then-enrich, the cheap filter must own the score — because the score
 A vendor SDK couples you to that vendor — it does not make swapping vendors easier; it makes it harder. Provider-portability comes from your own interface (Enricher) that the rest of the app depends on, with the SDK hidden behind one implementation. Open/closed: a new provider = a new implementation of your interface, not edits to the caller. The SDK reduces per-vendor boilerplate; your interface buys the portability.
 
 `var _ Iface = (*T)(nil)` is a compile-time assertion that `*T` implements `Iface`. Go interfaces are satisfied implicitly, so without it a mismatch only surfaces at the call site; with it, the error appears on the type itself, immediately, and documents the intent. Typed nil = a zero-cost value of the right type; the whole line vanishes at compile time.
+
+the core rule (return value = retry signal; ask "could a retry succeed?"), the enrich taxonomy table, and the contrast: the matcher needs no taxonomy because it has no flaky external dependency — its only retryable failure is a DB error, which it already handles.
