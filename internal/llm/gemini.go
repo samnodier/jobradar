@@ -30,10 +30,10 @@ func NewGeminiEnricher(ctx context.Context, apiKey string) (Enricher, error) {
 
 var _ Enricher = (*geminiEnricher)(nil)
 
-const systemInstructions = `You are a career assistant job-match analyst. Given a job posting and a candidate's profile,
-write a concise 2-3 sentence summary of how well the candidate fits the role.
+const systemInstructions = `You are a career assistant speaking directly to a job-seeker about a specific role.
+Write a concise 2-3 sentence summary addressing the user as "you" — for example: "You have strong experience in X" or "You're missing Y which this role requires."
 Be specific — mention relevant skills and experience by name.
-Do not invent skills or experience the candidate does not have.
+Do not invent skills or experience the user does not have.
 Respond only with valid JSON matching the schema provided. No markdown, no preamble.`
 
 const model = "gemini-3.5-flash"
@@ -68,22 +68,7 @@ func (g *geminiEnricher) Enrich(ctx context.Context, input EnrichmentInput) (Enr
 		},
 	)
 	if err != nil {
-		var apiErr *genai.APIError
-		if errors.As(err, &apiErr) {
-			switch apiErr.Code {
-			case 400:
-				return EnrichmentResult{}, fmt.Errorf("bad request (check prompt/schema): %s", apiErr.Message)
-			case 429:
-				return EnrichmentResult{}, fmt.Errorf("gemini rate limit exceeded, need to backoff: %s", apiErr.Message)
-			case 500, 503:
-				return EnrichmentResult{}, fmt.Errorf("gemini service unavailable: %s", apiErr.Message)
-			default:
-				return EnrichmentResult{}, fmt.Errorf("gemini API error (code %d): %s", apiErr.Code, apiErr.Message)
-			}
-		}
-
-		// 2. Fallback for network timeouts, context cancellations, etc.
-		return EnrichmentResult{}, fmt.Errorf("gemini: network or generic generation failure: %w", err)
+		return EnrichmentResult{}, classifyGeminiError(err)
 	}
 
 	raw := result.Text()
@@ -103,4 +88,24 @@ func formatExperience(experiences []string) string {
 		fmt.Fprintf(&out, "%d. %s\n", i+1, exp)
 	}
 	return out.String()
+}
+
+func classifyGeminiError(err error) error {
+	var apiErr genai.APIError
+	if errors.As(err, &apiErr) {
+		switch apiErr.Code {
+		case 400, 404:
+			return fmt.Errorf("invalid request: %w: %w", ErrPermanent, apiErr)
+		case 401, 403:
+			return fmt.Errorf("authentication failed: %w: %w", ErrPermanent, apiErr)
+		case 429:
+			return fmt.Errorf("gemini rate limit exceeded: %w", apiErr)
+		case 500, 503:
+			return fmt.Errorf("gemini service unavailable: %w", apiErr)
+		default:
+			return fmt.Errorf("unexpected gemini API error (code %d): %w", apiErr.Code, apiErr)
+		}
+	}
+	// 2. Fallback for network timeouts, context cancellations, etc.
+	return fmt.Errorf("gemini: network or generic generation failure: %w", err)
 }
