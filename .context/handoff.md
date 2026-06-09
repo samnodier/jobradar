@@ -4,89 +4,90 @@
 
 ## Date
 
-2026-06-09
+2026-06-09 (evening session)
 
 ## Branch
 
-`feature/ai-matching` (pushing WIP at end of session)
+`feature/ai-matching`
 
-## Where you are
+## Where you are — Phase 5 enrichment is WORKING end to end ✅
 
-`handleEnrichJob` is fully wired and builds green. The happy path is complete:
-parse payload → `GetGeminiKeyByUserID` (nil key → return nil; DB err → return err)
-→ `crypto.Decrypt` → `cfg.newEnricher` (the injected seam) → fetch job + gather
-profile → `Enrich` → `UpdateMatchEnrichment`. The seam
-(`apiConfig.newEnricher func(ctx, key) (llm.Enricher, error)`, wired to
-`llm.NewGeminiEnricher` in `main.go:85`) exists so the handler is testable.
+Tonight the full vertical slice ran live: scrape → match → enrich → Gemini →
+DB → API → Vue. Confirmed in the UI: a real Gemini `ai_summary` rendered on a
+job in the new second-person voice ("You have Linux and SQL skills, but...").
+6 of 100 jobs enriched (`is_enriched=true`, summary persisted); the rest hit the
+Gemini free-tier quota and DLQ'd — not a bug.
 
-**First live Gemini call happened** — got `503 UNAVAILABLE / model overloaded`
-(transient, Google-side capacity, not our bug). Jobs failed once each and were
-NOT retried — confirming the old "return nil on all errors" behavior. We then
-switched to a sentinel-based error taxonomy (below), which has a bug to fix.
+### What got fixed/built this session
 
-## START HERE TOMORROW — one bug, then test, then run
+1. **`ErrPermanent` taxonomy now actually fires.** Two bugs found and fixed in
+   `internal/llm/gemini.go`:
+   - The permanent cases now wrap `ErrPermanent` (`%w`) so `errors.Is` works in
+     the handler; added the missing 401/403 case.
+   - **The value-vs-pointer bug:** the genai SDK returns its error *by value*
+     (`return APIError{...}`), so `errors.As(err, &apiErr)` with `var apiErr
+     *genai.APIError` never matched — every error fell to the transient fallback,
+     so the whole taxonomy was dead in production. Fixed by declaring the target
+     as a value: `var apiErr genai.APIError`. The unit test had passed because it
+     built the error as a *pointer* (`&genai.APIError{}`) — wrong shape, false
+     confidence. Test now uses a value and is honest.
+2. **Classification extracted to a pure func** `classifyGeminiError(err) error`
+   so it's testable without a live Gemini call. Table test in
+   `internal/llm/gemini_test.go` (covers 400/401/403/404/429/500/503 + a plain
+   network error via the fallback). Green.
+3. **Full jitter on backoff** (`internal/queue/worker.go` ~line 108):
+   `rand.Float64() * maxBackoff`, capped at 5min. Logs confirm randomized delays.
+4. **System prompt rewritten for voice** (`gemini.go`) — speaks directly to the
+   user as "you", with concrete example phrasings. Confirmed in live output.
+5. **DB volume / migrations:** swapped to a fresh volume → empty DB → had to
+   `make migrate-up`, recreate account, re-add skills to trigger matching.
 
-### 1. Fix the `ErrPermanent` silent bug (internal/llm/gemini.go)
+## START HERE NEXT SESSION
 
-The taxonomy design is good: classification lives behind the `Enricher`
-interface. `gemini.go` defines `var ErrPermanent` and switches on
-`apiErr.Code`; the handler asks `errors.Is(err, llm.ErrPermanent)` → permanent =
-`return nil` (drop), else `return err` (retry).
+1. **Reset `AI_MATCH_THRESHOLD` back to ≥60** (temped to 40 for testing — that's
+   what blew past the 5/min free quota by enriching too many jobs at once).
+2. **Throttle / rate-limit enrich enqueues** so you stay under Gemini's 5 req/min
+   free tier. Options: cap concurrency, honor the 429 `RetryInfo`/`Retry-After`,
+   or widen the backoff window (current ~15s retry budget < 60s quota window, so
+   transient 429s still DLQ — see LEARNINGS).
+3. **Frontend: "enriched" indicator** (Sam's idea) — only ~6/100 jobs are
+   enriched and there's no way to spot them in the list without opening each.
+   Small Vue task: an icon/badge on job cards gated on `is_enriched`.
 
-**THE BUG:** `ErrPermanent` (gemini.go:17) is defined but **never wrapped**.
-Every switch case returns a plain `fmt.Errorf` with no `%w ErrPermanent`, so
-`errors.Is` in the handler is **always false** → everything is treated as
-transient → 400/401/403 retry pointlessly to the DLQ. It compiles and "runs" —
-classic silent wiring bug.
+## Deferred (decided, not blocking)
 
-**Fix:** fill in this table, then wrap `ErrPermanent` on the permanent rows
-(Go 1.26 allows `%w`), and ADD a 401/403 case (currently missing → falls to
-default → retried):
+- **Manual "enrich all qualifying jobs" button** — mostly redundant: adding a
+  skill already fans out a re-match over ALL jobs (`enqueueMatchJobsForUser`),
+  and `handleMatchJob` re-enqueues enrich for every job that re-qualifies, and
+  `UpsertMatch` resets `ai_summary=nil`/`is_enriched=false` on re-match. So
+  enrichment already re-runs automatically on profile change. Only build the
+  button if you want to trigger enrichment WITHOUT a profile change.
+- **Full handler test for `handleEnrichJob`** — needs `cfg.db` behind an
+  interface to avoid live Postgres. Skipped; the classification table-test covers
+  the logic that was actually broken.
+- **Matcher signal quality** — weight skills by proficiency; the
+  description-derived "missing skills" can flag skills the user genuinely has
+  (noted as design debt in `worker_match.go`).
+- **Skip-write scale debt** — currently upserts score=0 rows for non-matches;
+  "don't write skips" must ship together with a `DeleteMatch` query (see TODO in
+  `worker_match.go`).
 
-| Code | Permanent or transient? | Wrap ErrPermanent? |
-|------|-------------------------|--------------------|
-| 400  | permanent (malformed request) | yes |
-| 401 / 403 | permanent (bad/revoked key) — NO CASE EXISTS YET | yes |
-| 429  | transient (rate limit) | no |
-| 500 / 503 | transient (overload) | no |
-| network / timeout fallback | transient | no |
+## Files in play this session
 
-### 2. Write the tests (this is what would have caught the bug)
+- `internal/llm/gemini.go` — taxonomy (`classifyGeminiError`, value target),
+  system prompt voice
+- `internal/llm/gemini_test.go` — value-shaped table test
+- `internal/queue/worker.go` — full jitter backoff
+- `cmd/jobradar/worker_match.go` / `worker_enrich.go` — match→enrich chain (no
+  changes tonight, but traced and confirmed correct)
+- `LEARNINGS.md` — 4 new entries (errors.As value/pointer, full jitter, retry
+  budget vs failure window, fresh volume = fresh DB)
+- `docker-compose.yml` — DB volume
 
-- Pure func: extract/keep the classification and table-test it.
-- Handler test via a **fake `Enricher`** injected through `cfg.newEnricher`:
-  - fake returns `ErrPermanent`-wrapped error → handler must `return nil`.
-  - fake returns a plain error → handler must `return err`.
-  - fake returns success → handler must call `UpdateMatchEnrichment` with summary.
-  (DB is still concrete `*database.Queries`; a full handler test may need a db
-  interface — decide scope then.)
+## LEARNINGS captured this session
 
-### 3. Run live and SEE it on the frontend
-
-Frontend already renders everything (`JobDetail.vue`: score, matched/missing
-skills, `ai_summary` gated on `is_enriched`). So once a summary lands:
-- `docker compose up`, migrate if needed, run backend + `npm run dev`.
-- Settings tab → paste real Gemini key.
-- `AI_MATCH_THRESHOLD=30` (temp) → trigger match via a profile save.
-- Watch worker logs → check `user_job_matches.ai_summary` / `is_enriched=true`.
-- If DB has `ai_summary` but the frontend doesn't show it → **DTO drift** in the
-  jobs handler response mapping (check it serializes `ai_summary`).
-- Gemini was overloaded (503) tonight — may need to wait for the spike to pass.
-
-## Cleanup before merging Phase 5
-
-- Add **jitter** to the backoff retry (thundering-herd; it's a LEARNINGS topic).
-- Reset `AI_MATCH_THRESHOLD` back to ≥60.
-- `go mod tidy` (genai shows `// indirect`).
-- LEARNINGS entries: (a) return-value = retry signal + enrich taxonomy table +
-  why the matcher needs none (no flaky external dep); (b) classify provider
-  errors behind the interface via a shared sentinel, not in the consumer;
-  (c) "it builds ≠ it's wired" — the `ErrPermanent` dead check.
-
-## Files in play
-
-- `cmd/jobradar/worker_enrich.go` (handler, done modulo taxonomy)
-- `cmd/jobradar/main.go` (`newEnricher` seam wired, line 85)
-- `internal/llm/gemini.go` (the `ErrPermanent` bug lives here)
-- `internal/llm/llm.go` (field is `DesiredRoles`, not `UserRoles`)
-- Uncommitted earlier: `.context/*.md` doc edits.
+errors.As matches by exact dynamic type (pointer vs value); a test is only as
+good as the fidelity of its inputs; full jitter vs thundering herd; a transient
+error still DLQs if retry budget < failure window; fresh volume = fresh DB =
+re-run migrations. (Plus earlier: LLM voice via system-prompt framing; no
+bind-mount volumes in the module tree.)
