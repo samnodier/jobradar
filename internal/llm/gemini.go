@@ -3,6 +3,7 @@ package llm
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -12,6 +13,8 @@ import (
 type geminiEnricher struct {
 	client *genai.Client
 }
+
+var ErrPermanent = errors.New("permanent enrichment failure")
 
 // NewGeminiEnricher creates a new instance of the GeminiEnricher
 func NewGeminiEnricher(ctx context.Context, apiKey string) (Enricher, error) {
@@ -45,7 +48,7 @@ func (g *geminiEnricher) Enrich(ctx context.Context, input EnrichmentInput) (Enr
 		Candidate Desired Roles: %s
 		Candidate Skills: %s
 		Candidate Experience: %s
-		`, input.JobTitle, input.JobLocation, input.JobDescription, strings.Join(input.UserRoles, ", "), strings.Join(input.UserSkills, ", "), formatExperience(input.UserExperiences),
+		`, input.JobTitle, input.JobLocation, input.JobDescription, strings.Join(input.DesiredRoles, ", "), strings.Join(input.UserSkills, ", "), formatExperience(input.UserExperiences),
 	)
 
 	result, err := g.client.Models.GenerateContent(
@@ -65,7 +68,22 @@ func (g *geminiEnricher) Enrich(ctx context.Context, input EnrichmentInput) (Enr
 		},
 	)
 	if err != nil {
-		return EnrichmentResult{}, fmt.Errorf("gemini: generate failed: %w", err)
+		var apiErr *genai.APIError
+		if errors.As(err, &apiErr) {
+			switch apiErr.Code {
+			case 400:
+				return EnrichmentResult{}, fmt.Errorf("bad request (check prompt/schema): %s", apiErr.Message)
+			case 429:
+				return EnrichmentResult{}, fmt.Errorf("gemini rate limit exceeded, need to backoff: %s", apiErr.Message)
+			case 500, 503:
+				return EnrichmentResult{}, fmt.Errorf("gemini service unavailable: %s", apiErr.Message)
+			default:
+				return EnrichmentResult{}, fmt.Errorf("gemini API error (code %d): %s", apiErr.Code, apiErr.Message)
+			}
+		}
+
+		// 2. Fallback for network timeouts, context cancellations, etc.
+		return EnrichmentResult{}, fmt.Errorf("gemini: network or generic generation failure: %w", err)
 	}
 
 	raw := result.Text()

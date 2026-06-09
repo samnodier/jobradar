@@ -4,65 +4,89 @@
 
 ## Date
 
-2026-06-03
+2026-06-09
 
 ## Branch
 
-`feature/ai-matching` (commits pushed through `3fa0dc0`)
+`feature/ai-matching` (pushing WIP at end of session)
 
-## Accomplished
+## Where you are
 
-- **`UpdateMatchEnrichment` SQLC query** (`sql/queries/matches.sql`) — narrow `UPDATE user_job_matches SET ai_summary = $3, is_enriched = TRUE, updated_at = NOW() WHERE user_id = $1 AND job_id = $2`. No COALESCE (a system write is authoritative — it always has its value). Regenerated `internal/database/matches.sql.go`.
-- **Created `internal/llm` package** — the provider-agnostic enrichment boundary:
-  - `llm.go` — `Enricher` interface (`Enrich(ctx, EnrichmentInput) (EnrichmentResult, error)`); `EnrichmentInput` (job title/description/skills/location + user roles/skills/experiences, all plain types, no DB types); `EnrichmentResult{ Summary string }` with `json:"summary"` tag.
-  - `gemini.go` — `geminiEnricher` implements `Enricher` via `google.golang.org/genai` (v1.58.0). `NewGeminiEnricher(ctx, apiKey)` builds the client, returns `(Enricher, error)` — **one enricher per user** (the key is per-user). `Enrich` sends a system instruction + formatted user content, uses **structured output** (`ResponseMIMEType: "application/json"` + `ResponseSchema`, `Required: ["summary"]`), parses defensively (empty-check + unmarshal error). Compile-time check `var _ Enricher = (*geminiEnricher)(nil)`. Model const `gemini-3.5-flash` (verified real + GA).
-- **Enrich-job queue plumbing** (commit `0c53054`) — `JobEnrichMatch` type + dedicated `EnrichJobPayload`; `handleMatchJob` gates the enqueue at the producer (`score >= cfg.aiMatchThreshold && user.HasGeminiKey`); `handleEnrichJob` **stub** in new `cmd/jobradar/worker_enrich.go`, registered in `main.go`; `aiMatchThreshold` moved from a dead local onto `apiConfig`.
-- **Fixed `has_gemini_key` vanishing on refresh** — `/auth/users/me` (`internal/auth/users.go`) returns a hand-mapped `UserResponse` DTO that was silently dropping the field; added `HasGeminiKey` to the struct + the mapping.
-- **Cleanup** (commit `23f2887`) — matcher param rename `userExps` → `userExperiences`; fixed `// Package fether` typo in `internal/fetcher/remoteok.go`.
-- **Synced `.context/` docs to reality** — `PLAN.md` (Phase 5 Built/Remaining + enrichment-scope notes), `SCHEMA.md` (`encrypted_gemini_api_key`, `UpdateMatchEnrichment`, `Set/GetGeminiKeyByUserID`, derived `has_gemini_key`), `DECISIONS.md` (4 new decisions), `ROUTES.md` (`PUT /api/users/me/gemini-key`).
+`handleEnrichJob` is fully wired and builds green. The happy path is complete:
+parse payload → `GetGeminiKeyByUserID` (nil key → return nil; DB err → return err)
+→ `crypto.Decrypt` → `cfg.newEnricher` (the injected seam) → fetch job + gather
+profile → `Enrich` → `UpdateMatchEnrichment`. The seam
+(`apiConfig.newEnricher func(ctx, key) (llm.Enricher, error)`, wired to
+`llm.NewGeminiEnricher` in `main.go:85`) exists so the handler is testable.
 
-## Current State
+**First live Gemini call happened** — got `503 UNAVAILABLE / model overloaded`
+(transient, Google-side capacity, not our bug). Jobs failed once each and were
+NOT retried — confirming the old "return nil on all errors" behavior. We then
+switched to a sentinel-based error taxonomy (below), which has a bug to fix.
 
-Builds green (`go build ./cmd/... ./internal/...`). The full **filter → enrich-enqueue** chain is proven end-to-end: a profile change fans out re-match jobs → every job re-scored → high-scoring jobs for key-holding users enqueue an enrich job — confirmed by the `would enrich job X for user Y` stub firing (17 jobs at `AI_MATCH_THRESHOLD=30`). The `internal/llm` enricher compiles but its `Enrich` method has **never run against the live Gemini API** and is **not yet wired into `handleEnrichJob`** (still the stub). Last stable commit: `3fa0dc0`. The 4 `.context/*.md` doc edits made at end-of-session are **uncommitted** in the working tree.
+## START HERE TOMORROW — one bug, then test, then run
 
-## What Didn't Work
+### 1. Fix the `ErrPermanent` silent bug (internal/llm/gemini.go)
 
-- Nothing abandoned. One false alarm to record: `gemini-3.5-flash` was initially flagged as a non-existent model — **wrong** (assistant cutoff is Jan 2026; the model shipped after and is GA, verified on ai.google.dev). Do not "fix" the model name.
-- `AI_MATCH_THRESHOLD=30` is a **shell-only test value** this session, not committed. Real default is `60` in `main.go`. At 30, one profile save queued 17 live Gemini calls — raise it back before shipping.
+The taxonomy design is good: classification lives behind the `Enricher`
+interface. `gemini.go` defines `var ErrPermanent` and switches on
+`apiErr.Code`; the handler asks `errors.Is(err, llm.ErrPermanent)` → permanent =
+`return nil` (drop), else `return err` (retry).
 
-## Next Steps
+**THE BUG:** `ErrPermanent` (gemini.go:17) is defined but **never wrapped**.
+Every switch case returns a plain `fmt.Errorf` with no `%w ErrPermanent`, so
+`errors.Is` in the handler is **always false** → everything is treated as
+transient → 400/401/403 retry pointlessly to the DLQ. It compiles and "runs" —
+classic silent wiring bug.
 
-1. **Wire `Enrich` into `handleEnrichJob`** (`cmd/jobradar/worker_enrich.go`): parse payload → `GetGeminiKeyByUserID` → `crypto.Decrypt` (handle no-key defensively; pre-check can go stale) → `llm.NewGeminiEnricher(ctx, key)`.
-2. Build `EnrichmentInput` from job + profile (same data `handleMatchJob` already gathers — decide share-helper vs duplication).
-3. Call `Enrich`, persist via `UpdateMatchEnrichment` (`AiSummary: &result.Summary`).
-4. **Failure taxonomy** in the handler: bad/revoked key (401/403) → `return nil` (drop, no retry); 429/timeout/5xx → `return err` (backoff + DLQ retry). Classify the genai error to pick the path.
-5. Run live with a real key + low threshold; confirm `ai_summary` lands and `is_enriched` flips.
-6. Reset `AI_MATCH_THRESHOLD` to ≥60 once verified.
-7. `go mod tidy` (genai shows `// indirect`).
-8. Commit the uncommitted `.context/*.md` doc updates.
-9. (Later) Frontend: show score / matched-missing skills / `ai_summary` on job cards. Matcher proficiency weighting.
+**Fix:** fill in this table, then wrap `ErrPermanent` on the permanent rows
+(Go 1.26 allows `%w`), and ADD a 401/403 case (currently missing → falls to
+default → retried):
 
-## Open Questions
+| Code | Permanent or transient? | Wrap ErrPermanent? |
+|------|-------------------------|--------------------|
+| 400  | permanent (malformed request) | yes |
+| 401 / 403 | permanent (bad/revoked key) — NO CASE EXISTS YET | yes |
+| 429  | transient (rate limit) | no |
+| 500 / 503 | transient (overload) | no |
+| network / timeout fallback | transient | no |
 
-- **EnrichmentInput duplication** — `handleMatchJob` already compiles roles/skills/experiences. Share a helper or accept two copies? Lean: extract a profile-gather helper once enrich needs it.
-- **Error classification surface** — does genai expose typed/status errors cleanly enough to tell 401 from 429, or must we inspect the error string? Research before step 4.
-- **Explicit backend** — `genai.NewClient` called with only `APIKey` (no `Backend`). Confirm it defaults to `BackendGeminiAPI`; consider setting it explicitly.
-- **Cosmetic** — `UserRoles` formatted with `%v` (Go slice syntax) in the prompt; switch to `strings.Join`.
-- **Re-match scale** — open debt in `worker_match.go`: "don't write skips" must arrive together with a `DeleteMatch` query; fold into coalescing → batch `RematchUser` job.
+### 2. Write the tests (this is what would have caught the bug)
 
-## Files Changed
+- Pure func: extract/keep the classification and table-test it.
+- Handler test via a **fake `Enricher`** injected through `cfg.newEnricher`:
+  - fake returns `ErrPermanent`-wrapped error → handler must `return nil`.
+  - fake returns a plain error → handler must `return err`.
+  - fake returns success → handler must call `UpdateMatchEnrichment` with summary.
+  (DB is still concrete `*database.Queries`; a full handler test may need a db
+  interface — decide scope then.)
 
-**Committed this session** (`0c53054`, `23f2887`, `3fa0dc0`):
+### 3. Run live and SEE it on the frontend
 
-- `cmd/jobradar/worker_match.go`, `cmd/jobradar/worker_enrich.go` (new), `cmd/jobradar/main.go`, `cmd/jobradar/scraper_remoteok.go`
-- `internal/queue/types.go`
-- `internal/auth/users.go`
-- `internal/llm/llm.go` (new), `internal/llm/gemini.go` (new)
-- `sql/queries/matches.sql`, `sql/queries/users.sql`, `internal/database/matches.sql.go`, `internal/database/users.sql.go`
-- `internal/matcher/matcher.go`, `internal/matcher/matcher_test.go`, `internal/fetcher/remoteok.go`
-- `frontend/src/components/SettingsTab.vue`, `frontend/src/stores/auth.ts`, `frontend/src/types/user.ts`
-- `go.mod`, `go.sum`, `LEARNINGS.md`, `.context/PLAN.md`
+Frontend already renders everything (`JobDetail.vue`: score, matched/missing
+skills, `ai_summary` gated on `is_enriched`). So once a summary lands:
+- `docker compose up`, migrate if needed, run backend + `npm run dev`.
+- Settings tab → paste real Gemini key.
+- `AI_MATCH_THRESHOLD=30` (temp) → trigger match via a profile save.
+- Watch worker logs → check `user_job_matches.ai_summary` / `is_enriched=true`.
+- If DB has `ai_summary` but the frontend doesn't show it → **DTO drift** in the
+  jobs handler response mapping (check it serializes `ai_summary`).
+- Gemini was overloaded (503) tonight — may need to wait for the spike to pass.
 
-**Uncommitted (working tree):**
+## Cleanup before merging Phase 5
 
-- `.context/PLAN.md`, `.context/SCHEMA.md`, `.context/DECISIONS.md`, `.context/ROUTES.md`
+- Add **jitter** to the backoff retry (thundering-herd; it's a LEARNINGS topic).
+- Reset `AI_MATCH_THRESHOLD` back to ≥60.
+- `go mod tidy` (genai shows `// indirect`).
+- LEARNINGS entries: (a) return-value = retry signal + enrich taxonomy table +
+  why the matcher needs none (no flaky external dep); (b) classify provider
+  errors behind the interface via a shared sentinel, not in the consumer;
+  (c) "it builds ≠ it's wired" — the `ErrPermanent` dead check.
+
+## Files in play
+
+- `cmd/jobradar/worker_enrich.go` (handler, done modulo taxonomy)
+- `cmd/jobradar/main.go` (`newEnricher` seam wired, line 85)
+- `internal/llm/gemini.go` (the `ErrPermanent` bug lives here)
+- `internal/llm/llm.go` (field is `DesiredRoles`, not `UserRoles`)
+- Uncommitted earlier: `.context/*.md` doc edits.

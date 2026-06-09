@@ -22,6 +22,7 @@ import (
 	"github.com/samnodier/jobradar/internal/auth"
 	"github.com/samnodier/jobradar/internal/crypto"
 	"github.com/samnodier/jobradar/internal/database"
+	"github.com/samnodier/jobradar/internal/llm"
 	"github.com/samnodier/jobradar/internal/queue"
 )
 
@@ -33,6 +34,7 @@ type apiConfig struct {
 	rootCtx          context.Context
 	crypto           *crypto.Service
 	aiMatchThreshold int32
+	newEnricher      func(ctx context.Context, apiKey string) (llm.Enricher, error)
 	IsProduction     bool
 }
 
@@ -80,6 +82,7 @@ func main() {
 		queue:            q,
 		rootCtx:          context.Background(),
 		crypto:           cryptoService,
+		newEnricher:      llm.NewGeminiEnricher,
 		aiMatchThreshold: aiMatchThreshold,
 		IsProduction:     os.Getenv("APP_ENV") == "production",
 	}
