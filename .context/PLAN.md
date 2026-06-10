@@ -82,6 +82,10 @@ Jobradar is a full job search command center inspired by career-ops (<https://gi
 
 - **Status:** Not Started
 - **Description:** Email alerts via Resend or Mailgun. In-app notification bell. `GET /api/notifications`. Idempotency — never send the same alert twice.
+- **Cadence (captured 2026-06-10):** daily morning digest of *new* matches scoring ≥ threshold, batched per user (LinkedIn-job-alert style), not one email per job.
+- **Default policy:** notify on matches scoring ≥ 50% by default; make the threshold (and on/off, and cadence) user-customizable later — start with the sane default, add settings when needed.
+- **Idempotency mechanism (this is the "more architecture" Sam worried about — it's bounded, not new scope):** a sent-notification ledger keyed by `(user_id, job_id, notification_type)`; check-before-send. One small table + a uniqueness guard. This is exactly the Phase-7 idempotency requirement, already planned — not extra architecture.
+- **North-star reference:** career-ops.org — the product Jobradar is modelled on; revisit for feature parity ideas (esp. resume tailoring + alerts).
 
 ### Phase 5.6 — AI Resume Import
 

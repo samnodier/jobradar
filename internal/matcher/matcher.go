@@ -1,6 +1,10 @@
 package matcher
 
-import "math"
+import (
+	"maps"
+	"math"
+	"slices"
+)
 
 // MatchResult holds the combined matching scores and outcomes.
 type MatchResult struct {
@@ -17,7 +21,7 @@ func MatchJob(
 	jobTitle string,
 	jobDesc string,
 	desiredRoles []string,
-	userSkills []string,
+	userSkills map[string]float64,
 	jobSkills []string,
 	userExperiences []string,
 	titleThreshold float64,
@@ -59,10 +63,14 @@ func MatchJob(
 	var matchedSkills []string
 	skillScore := 0.0
 	if len(userSkills) > 0 {
-		sm := NewSkillMatcher(userSkills)
+		sm := NewSkillMatcher(slices.Collect(maps.Keys(userSkills)))
 		matchedSkills = sm.FindSkills(jobDesc)
+		var totalMatchedSkillsWeight float64
+		for _, skill := range matchedSkills {
+			totalMatchedSkillsWeight += userSkills[skill]
+		}
 		if len(jobSkills) > 0 {
-			skillScore = float64(len(matchedSkills)) / float64(len(jobSkills))
+			skillScore = totalMatchedSkillsWeight / float64(len(jobSkills))
 		}
 		skillScore = math.Min(skillScore, 1.0)
 	}

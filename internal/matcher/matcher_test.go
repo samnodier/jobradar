@@ -6,7 +6,7 @@ import (
 
 func TestMatchJob(t *testing.T) {
 	desiredRoles := []string{"Go Developer", "Backend Engineer"}
-	userSkills := []string{"Go", "PostgreSQL", "Vue.js", "Docker"}
+	userSkills := map[string]float64{"Go": 1.0, "PostgreSQL": 0.8, "Vue.js": 0.5, "Docker": 0.5}
 	jobSkills := []string{"Go", "SQL", "React"}
 	userExperiences := []string{
 		"Built scalable backend systems and web applications with Go and Vue.",
