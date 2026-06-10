@@ -1,3 +1,26 @@
+<script setup lang="ts">
+import type { Job } from '@/types/job'
+import { useJobFormatting } from '@/composables/useJobFormatting'
+import { Bookmark, ListCheck, ListPlus, ListX, Sparkles } from '@lucide/vue'
+import { ref } from 'vue'
+
+const { scoreBadgeClass, timeAgo } = useJobFormatting()
+const props = defineProps<{ job: Job; selected: boolean }>()
+const emit = defineEmits(['click', 'save', 'apply'])
+
+const isHovered = ref(false)
+
+function addToApplications(event: MouseEvent) {
+  event.stopPropagation()
+  emit('apply', props.job)
+}
+
+function saveJob(event: MouseEvent) {
+  event.stopPropagation()
+  emit('save', props.job)
+}
+</script>
+
 <template>
   <div
     class="flex items-center px-5 h-11 border-b border-zinc-200 gap-3 transition-colors cursor-pointer"
@@ -18,14 +41,13 @@
       {{ job.is_remote ? 'Remote' : 'On-site' }}
     </span>
 
-    <span
-      v-if="job.is_matched"
-      :class="[
-        'w-12 text-xs font-medium  h-5 px-1.75  flex items-center justify-center  shrink-0',
-        scoreBadgeClass(job.match_score ?? 0),
-      ]"
-    >
-      {{ job.is_matched ? `${job.match_score}%` : '' }}
+    <span v-if="job.is_matched" class="text-xs font-medium flex items-center justify-center">
+      <p :class="['w-10 h-5 px-1.75 shrink-0 text-center', scoreBadgeClass(job.match_score ?? 0)]">
+        {{ job.is_matched ? `${job.match_score}%` : '' }}
+      </p>
+      <span class="text-accent h-5">
+        <Sparkles :size="20" color="currentColor" v-if="job.is_enriched" />
+      </span>
     </span>
     <span v-else class="w-12 h-5 px-1.75 flex items-center justify-center shrink-0"> </span>
 
@@ -59,26 +81,3 @@
     </span>
   </div>
 </template>
-
-<script setup lang="ts">
-import type { Job } from '@/types/job'
-import { useJobFormatting } from '@/composables/useJobFormatting'
-import { Bookmark, ListCheck, ListPlus, ListX } from '@lucide/vue'
-import { ref } from 'vue'
-
-const { scoreBadgeClass, timeAgo } = useJobFormatting()
-const props = defineProps<{ job: Job; selected: boolean }>()
-const emit = defineEmits(['click', 'save', 'apply'])
-
-const isHovered = ref(false)
-
-function addToApplications(event: MouseEvent) {
-  event.stopPropagation()
-  emit('apply', props.job)
-}
-
-function saveJob(event: MouseEvent) {
-  event.stopPropagation()
-  emit('save', props.job)
-}
-</script>

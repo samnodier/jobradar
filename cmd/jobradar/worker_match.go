@@ -79,20 +79,20 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 		return err
 	}
 
-	var userSkills []string
+	userSkills := make(map[string]float64)
 	seenSkills := make(map[string]struct{})
 	for _, userSkill := range dbUserSkills {
 		lower := strings.ToLower(userSkill.SkillName)
 		if _, ok := seenSkills[lower]; !ok {
 			seenSkills[lower] = struct{}{}
-			userSkills = append(userSkills, userSkill.SkillName)
+			userSkills[userSkill.SkillName] = proficiencyToWeight(userSkill.Proficiency)
 		}
 	}
 	for _, expSkill := range dbExpSkills {
 		lower := strings.ToLower(expSkill.SkillName)
 		if _, ok := seenSkills[lower]; !ok {
 			seenSkills[lower] = struct{}{}
-			userSkills = append(userSkills, expSkill.SkillName)
+			userSkills[expSkill.SkillName] = 0.5
 		}
 	}
 
@@ -254,4 +254,23 @@ func (cfg *apiConfig) enqueueMatchJobsForUser(ctx context.Context, userID uuid.U
 		}
 	}
 	return nil
+}
+
+func proficiencyToWeight(p *string) float64 {
+	if p == nil {
+		return 0.5
+	}
+	proficiency := strings.ToLower(strings.TrimSpace(*p))
+	switch proficiency {
+	case "beginner":
+		return 0.3
+	case "intermediate":
+		return 0.5
+	case "advanced":
+		return 0.8
+	case "expert":
+		return 1.0
+	default:
+		return 0.5
+	}
 }
