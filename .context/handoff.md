@@ -4,90 +4,113 @@
 
 ## Date
 
-2026-06-09 (evening session)
+2026-06-10
 
 ## Branch
 
-`feature/ai-matching`
+`main` — today's work (`feature/ai-matching`) was merged in and pushed. Working
+tree clean; `main` is in sync with `origin/main` (0 ahead / 0 behind).
 
-## Where you are — Phase 5 enrichment is WORKING end to end ✅
+## Accomplished
 
-Tonight the full vertical slice ran live: scrape → match → enrich → Gemini →
-DB → API → Vue. Confirmed in the UI: a real Gemini `ai_summary` rendered on a
-job in the new second-person voice ("You have Linux and SQL skills, but...").
-6 of 100 jobs enriched (`is_enriched=true`, summary persisted); the rest hit the
-Gemini free-tier quota and DLQ'd — not a bug.
+- **Proficiency-weighted skill scoring** (the session goal). In
+  `internal/matcher/matcher.go`, `MatchJob`'s skill dimension now sums each
+  matched skill's proficiency weight and divides by `len(jobSkills)` (was a flat
+  `len(matchedSkills)/len(jobSkills)` count). The `userSkills` parameter changed
+  from `[]string` to `map[string]float64` (name → weight); the trie is built from
+  the map's keys (`slices.Collect(maps.Keys(...))`) and weights are looked up by
+  matched-skill name.
+- **`proficiencyToWeight(p *string) float64`** added in
+  `cmd/jobradar/worker_match.go`: beginner 0.3 / intermediate 0.5 / advanced 0.8
+  / expert 1.0; `nil` or unrecognized → **0.5 neutral prior**. The worker builds
+  the `map[string]float64`, deduping case-insensitively so `user_skills`
+  (proficiency known) wins over experience-only skills (prior) via the existing
+  seen-set ordering.
+- **`matcher_test.go`** updated to the map signature; tests pass (scores
+  compressed downward as expected, still clear the `>50` thresholds).
+- **AI-enriched indicator** added to `frontend/src/components/JobRow.vue`, gated
+  on `job.is_enriched`.
+- **Bugfix:** 500 on `PATCH /api/profile/experiences/{id}`. In
+  `cmd/jobradar/handler_experiences.go`, the post-commit read-back was using the
+  committed `qtx` (a closed transaction); switched to `cfg.db` (pool), matching
+  the create handler. Committed separately (`de99fa7`).
+- **`AI_MATCH_THRESHOLD` → 45** in `.env` (was 60; scores compress under the new
+  weighting). **Takes effect on next server restart** — env is read at startup.
+- **`.context/PLAN.md`** Phase 7 annotated: daily-digest cadence, default-≥50%
+  notify policy, the idempotency sent-ledger mechanism, and career-ops.org as the
+  north-star reference.
+- Two commits (`de99fa7` bugfix, `f215ffe` feature) merged to `main` and pushed.
 
-### What got fixed/built this session
+## Current State
 
-1. **`ErrPermanent` taxonomy now actually fires.** Two bugs found and fixed in
-   `internal/llm/gemini.go`:
-   - The permanent cases now wrap `ErrPermanent` (`%w`) so `errors.Is` works in
-     the handler; added the missing 401/403 case.
-   - **The value-vs-pointer bug:** the genai SDK returns its error *by value*
-     (`return APIError{...}`), so `errors.As(err, &apiErr)` with `var apiErr
-     *genai.APIError` never matched — every error fell to the transient fallback,
-     so the whole taxonomy was dead in production. Fixed by declaring the target
-     as a value: `var apiErr genai.APIError`. The unit test had passed because it
-     built the error as a *pointer* (`&genai.APIError{}`) — wrong shape, false
-     confidence. Test now uses a value and is honest.
-2. **Classification extracted to a pure func** `classifyGeminiError(err) error`
-   so it's testable without a live Gemini call. Table test in
-   `internal/llm/gemini_test.go` (covers 400/401/403/404/429/500/503 + a plain
-   network error via the fallback). Green.
-3. **Full jitter on backoff** (`internal/queue/worker.go` ~line 108):
-   `rand.Float64() * maxBackoff`, capped at 5min. Logs confirm randomized delays.
-4. **System prompt rewritten for voice** (`gemini.go`) — speaks directly to the
-   user as "you", with concrete example phrasings. Confirmed in live output.
-5. **DB volume / migrations:** swapped to a fresh volume → empty DB → had to
-   `make migrate-up`, recreate account, re-add skills to trigger matching.
+Working. On `main`, clean tree, in sync with origin. `go build ./cmd/...
+./internal/...` is green; `internal/matcher` and `internal/llm` tests pass. The
+proficiency weighting is live and produces lower, more discriminating scores.
+Enrichment is **functionally complete but blocked by quota**: the Gemini
+free tier for `gemini-3.5-flash` is **20 requests per DAY** (`quotaId:
+GenerateRequestsPerDayPerProjectPerModel-FreeTier`), and today's 20 are spent —
+it resets ~midnight Pacific. The enrich icon renders but summaries won't appear
+until jobs actually enrich.
 
-## START HERE NEXT SESSION
+Minor cosmetic note: the two commit subjects ran into their bodies (no blank line
+between subject and body) because of how the `-m` string was passed — harmless,
+but the git log reads as one long line per commit.
 
-1. **Reset `AI_MATCH_THRESHOLD` back to ≥60** (temped to 40 for testing — that's
-   what blew past the 5/min free quota by enriching too many jobs at once).
-2. **Throttle / rate-limit enrich enqueues** so you stay under Gemini's 5 req/min
-   free tier. Options: cap concurrency, honor the 429 `RetryInfo`/`Retry-After`,
-   or widen the backoff window (current ~15s retry budget < 60s quota window, so
-   transient 429s still DLQ — see LEARNINGS).
-3. **Frontend: "enriched" indicator** (Sam's idea) — only ~6/100 jobs are
-   enriched and there's no way to spot them in the list without opening each.
-   Small Vue task: an icon/badge on job cards gated on `is_enriched`.
+## What Didn't Work (don't re-explore these)
 
-## Deferred (decided, not blocking)
+- **Flushing the Redis queue does NOT fix enrichment.** `DEL jobradar:queue:main
+  jobradar:queue:dlq` stops the *flood* (and it did — dropped ~hundreds of retries
+  to ~5), but the real ceiling is **20/day**, not a per-minute rate. Flushing
+  again won't get more enrichments; the daily bucket is the wall.
+- **Switching to Claude to "use my subscription / avoid billing" is a dead end.**
+  A Claude.ai subscription is NOT Anthropic API access — the API needs separate
+  pay-as-you-go billing with **no free tier**. It would cost *more* than Gemini,
+  not less. (The `Enricher` interface still makes adding Claude cheap *if* we ever
+  want multi-provider — it just doesn't dodge billing.)
+- **Profile edits re-flood enrichment.** Saving skills/desired-roles/preferences
+  calls `enqueueMatchJobsForUser`, which re-matches *every* job and re-enqueues
+  enrich for all that clear the threshold. This was the recurring flood trigger
+  all session — not a one-time artifact of lowering the threshold.
 
-- **Manual "enrich all qualifying jobs" button** — mostly redundant: adding a
-  skill already fans out a re-match over ALL jobs (`enqueueMatchJobsForUser`),
-  and `handleMatchJob` re-enqueues enrich for every job that re-qualifies, and
-  `UpsertMatch` resets `ai_summary=nil`/`is_enriched=false` on re-match. So
-  enrichment already re-runs automatically on profile change. Only build the
-  button if you want to trigger enrichment WITHOUT a profile change.
-- **Full handler test for `handleEnrichJob`** — needs `cfg.db` behind an
-  interface to avoid live Postgres. Skipped; the classification table-test covers
-  the logic that was actually broken.
-- **Matcher signal quality** — weight skills by proficiency; the
-  description-derived "missing skills" can flag skills the user genuinely has
-  (noted as design debt in `worker_match.go`).
-- **Skip-write scale debt** — currently upserts score=0 rows for non-matches;
-  "don't write skips" must ship together with a `DeleteMatch` query (see TODO in
-  `worker_match.go`).
+## Next Steps (ordered)
 
-## Files in play this session
+1. **Finish today's LEARNINGS.md entries** if not already done: ordinal-vs-interval
+   data; richer-signal⇒inherited-missing-data; validate-at-edge/defend-in-core;
+   nil-slice-vs-nil-map; build-green≠correct (un-summed accumulator); tx-dead-after-
+   commit / scope-tx-to-atomic-unit; log-every-500; LSP-cache-vs-compiler-truth;
+   free-tier-LLM-is-per-day.
+2. **Restart the server** so `AI_MATCH_THRESHOLD=45` takes effect (no rush — quota
+   is spent today anyway).
+3. **Phase 8.5 — Job Import from Link** (agreed next phase). Branch
+   `feature/job-import` off `main`. Scope to plan before coding: `POST` endpoint
+   for a pasted URL → fetch + scrape the page → LLM-extract title/company/
+   description/location/skills → create a **user-private** job record → enqueue
+   match + enrich (reuses the existing pipeline). This is the highest
+   personal-utility feature for Sam's own job hunt.
+4. **(Deferred Phase 5 hardening — separate `feature/enrich-rate-limit` branch):**
+   honor Gemini's `Retry-After`/`RetryInfo`; cap enrich concurrency to the budget;
+   replace the per-job re-match fan-out with a coalesced/batched `RematchUser` job.
 
-- `internal/llm/gemini.go` — taxonomy (`classifyGeminiError`, value target),
-  system prompt voice
-- `internal/llm/gemini_test.go` — value-shaped table test
-- `internal/queue/worker.go` — full jitter backoff
-- `cmd/jobradar/worker_match.go` / `worker_enrich.go` — match→enrich chain (no
-  changes tonight, but traced and confirmed correct)
-- `LEARNINGS.md` — 4 new entries (errors.As value/pointer, full jitter, retry
-  budget vs failure window, fresh volume = fresh DB)
-- `docker-compose.yml` — DB volume
+## Open Questions
 
-## LEARNINGS captured this session
+- **Gemini free (A) vs paid (B)?** A = accept 20/day as a demo allowance and cap
+  demand to the best matches; B = pay-as-you-go (flash enrichment is ~a fraction of
+  a cent each — cents/month for personal use). Deferred; doesn't block 8.5.
+- **beginner (0.3) < unknown-prior (0.5) ordering** — deliberate, but revisit if it
+  creates a perverse incentive to leave proficiency blank.
+- **Stop writing `score=0` rows for skipped jobs?** Existing TODO in
+  `worker_match.go` — must ship *together* with a `DeleteMatch` query and the
+  re-match coalescing, never alone (stale high-score rows would linger).
+- **Re-match scale** — profile edits fan out O(jobs) enrich jobs; needs coalescing
+  / a batch `RematchUser` job before this is production-safe.
 
-errors.As matches by exact dynamic type (pointer vs value); a test is only as
-good as the fidelity of its inputs; full jitter vs thundering herd; a transient
-error still DLQs if retry budget < failure window; fresh volume = fresh DB =
-re-run migrations. (Plus earlier: LLM voice via system-prompt framing; no
-bind-mount volumes in the module tree.)
+## Files Changed This Session
+
+- `cmd/jobradar/worker_match.go` — `proficiencyToWeight`, weight-map build
+- `cmd/jobradar/handler_experiences.go` — post-commit read via pool (bugfix)
+- `internal/matcher/matcher.go` — weighted skill score, map signature
+- `internal/matcher/matcher_test.go` — map signature + weighted expectations
+- `frontend/src/components/JobRow.vue` — AI-enriched indicator icon
+- `.context/PLAN.md` — Phase 7 annotations
+- `LEARNINGS.md` — session learnings
+- `.env` — `AI_MATCH_THRESHOLD` 60 → 45 (gitignored; local change only)
