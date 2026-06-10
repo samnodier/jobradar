@@ -337,7 +337,7 @@ func (cfg *apiConfig) handlerUpdateExperience(w http.ResponseWriter, r *http.Req
 	}
 
 	// fetch the full updated experience from the database after update
-	fullExperience, err := qtx.GetExperienceByID(r.Context(), database.GetExperienceByIDParams{
+	fullExperience, err := cfg.db.GetExperienceByID(r.Context(), database.GetExperienceByIDParams{
 		ID:     experience.ID,
 		UserID: userID,
 	})
