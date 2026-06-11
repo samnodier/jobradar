@@ -190,7 +190,9 @@ func (h *Handler) fetchGitHubUser(ctx context.Context, accessToken string) (*Git
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("github api error: %d", resp.StatusCode)
@@ -233,7 +235,9 @@ func (h *Handler) fetchGitHubPrimaryEmail(ctx context.Context, accessToken strin
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("github email api error: %d", resp.StatusCode)
