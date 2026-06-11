@@ -32,27 +32,28 @@ type ExperienceSkill struct {
 }
 
 type Job struct {
-	ID              uuid.UUID  `json:"id"`
-	ExternalID      string     `json:"external_id"`
-	JobSource       string     `json:"job_source"`
-	Title           string     `json:"title"`
-	CompanyName     string     `json:"company_name"`
-	Description     *string    `json:"description"`
-	SourceUrl       string     `json:"source_url"`
-	SalaryMin       *int32     `json:"salary_min"`
-	SalaryMax       *int32     `json:"salary_max"`
-	Currency        *string    `json:"currency"`
-	JobLocation     *string    `json:"job_location"`
-	IsRemote        *bool      `json:"is_remote"`
-	JobStatus       *string    `json:"job_status"`
-	EmploymentType  *string    `json:"employment_type"`
-	ExperienceLevel *string    `json:"experience_level"`
-	Skills          []string   `json:"skills"`
-	PostedAt        *time.Time `json:"posted_at"`
-	ExpiresAt       *time.Time `json:"expires_at"`
-	CreatedAt       *time.Time `json:"created_at"`
-	UpdatedAt       *time.Time `json:"updated_at"`
-	LogoUrl         *string    `json:"logo_url"`
+	ID              uuid.UUID   `json:"id"`
+	ExternalID      string      `json:"external_id"`
+	JobSource       string      `json:"job_source"`
+	Title           string      `json:"title"`
+	CompanyName     string      `json:"company_name"`
+	Description     *string     `json:"description"`
+	SourceUrl       string      `json:"source_url"`
+	SalaryMin       *int32      `json:"salary_min"`
+	SalaryMax       *int32      `json:"salary_max"`
+	Currency        *string     `json:"currency"`
+	JobLocation     *string     `json:"job_location"`
+	IsRemote        *bool       `json:"is_remote"`
+	JobStatus       *string     `json:"job_status"`
+	EmploymentType  *string     `json:"employment_type"`
+	ExperienceLevel *string     `json:"experience_level"`
+	Skills          []string    `json:"skills"`
+	PostedAt        *time.Time  `json:"posted_at"`
+	ExpiresAt       *time.Time  `json:"expires_at"`
+	CreatedAt       *time.Time  `json:"created_at"`
+	UpdatedAt       *time.Time  `json:"updated_at"`
+	LogoUrl         *string     `json:"logo_url"`
+	CreatedByUserID pgtype.UUID `json:"created_by_user_id"`
 }
 
 type ProjectSkill struct {

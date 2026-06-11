@@ -228,7 +228,7 @@ Best-effort: per-job failures are logged and skipped, not fatal.
 */
 func (cfg *apiConfig) enqueueMatchJobsForUser(ctx context.Context, userID uuid.UUID) error {
 	// Fetch all job IDs
-	jobsIDs, err := cfg.db.GetAllJobIDs(ctx)
+	jobsIDs, err := cfg.db.GetAllJobIDs(ctx, convert.ToPgUUID(userID))
 	if err != nil {
 		return fmt.Errorf("enqueueMatchJobsForUser: error fetching job IDs for rematching: %w", err)
 	}

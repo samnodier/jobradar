@@ -5,7 +5,8 @@ INSERT INTO jobs (
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
 )
-ON CONFLICT (external_id, job_source) DO NOTHING
+ON CONFLICT (external_id, job_source)
+WHERE created_by_user_id IS NULL DO NOTHING
 RETURNING *;
 
 -- name: GetJobs :many
@@ -43,10 +44,12 @@ FROM jobs AS j
 LEFT JOIN saved_jobs AS s ON j.id = s.job_id AND s.user_id = $1
 LEFT JOIN applications AS a ON j.id = a.job_id AND a.user_id = $1
 LEFT JOIN user_job_matches AS m ON j.id = m.job_id AND m.user_id = $1
+WHERE (j.created_by_user_id IS NULL OR j.created_by_user_id = $1)
 ORDER BY j.created_at DESC;
 
 -- name: GetAllJobIDs :many
-SELECT id FROM jobs;
+SELECT id FROM jobs
+WHERE created_by_user_id IS NULL OR created_by_user_id = $1;
 
 -- name: GetJobByID :one
 SELECT
@@ -83,7 +86,7 @@ FROM jobs AS j
 LEFT JOIN saved_jobs AS s ON j.id = s.job_id AND s.user_id = $1
 LEFT JOIN applications AS a ON j.id = a.job_id AND a.user_id = $1
 LEFT JOIN user_job_matches AS m ON j.id = m.job_id AND m.user_id = $1
-WHERE j.id = $2;
+WHERE j.id = $2 AND (j.created_by_user_id IS NULL OR j.created_by_user_id = $1);
 
 -- name: GetJobStats :one
 SELECT
@@ -116,4 +119,5 @@ FROM jobs
 WHERE
     (title ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
     AND ($2::TEXT IS NULL OR $2 = ANY(skills))
+    AND (created_by_user_id IS NULL OR created_by_user_id = $3)
 ORDER BY created_at DESC;

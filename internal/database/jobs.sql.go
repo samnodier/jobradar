@@ -20,8 +20,9 @@ INSERT INTO jobs (
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
 )
-ON CONFLICT (external_id, job_source) DO NOTHING
-RETURNING id, external_id, job_source, title, company_name, description, source_url, salary_min, salary_max, currency, job_location, is_remote, job_status, employment_type, experience_level, skills, posted_at, expires_at, created_at, updated_at, logo_url
+ON CONFLICT (external_id, job_source)
+WHERE created_by_user_id IS NULL DO NOTHING
+RETURNING id, external_id, job_source, title, company_name, description, source_url, salary_min, salary_max, currency, job_location, is_remote, job_status, employment_type, experience_level, skills, posted_at, expires_at, created_at, updated_at, logo_url, created_by_user_id
 `
 
 type CreateJobParams struct {
@@ -79,16 +80,18 @@ func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, erro
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.LogoUrl,
+		&i.CreatedByUserID,
 	)
 	return i, err
 }
 
 const getAllJobIDs = `-- name: GetAllJobIDs :many
 SELECT id FROM jobs
+WHERE created_by_user_id IS NULL OR created_by_user_id = $1
 `
 
-func (q *Queries) GetAllJobIDs(ctx context.Context) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, getAllJobIDs)
+func (q *Queries) GetAllJobIDs(ctx context.Context, createdByUserID pgtype.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, getAllJobIDs, createdByUserID)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +145,7 @@ FROM jobs AS j
 LEFT JOIN saved_jobs AS s ON j.id = s.job_id AND s.user_id = $1
 LEFT JOIN applications AS a ON j.id = a.job_id AND a.user_id = $1
 LEFT JOIN user_job_matches AS m ON j.id = m.job_id AND m.user_id = $1
-WHERE j.id = $2
+WHERE j.id = $2 AND (j.created_by_user_id IS NULL OR j.created_by_user_id = $1)
 `
 
 type GetJobByIDParams struct {
@@ -277,6 +280,7 @@ FROM jobs AS j
 LEFT JOIN saved_jobs AS s ON j.id = s.job_id AND s.user_id = $1
 LEFT JOIN applications AS a ON j.id = a.job_id AND a.user_id = $1
 LEFT JOIN user_job_matches AS m ON j.id = m.job_id AND m.user_id = $1
+WHERE (j.created_by_user_id IS NULL OR j.created_by_user_id = $1)
 ORDER BY j.created_at DESC
 `
 
@@ -384,12 +388,14 @@ FROM jobs
 WHERE
     (title ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
     AND ($2::TEXT IS NULL OR $2 = ANY(skills))
+    AND (created_by_user_id IS NULL OR created_by_user_id = $3)
 ORDER BY created_at DESC
 `
 
 type SearchJobsParams struct {
-	Column1 *string `json:"column_1"`
-	Column2 string  `json:"column_2"`
+	Column1         *string     `json:"column_1"`
+	Column2         string      `json:"column_2"`
+	CreatedByUserID pgtype.UUID `json:"created_by_user_id"`
 }
 
 type SearchJobsRow struct {
@@ -412,7 +418,7 @@ type SearchJobsRow struct {
 }
 
 func (q *Queries) SearchJobs(ctx context.Context, arg SearchJobsParams) ([]SearchJobsRow, error) {
-	rows, err := q.db.Query(ctx, searchJobs, arg.Column1, arg.Column2)
+	rows, err := q.db.Query(ctx, searchJobs, arg.Column1, arg.Column2, arg.CreatedByUserID)
 	if err != nil {
 		return nil, err
 	}
