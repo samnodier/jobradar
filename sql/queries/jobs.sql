@@ -9,6 +9,37 @@ ON CONFLICT (external_id, job_source)
 WHERE created_by_user_id IS NULL DO NOTHING
 RETURNING *;
 
+-- name: CreateImportedJob :one
+INSERT INTO jobs (
+    external_id, job_source, title, company_name, description, source_url,
+    salary_min,
+    salary_max,
+    currency,
+    job_location,
+    is_remote,
+    skills,
+    logo_url,
+    created_by_user_id
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+)
+ON CONFLICT (created_by_user_id, source_url)
+WHERE created_by_user_id IS NOT NULL
+DO UPDATE
+    SET
+        title = excluded.title,
+        company_name = excluded.company_name,
+        description = excluded.description,
+        salary_min = excluded.salary_min,
+        salary_max = excluded.salary_max,
+        currency = excluded.currency,
+        job_location = excluded.job_location,
+        is_remote = excluded.is_remote,
+        skills = excluded.skills,
+        logo_url = excluded.logo_url,
+        updated_at = NOW()
+RETURNING *;
+
 -- name: GetJobs :many
 SELECT
     j.id,

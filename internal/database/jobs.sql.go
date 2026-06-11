@@ -13,6 +13,100 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createImportedJob = `-- name: CreateImportedJob :one
+INSERT INTO jobs (
+    external_id, job_source, title, company_name, description, source_url,
+    salary_min,
+    salary_max,
+    currency,
+    job_location,
+    is_remote,
+    skills,
+    logo_url,
+    created_by_user_id
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+)
+ON CONFLICT (created_by_user_id, source_url)
+WHERE created_by_user_id IS NOT NULL
+DO UPDATE
+    SET
+        title = excluded.title,
+        company_name = excluded.company_name,
+        description = excluded.description,
+        salary_min = excluded.salary_min,
+        salary_max = excluded.salary_max,
+        currency = excluded.currency,
+        job_location = excluded.job_location,
+        is_remote = excluded.is_remote,
+        skills = excluded.skills,
+        logo_url = excluded.logo_url,
+        updated_at = NOW()
+RETURNING id, external_id, job_source, title, company_name, description, source_url, salary_min, salary_max, currency, job_location, is_remote, job_status, employment_type, experience_level, skills, posted_at, expires_at, created_at, updated_at, logo_url, created_by_user_id
+`
+
+type CreateImportedJobParams struct {
+	ExternalID      string      `json:"external_id"`
+	JobSource       string      `json:"job_source"`
+	Title           string      `json:"title"`
+	CompanyName     string      `json:"company_name"`
+	Description     *string     `json:"description"`
+	SourceUrl       string      `json:"source_url"`
+	SalaryMin       *int32      `json:"salary_min"`
+	SalaryMax       *int32      `json:"salary_max"`
+	Currency        *string     `json:"currency"`
+	JobLocation     *string     `json:"job_location"`
+	IsRemote        *bool       `json:"is_remote"`
+	Skills          []string    `json:"skills"`
+	LogoUrl         *string     `json:"logo_url"`
+	CreatedByUserID pgtype.UUID `json:"created_by_user_id"`
+}
+
+func (q *Queries) CreateImportedJob(ctx context.Context, arg CreateImportedJobParams) (Job, error) {
+	row := q.db.QueryRow(ctx, createImportedJob,
+		arg.ExternalID,
+		arg.JobSource,
+		arg.Title,
+		arg.CompanyName,
+		arg.Description,
+		arg.SourceUrl,
+		arg.SalaryMin,
+		arg.SalaryMax,
+		arg.Currency,
+		arg.JobLocation,
+		arg.IsRemote,
+		arg.Skills,
+		arg.LogoUrl,
+		arg.CreatedByUserID,
+	)
+	var i Job
+	err := row.Scan(
+		&i.ID,
+		&i.ExternalID,
+		&i.JobSource,
+		&i.Title,
+		&i.CompanyName,
+		&i.Description,
+		&i.SourceUrl,
+		&i.SalaryMin,
+		&i.SalaryMax,
+		&i.Currency,
+		&i.JobLocation,
+		&i.IsRemote,
+		&i.JobStatus,
+		&i.EmploymentType,
+		&i.ExperienceLevel,
+		&i.Skills,
+		&i.PostedAt,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LogoUrl,
+		&i.CreatedByUserID,
+	)
+	return i, err
+}
+
 const createJob = `-- name: CreateJob :one
 INSERT INTO jobs (
     external_id, job_source, title, company_name, description, source_url,
