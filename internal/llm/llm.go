@@ -23,16 +23,16 @@ type ExtractionInput struct {
 }
 
 type ExtractionResult struct {
-	Title       string
-	CompanyName string
-	Description string
-	SalaryMin   *int32
-	SalaryMax   *int32
-	Currency    *string
-	JobLocation *string
-	IsRemote    *bool
-	Skills      []string
-	LogoURL     *string
+	Title       string   `json:"title"`
+	CompanyName string   `json:"company_name"`
+	Description string   `json:"description"`
+	SalaryMin   *int32   `json:"salary_min"`
+	SalaryMax   *int32   `json:"salary_max"`
+	Currency    *string  `json:"currency"`
+	JobLocation *string  `json:"job_location"`
+	IsRemote    *bool    `json:"is_remote"`
+	Skills      []string `json:"skills"`
+	LogoURL     *string  `json:"logo_url"`
 }
 
 type Enricher interface {
