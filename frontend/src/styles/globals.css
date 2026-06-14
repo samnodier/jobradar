@@ -25,6 +25,15 @@
 :root {
   --topbar-height: 53px;
   color-scheme: light;
+
+  --dp-font-family: var(--font-base) !important;
+  --dp-border-radius: 0 !important;
+  --dp-cell-border-radius: 0 !important;
+  --dp-primary-color: var(--color-accent) !important;
+  --dp-text-color: #111827 !important;
+  --dp-text-color-hover: #111827 !important;
+  --dp-selected-color: var(--color-accent) !important;
+  --dp-font-size: var(--text-sm) !important;
 }
 
 html,
