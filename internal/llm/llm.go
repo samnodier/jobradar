@@ -32,7 +32,6 @@ type ExtractionResult struct {
 	JobLocation *string  `json:"job_location"`
 	IsRemote    *bool    `json:"is_remote"`
 	Skills      []string `json:"skills"`
-	LogoURL     *string  `json:"logo_url"`
 }
 
 type Enricher interface {
