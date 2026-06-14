@@ -4,113 +4,59 @@
 
 ## Date
 
-2026-06-10
+2026-06-14
 
 ## Branch
 
-`main` — today's work (`feature/ai-matching`) was merged in and pushed. Working
-tree clean; `main` is in sync with `origin/main` (0 ahead / 0 behind).
+`feature/job-import`
 
 ## Accomplished
 
-- **Proficiency-weighted skill scoring** (the session goal). In
-  `internal/matcher/matcher.go`, `MatchJob`'s skill dimension now sums each
-  matched skill's proficiency weight and divides by `len(jobSkills)` (was a flat
-  `len(matchedSkills)/len(jobSkills)` count). The `userSkills` parameter changed
-  from `[]string` to `map[string]float64` (name → weight); the trie is built from
-  the map's keys (`slices.Collect(maps.Keys(...))`) and weights are looked up by
-  matched-skill name.
-- **`proficiencyToWeight(p *string) float64`** added in
-  `cmd/jobradar/worker_match.go`: beginner 0.3 / intermediate 0.5 / advanced 0.8
-  / expert 1.0; `nil` or unrecognized → **0.5 neutral prior**. The worker builds
-  the `map[string]float64`, deduping case-insensitively so `user_skills`
-  (proficiency known) wins over experience-only skills (prior) via the existing
-  seen-set ordering.
-- **`matcher_test.go`** updated to the map signature; tests pass (scores
-  compressed downward as expected, still clear the `>50` thresholds).
-- **AI-enriched indicator** added to `frontend/src/components/JobRow.vue`, gated
-  on `job.is_enriched`.
-- **Bugfix:** 500 on `PATCH /api/profile/experiences/{id}`. In
-  `cmd/jobradar/handler_experiences.go`, the post-commit read-back was using the
-  committed `qtx` (a closed transaction); switched to `cfg.db` (pool), matching
-  the create handler. Committed separately (`de99fa7`).
-- **`AI_MATCH_THRESHOLD` → 45** in `.env` (was 60; scores compress under the new
-  weighting). **Takes effect on next server restart** — env is read at startup.
-- **`.context/PLAN.md`** Phase 7 annotated: daily-digest cadence, default-≥50%
-  notify policy, the idempotency sent-ledger mechanism, and career-ops.org as the
-  north-star reference.
-- Two commits (`de99fa7` bugfix, `f215ffe` feature) merged to `main` and pushed.
+Smoke-tested the entire Phase 8.5 import backend against a live server and a real URL for the first time (it had only ever been compiled). Found and fixed one real bug, killed an LLM hallucination at the schema level, and recorded both lessons.
+
+- **Verified the import pipeline end to end** with `curl` (auth via refreshed `cookies.txt`, session cookie `session_id`) against `https://www.myjobmag.co.ke/job/backend-developer-savannah-informatics-4`:
+  - `POST /api/jobs/import` (extract) → `200`, returns a draft, no DB write. ✅
+  - SSRF guard → internal URLs (`169.254.169.254`, `localhost:8080`) rejected instantly at dial time. ✅
+  - `POST /api/jobs/import/confirm` → `201`, writes a user-private job (`created_by_user_id` set), `job_source` strips `www.` → `myjobmag.co.ke`. ✅
+  - Dedup → re-POST same `source_url` upserts the SAME row (id `33393479…`), edits applied, 1 row total. ✅
+- **Found + fixed the match-worker drift bug.** Server logged `Job 33393479… not found in DB skipping matching` on confirm. Root cause: `cmd/jobradar/worker_match.go` called `GetJobByID` with `UserID: uuid.Nil`. `GetJobByID`'s WHERE is `j.id = $2 AND (j.created_by_user_id IS NULL OR j.created_by_user_id = $1)` — `uuid.Nil` matches public jobs only; a user-private import (`created_by_user_id` set) is structurally excluded. Fixed by passing the real `userID` (already parsed on line 35, already used by `UpsertMatch`) and correcting the now-false comment. After fix: match row written — `match_score 46`, `title_score 0.89`, `skill_score 0.125`.
+- **Killed the logo hallucination.** Extract had invented `savannahinformatics.com/logo.png` (guessed `domain/logo.png`). Removed `logo_url` from the Gemini `ResponseSchema` (`internal/llm/gemini.go`) and from `ExtractionResult` (`internal/llm/llm.go`) — structured output can no longer emit it. Also repaired a garbled final prompt line in `extractInstructions` (`Respond only wihema. Nomarkdown` → `Respond only with JSON matching the schema. …`).
+- **Two `LEARNINGS.md` entries added:** (1) a background worker is a reader of shared queries — a nil/placeholder arg a new WHERE clause depends on is a silent drift hazard; (2) an LLM fabricates any schema field the page doesn't supply — a guessed conventional URL is the hallucination signature; remove the field from the schema for a structural guarantee, or derive deterministically.
 
 ## Current State
 
-Working. On `main`, clean tree, in sync with origin. `go build ./cmd/...
-./internal/...` is green; `internal/matcher` and `internal/llm` tests pass. The
-proficiency weighting is live and produces lower, more discriminating scores.
-Enrichment is **functionally complete but blocked by quota**: the Gemini
-free tier for `gemini-3.5-flash` is **20 requests per DAY** (`quotaId:
-GenerateRequestsPerDayPerProjectPerModel-FreeTier`), and today's 20 are spent —
-it resets ~midnight Pacific. The enrich icon renders but summaries won't appear
-until jobs actually enrich.
+Working. `go build ./cmd/... ./internal/...` is clean (`EXIT 0`). The full import pipeline (extract → confirm → match) is verified live, not just compiled — a match row now lands for imported jobs. Changes are **uncommitted** in the working tree (worker fix, schema/prompt edits, LEARNINGS). This is the last stable state; no known bugs in the import path. Frontend still does not exist.
 
-Minor cosmetic note: the two commit subjects ran into their bodies (no blank line
-between subject and body) because of how the `-m` string was passed — harmless,
-but the git log reads as one long line per commit.
+## What Didn't Work
 
-## What Didn't Work (don't re-explore these)
+- First re-run of the confirm after "the fix" still produced `0` match rows — because the edit had **not actually been made to `worker_match.go` yet**; re-running curl against unchanged, un-rebuilt code can't change the outcome. Lesson reinforced: verify the source changed and the server was restarted before re-testing.
+- `cookies.txt` in the repo was 2 months old and dead (`SESSION_TTL` is 240h); had to log in via browser (`/auth/github/login`) and refresh the `session_id` value + bump the expiry field. Netscape format is tab-separated and expiry-checked — spaces or a past expiry = curl silently drops the cookie.
 
-- **Flushing the Redis queue does NOT fix enrichment.** `DEL jobradar:queue:main
-  jobradar:queue:dlq` stops the *flood* (and it did — dropped ~hundreds of retries
-  to ~5), but the real ceiling is **20/day**, not a per-minute rate. Flushing
-  again won't get more enrichments; the daily bucket is the wall.
-- **Switching to Claude to "use my subscription / avoid billing" is a dead end.**
-  A Claude.ai subscription is NOT Anthropic API access — the API needs separate
-  pay-as-you-go billing with **no free tier**. It would cost *more* than Gemini,
-  not less. (The `Enricher` interface still makes adding Claude cheap *if* we ever
-  want multi-provider — it just doesn't dodge billing.)
-- **Profile edits re-flood enrichment.** Saving skills/desired-roles/preferences
-  calls `enqueueMatchJobsForUser`, which re-matches *every* job and re-enqueues
-  enrich for all that clear the threshold. This was the recurring flood trigger
-  all session — not a one-time artifact of lowering the threshold.
+## Next Steps
 
-## Next Steps (ordered)
-
-1. **Finish today's LEARNINGS.md entries** if not already done: ordinal-vs-interval
-   data; richer-signal⇒inherited-missing-data; validate-at-edge/defend-in-core;
-   nil-slice-vs-nil-map; build-green≠correct (un-summed accumulator); tx-dead-after-
-   commit / scope-tx-to-atomic-unit; log-every-500; LSP-cache-vs-compiler-truth;
-   free-tier-LLM-is-per-day.
-2. **Restart the server** so `AI_MATCH_THRESHOLD=45` takes effect (no rush — quota
-   is spent today anyway).
-3. **Phase 8.5 — Job Import from Link** (agreed next phase). Branch
-   `feature/job-import` off `main`. Scope to plan before coding: `POST` endpoint
-   for a pasted URL → fetch + scrape the page → LLM-extract title/company/
-   description/location/skills → create a **user-private** job record → enqueue
-   match + enrich (reuses the existing pipeline). This is the highest
-   personal-utility feature for Sam's own job hunt.
-4. **(Deferred Phase 5 hardening — separate `feature/enrich-rate-limit` branch):**
-   honor Gemini's `Retry-After`/`RetryInfo`; cap enrich concurrency to the budget;
-   replace the per-job re-match fan-out with a coalesced/batched `RematchUser` job.
+1. Commit this session's work on `feature/job-import` (worker fix + import schema/prompt + LEARNINGS). Suggested message: `fix: match worker passes owner userID so private imports match; drop hallucinated logo_url from extractor`.
+2. Build the frontend import flow — add an import button + URL input (likely `JobsView`).
+3. Wire `POST /api/jobs/import` with a loading spinner (slow ~13s LLM round-trip) and `credentials: 'include'`.
+4. Build a review/edit form from the returned draft; render `source_url` read-only — populate it from the user's typed URL, NOT from the extract response (the draft no longer echoes it, by design).
+5. Wire submit → `POST /api/jobs/import/confirm`; on `201`, surface the new private job in the list.
+6. Handle error states in UI: `422` no-key → prompt to add a Gemini key in Settings; `422`/`502` transient → client-driven Retry button.
+7. Guard `job.skills` for `null` in the imported-job display (imports may store `NULL`, not `'{}'`).
+8. Decide where the company/provider logo comes from now that it's no longer extracted — derive from the `source_url` domain (favicon) deterministically.
 
 ## Open Questions
 
-- **Gemini free (A) vs paid (B)?** A = accept 20/day as a demo allowance and cap
-  demand to the best matches; B = pay-as-you-go (flash enrichment is ~a fraction of
-  a cent each — cents/month for personal use). Deferred; doesn't block 8.5.
-- **beginner (0.3) < unknown-prior (0.5) ordering** — deliberate, but revisit if it
-  creates a perverse incentive to leave proficiency blank.
-- **Stop writing `score=0` rows for skipped jobs?** Existing TODO in
-  `worker_match.go` — must ship *together* with a `DeleteMatch` query and the
-  re-match coalescing, never alone (stale high-score rows would linger).
-- **Re-match scale** — profile edits fan out O(jobs) enrich jobs; needs coalescing
-  / a batch `RematchUser` job before this is production-safe.
+- **Provider vs company logo:** logo extraction is removed. Sam's intent was the *provider* site logo (company logo usually isn't in a post). Derive from the `source_url` host's favicon — decide frontend vs backend ownership of that derivation.
+- **Matcher false positive:** the imported job matched `matched_skills = {Design}` — the matcher found the user's "Design" skill by scanning the *description* text ("design, build, and optimize"), not the skills list. Matcher signal-quality (Phase 5 polish), not an import bug.
+- **Pre-existing enrich DLQ backlog:** `jobradar:queue:dlq` holds 5 `enrich:match` jobs (attempt 4/3) from the known Gemini free-tier rate-limit issue, plus 1 stale `scrape:remoteok`. Not today's work, but the DLQ is non-empty.
+- **Free-tier Gemini quota** is low for the day (two `422`s on `/import` mid-session looked quota-related) — mind this when manually re-testing extract.
+- `external_id` still set to the full `source_url` (carried over open question; fine while dedup is on `(created_by_user_id, source_url)`).
 
-## Files Changed This Session
+## Files Changed
 
-- `cmd/jobradar/worker_match.go` — `proficiencyToWeight`, weight-map build
-- `cmd/jobradar/handler_experiences.go` — post-commit read via pool (bugfix)
-- `internal/matcher/matcher.go` — weighted skill score, map signature
-- `internal/matcher/matcher_test.go` — map signature + weighted expectations
-- `frontend/src/components/JobRow.vue` — AI-enriched indicator icon
-- `.context/PLAN.md` — Phase 7 annotations
-- `LEARNINGS.md` — session learnings
-- `.env` — `AI_MATCH_THRESHOLD` 60 → 45 (gitignored; local change only)
+Uncommitted in the working tree (`git diff --name-only HEAD`):
+
+- `cmd/jobradar/worker_match.go` (pass real `userID` to `GetJobByID`; fix comment)
+- `internal/llm/gemini.go` (drop `logo_url` from `ResponseSchema`; repair `extractInstructions` final line)
+- `internal/llm/llm.go` (drop `logo_url` from `ExtractionResult`)
+- `LEARNINGS.md` (2 new entries: worker drift, LLM field hallucination)
+- `.context/handoff.md` (this file)

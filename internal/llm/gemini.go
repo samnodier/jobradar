@@ -72,7 +72,7 @@ const extractInstructions = `You are a precise job-posting data extractor.
 	- "is_remote" is true only if the posting explicitly describes the role as remote.
 	If it is on-site, hybrid, or unspecified, return false or null accordingly — do not assume.
 	- "job_location" is the location as written (e.g. "Berlin, Germany" or "Remote — US").
-Respond only wihema. Nomarkdown, no code fences, no preamble.`
+Respond only with JSON matching the schema. Nomarkdown, no code fences, no preamble.`
 
 const model = "gemini-3.5-flash"
 
@@ -144,7 +144,6 @@ func (g *geminiExtractor) Extract(ctx context.Context, input ExtractionInput) (E
 						Type:  genai.TypeArray,
 						Items: &genai.Schema{Type: genai.TypeString},
 					},
-					"logo_url": {Type: genai.TypeString},
 				},
 				Required: []string{
 					"title", "company_name", "description",

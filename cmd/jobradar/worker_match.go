@@ -45,8 +45,8 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 	// Fetch the job
 	job, err := cfg.db.GetJobByID(ctx, database.GetJobByIDParams{
 		// GetJobByID needs a user ID because of the left join with saved_jobs/applications.
-		// We can pass a blank UUID since we only need the raw job description/title details
-		UserID: uuid.Nil,
+		// We pass the UserID because it is required by the created_by_user_id filter
+		UserID: userID,
 		ID:     jobID,
 	})
 	if err != nil {
