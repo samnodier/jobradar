@@ -116,12 +116,16 @@ func (cfg *apiConfig) handleEnrichJob(ctx context.Context, qJob *queue.Job) erro
 	var userExperiences []string
 	for _, exp := range expsRows {
 		var text strings.Builder
-		text.WriteString(exp.RoleTitle + " at " + exp.CompanyName)
+		text.WriteString(exp.RoleTitle)
+		text.WriteString(" at ")
+		text.WriteString(exp.CompanyName)
 		if exp.Description != nil {
-			text.WriteString(" " + *exp.Description)
+			text.WriteString(" ")
+			text.WriteString(*exp.Description)
 		}
 		for _, ach := range exp.Achievements {
-			text.WriteString(" " + ach)
+			text.WriteString(" ")
+			text.WriteString(ach)
 		}
 		userExperiences = append(userExperiences, text.String())
 	}

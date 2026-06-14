@@ -35,6 +35,7 @@ type apiConfig struct {
 	crypto           *crypto.Service
 	aiMatchThreshold int32
 	newEnricher      func(ctx context.Context, apiKey string) (llm.Enricher, error)
+	newExtractor     func(ctx context.Context, apiKey string) (llm.Extractor, error)
 	IsProduction     bool
 }
 
@@ -83,6 +84,7 @@ func main() {
 		rootCtx:          context.Background(),
 		crypto:           cryptoService,
 		newEnricher:      llm.NewGeminiEnricher,
+		newExtractor:     llm.NewGeminiExtractor,
 		aiMatchThreshold: aiMatchThreshold,
 		IsProduction:     os.Getenv("APP_ENV") == "production",
 	}
@@ -175,6 +177,9 @@ func main() {
 		r.Post("/auth/onboarding", authHandler.HandleOnboardingComplete)
 		r.Group(func(r chi.Router) {
 			r.Use(authHandler.RequireAuth)
+
+			r.Post("/jobs/import", cfg.handlerExtractJob)
+			r.Post("/jobs/import/confirm", cfg.handlerImportConfirm)
 
 			r.Get("/applications", cfg.handlerApplicationsGet)
 			r.Post("/applications", cfg.handlerApplicationCreate)
