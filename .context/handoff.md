@@ -12,51 +12,55 @@
 
 ## Accomplished
 
-Smoke-tested the entire Phase 8.5 import backend against a live server and a real URL for the first time (it had only ever been compiled). Found and fixed one real bug, killed an LLM hallucination at the schema level, and recorded both lessons.
+Frontend session. Started the Phase 8.5 import UI and replaced the application date inputs with a themed date picker. Backend was untouched (import pipeline already verified live last session).
 
-- **Verified the import pipeline end to end** with `curl` (auth via refreshed `cookies.txt`, session cookie `session_id`) against `https://www.myjobmag.co.ke/job/backend-developer-savannah-informatics-4`:
-  - `POST /api/jobs/import` (extract) → `200`, returns a draft, no DB write. ✅
-  - SSRF guard → internal URLs (`169.254.169.254`, `localhost:8080`) rejected instantly at dial time. ✅
-  - `POST /api/jobs/import/confirm` → `201`, writes a user-private job (`created_by_user_id` set), `job_source` strips `www.` → `myjobmag.co.ke`. ✅
-  - Dedup → re-POST same `source_url` upserts the SAME row (id `33393479…`), edits applied, 1 row total. ✅
-- **Found + fixed the match-worker drift bug.** Server logged `Job 33393479… not found in DB skipping matching` on confirm. Root cause: `cmd/jobradar/worker_match.go` called `GetJobByID` with `UserID: uuid.Nil`. `GetJobByID`'s WHERE is `j.id = $2 AND (j.created_by_user_id IS NULL OR j.created_by_user_id = $1)` — `uuid.Nil` matches public jobs only; a user-private import (`created_by_user_id` set) is structurally excluded. Fixed by passing the real `userID` (already parsed on line 35, already used by `UpsertMatch`) and correcting the now-false comment. After fix: match row written — `match_score 46`, `title_score 0.89`, `skill_score 0.125`.
-- **Killed the logo hallucination.** Extract had invented `savannahinformatics.com/logo.png` (guessed `domain/logo.png`). Removed `logo_url` from the Gemini `ResponseSchema` (`internal/llm/gemini.go`) and from `ExtractionResult` (`internal/llm/llm.go`) — structured output can no longer emit it. Also repaired a garbled final prompt line in `extractInstructions` (`Respond only wihema. Nomarkdown` → `Respond only with JSON matching the schema. …`).
-- **Two `LEARNINGS.md` entries added:** (1) a background worker is a reader of shared queries — a nil/placeholder arg a new WHERE clause depends on is a silent drift hazard; (2) an LLM fabricates any schema field the page doesn't supply — a guessed conventional URL is the hallucination signature; remove the field from the schema for a structural guarantee, or derive deterministically.
+- **Added `@vuepic/vue-datepicker` (`^14.0.0`)** to `frontend/package.json` and integrated it into `ApplicationDetail.vue` for the **Applied** and **Follow up** dates, replacing the native `<input type="date">`.
+- **Fixed the "date doesn't show" bug** in `ApplicationDetail.vue`: the picker had `model-value="..."` (a static string prop) instead of `:model-value="..."` (a v-bind). Without the colon, Vue passed the literal expression text to the picker, so it never rendered the set date. Added the colon on both pickers; `applied_at`/`follow_up_at` now display correctly.
+- **Themed the date picker to match the brand** via `--dp-*` CSS custom properties added to `frontend/src/styles/globals.css` (font-family → `var(--font-base)`, sharp corners, accent color). Variables live in global CSS (not scoped) because the picker's calendar menu teleports to `<body>` and scoped styles can't reach it. Picker now matches the page font and sharp-corner look.
+- **Started the import entry point** in `JobsView.vue`: an `Import job` button (`.button-primary` + `PlusIcon` from `@lucide/vue`) in the header. ~70 lines of diff — entry point wired, panel not yet built.
+- **Created `frontend/src/components/ImportJobPanel.vue`** — currently an **empty placeholder file (0 lines)**.
+- Small unreviewed edits to `JobRow.vue` (+12) and `ApplicationsView.vue` (+6).
 
 ## Current State
 
-Working. `go build ./cmd/... ./internal/...` is clean (`EXIT 0`). The full import pipeline (extract → confirm → match) is verified live, not just compiled — a match row now lands for imported jobs. Changes are **uncommitted** in the working tree (worker fix, schema/prompt edits, LEARNINGS). This is the last stable state; no known bugs in the import path. Frontend still does not exist.
+App builds/runs (Sam confirmed the date picker shows and is styled). The date picker work is the stable, finished piece of this session. The import feature is **mid-build and not functional**: `JobsView.vue` has an `Import job` button but it isn't wired to anything, and `ImportJobPanel.vue` is an empty file. All changes are **uncommitted** in the working tree. No known runtime bugs in what's finished; the import UI is simply incomplete.
 
 ## What Didn't Work
 
-- First re-run of the confirm after "the fix" still produced `0` match rows — because the edit had **not actually been made to `worker_match.go` yet**; re-running curl against unchanged, un-rebuilt code can't change the outcome. Lesson reinforced: verify the source changed and the server was restarted before re-testing.
-- `cookies.txt` in the repo was 2 months old and dead (`SESSION_TTL` is 240h); had to log in via browser (`/auth/github/login`) and refresh the `session_id` value + bump the expiry field. Netscape format is tab-separated and expiry-checked — spaces or a past expiry = curl silently drops the cookie.
+- The date picker initially showed the selector but **not the selected date** — root cause was the missing `:` on `model-value` (static string vs binding), not a library or timezone issue. Fixed.
+- Styling the picker with scoped CSS would not have reached the calendar popup (it teleports to `body`) — using `--dp-*` variables in global CSS was the correct route.
 
 ## Next Steps
 
-1. Commit this session's work on `feature/job-import` (worker fix + import schema/prompt + LEARNINGS). Suggested message: `fix: match worker passes owner userID so private imports match; drop hallucinated logo_url from extractor`.
-2. Build the frontend import flow — add an import button + URL input (likely `JobsView`).
-3. Wire `POST /api/jobs/import` with a loading spinner (slow ~13s LLM round-trip) and `credentials: 'include'`.
-4. Build a review/edit form from the returned draft; render `source_url` read-only — populate it from the user's typed URL, NOT from the extract response (the draft no longer echoes it, by design).
-5. Wire submit → `POST /api/jobs/import/confirm`; on `201`, surface the new private job in the list.
-6. Handle error states in UI: `422` no-key → prompt to add a Gemini key in Settings; `422`/`502` transient → client-driven Retry button.
-7. Guard `job.skills` for `null` in the imported-job display (imports may store `NULL`, not `'{}'`).
-8. Decide where the company/provider logo comes from now that it's no longer extracted — derive from the `source_url` domain (favicon) deterministically.
+1. **Delete the stray file** literally named `'` in the repo root — it's an accidental 11KB dump of `JobsView.vue`'s script (likely an unclosed-quote shell mishap), not intentional. `rm "'"`.
+2. **Build `ImportJobPanel.vue`** (currently empty) as a slide-over: clone the overlay shell + footer from `ExperienceForm.vue` (`:168-193`, `:451-457`) — `max-w-140`, `border-l`, mobile bottom-sheet override. Drive it with an internal `phase` ref: `'url' → 'loading' → 'review'`.
+3. **Wire the `Import job` button** in `JobsView.vue` to open the panel.
+4. **Phase 'url':** URL input + validate at the edge (scheme ∈ {http,https}, non-empty host) before sending; `POST /api/jobs/import` with `credentials: 'include'`; spinner during the ~13s LLM round-trip (consider `AbortController` so closing cancels).
+5. **Phase 'review':** editable draft form using the existing field convention; render `source_url` **read-only**, populated from the URL the user typed (the draft does NOT echo it back, by design).
+6. **Submit → `POST /api/jobs/import/confirm`**; on `201`, emit the new job up to `JobsView` and prepend it to the `jobs` ref (stale-state spread pattern). Show it unmatched (don't poll for the score yet).
+7. **Error states:** `422` no-key → message linking to Settings; `422`/`502` transient → client-driven Retry button; malformed-URL `4xx` → inline field error.
+8. **Guard `job.skills` for `null`** in imported-job display, and fix the `Job` type (`types/job.ts:17`) which declares `skills: string[]` non-optional while imports can store `NULL`.
+9. **Date timezone cleanup (deferred):** `handleDateChange` in `ApplicationDetail.vue` still does `date.toISOString()` — a UTC off-by-one near midnight. Format from local date components instead.
 
 ## Open Questions
 
-- **Provider vs company logo:** logo extraction is removed. Sam's intent was the *provider* site logo (company logo usually isn't in a post). Derive from the `source_url` host's favicon — decide frontend vs backend ownership of that derivation.
-- **Matcher false positive:** the imported job matched `matched_skills = {Design}` — the matcher found the user's "Design" skill by scanning the *description* text ("design, build, and optimize"), not the skills list. Matcher signal-quality (Phase 5 polish), not an import bug.
-- **Pre-existing enrich DLQ backlog:** `jobradar:queue:dlq` holds 5 `enrich:match` jobs (attempt 4/3) from the known Gemini free-tier rate-limit issue, plus 1 stale `scrape:remoteok`. Not today's work, but the DLQ is non-empty.
-- **Free-tier Gemini quota** is low for the day (two `422`s on `/import` mid-session looked quota-related) — mind this when manually re-testing extract.
-- `external_id` still set to the full `source_url` (carried over open question; fine while dedup is on `(created_by_user_id, source_url)`).
+- **Sharp-corner consistency:** the only `rounded-*` in the app is the RemoteOK/Adzuna source dots in `AppSidebar.vue:40,45` (`rounded-full`). Intentional status LEDs, or make them sharp too?
+- **Import panel state ownership:** recommended local component state / small `useJobImport` composable, **no Pinia store** (used in one place; jobs list itself is a local ref). Confirm before building.
+- **No match score on a freshly imported job** — confirm enqueues matching async, so the new row shows unmatched until the worker runs + a refetch. Decided: show unmatched, no polling for now.
+- **Provider/company logo for imports** — `logo_url` is no longer extracted; imported jobs fall back to company initials. Optionally derive a favicon from the `source_url` host later.
+- `JobRow.vue` (+12) and `ApplicationsView.vue` (+6) edits were not reviewed this session — confirm what they were before committing.
 
 ## Files Changed
 
-Uncommitted in the working tree (`git diff --name-only HEAD`):
+Uncommitted in the working tree (`git diff --name-only HEAD` + untracked):
 
-- `cmd/jobradar/worker_match.go` (pass real `userID` to `GetJobByID`; fix comment)
-- `internal/llm/gemini.go` (drop `logo_url` from `ResponseSchema`; repair `extractInstructions` final line)
-- `internal/llm/llm.go` (drop `logo_url` from `ExtractionResult`)
-- `LEARNINGS.md` (2 new entries: worker drift, LLM field hallucination)
+- `frontend/package.json` (added `@vuepic/vue-datepicker ^14.0.0`)
+- `frontend/package-lock.json` (lockfile update)
+- `frontend/src/components/ApplicationDetail.vue` (date picker integration + `:model-value` fix)
+- `frontend/src/styles/globals.css` (`--dp-*` theming variables)
+- `frontend/src/views/JobsView.vue` (Import job button / entry point)
+- `frontend/src/components/JobRow.vue` (+12, unreviewed)
+- `frontend/src/views/ApplicationsView.vue` (+6, unreviewed)
+- `frontend/src/components/ImportJobPanel.vue` (**new, empty placeholder**)
+- `'` (untracked stray file in repo root — accidental, delete it)
 - `.context/handoff.md` (this file)

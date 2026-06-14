@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
 import AppSidebar from '@/components/AppSidebar.vue'
 import JobRow from '@/components/JobRow.vue'
-import { ArrowLeft, Search, ListFilter } from '@lucide/vue'
+import { ArrowLeft, Search, ListFilter, X, PlusIcon } from '@lucide/vue'
 import JobDetail from '@/components/JobDetail.vue'
 import type { Job } from '@/types/job'
 
@@ -39,12 +39,14 @@ watch(activeFilter, (value) => {
   if (value === 'all') {
     router.replace({ query: {} }).catch(() => {})
   } else {
-    router.replace({
-      query: {
-        filter: value === 'all' ? undefined : value,
-        q: route.query.q,
-      },
-    }).catch(() => {})
+    router
+      .replace({
+        query: {
+          filter: value === 'all' ? undefined : value,
+          q: route.query.q,
+        },
+      })
+      .catch(() => {})
   }
 })
 
@@ -52,10 +54,11 @@ const filteredJobs = computed(() => {
   let result = [...jobs.value]
   const q = searchTerm.value.trim().toLowerCase()
   if (q) {
-    result = result.filter((job) =>
-      job.title.toLowerCase().includes(q) ||
-      job.company_name.toLowerCase().includes(q) ||
-      job.skills?.some((skill) => skill.toLowerCase().includes(q))
+    result = result.filter(
+      (job) =>
+        job.title.toLowerCase().includes(q) ||
+        job.company_name.toLowerCase().includes(q) ||
+        job.skills?.some((skill) => skill.toLowerCase().includes(q)),
     )
   }
   if (activeFilter.value === 'remote') result = result.filter((job) => job.is_remote)
@@ -63,23 +66,23 @@ const filteredJobs = computed(() => {
   else if (activeFilter.value === 'applied') result = result.filter((job) => job.is_applied)
   else if (activeFilter.value === 'today') {
     const today = new Date().toDateString()
-    result = result.filter((job) => new Date(job.posted_at ?? '').toDateString() === today)
+    result = result.filter((job) => new Date(job.created_at ?? '').toDateString() === today)
   }
   return result
 })
 
 const sortedJobs = computed(() => {
   return [...filteredJobs.value].sort((a, b) => {
-    const left = new Date(a.posted_at ?? '').getTime()
-    const right = new Date(b.posted_at ?? '').getTime()
+    const left = new Date(a.created_at ?? '').getTime()
+    const right = new Date(b.created_at ?? '').getTime()
     return sortDirection.value === 'newest' ? right - left : left - right
   })
 })
 
 const groupedJobs = computed(() => {
   return sortedJobs.value.reduce<Record<string, Job[]>>((groups, job) => {
-    const label = job.posted_at
-      ? new Date(job.posted_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    const label = job.created_at
+      ? new Date(job.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
       : 'Unknown'
     groups[label] = groups[label] || []
     groups[label].push(job)
@@ -187,7 +190,7 @@ onUnmounted(() => {})
       <!-- Topbar -->
       <header class="flex flex-col gap-2 min-w-0 shrink-0 p-3">
         <!-- Search bar -->
-        <div class="flex items-center gap-2 border border-gray-200 bg-white px-3 h-9">
+        <div class="flex items-center gap-2 border border-gray-200 bg-white pl-3 h-9">
           <Search class="w-4 h-4 text-gray-400 shrink-0" />
           <input
             v-model="searchTerm"
@@ -199,9 +202,11 @@ onUnmounted(() => {})
             v-if="searchTerm"
             class="text-xs text-gray-400 cursor-pointer hover:text-gray-600"
             @click="searchTerm = ''"
-          >✕</span>
+          >
+            <X />
+          </span>
           <button
-            class="button h-7 px-3 text-sm text-white"
+            class="button h-full px-5 text-sm text-white"
             :style="{ background: 'var(--color-accent)' }"
           >
             Search
@@ -215,9 +220,11 @@ onUnmounted(() => {})
               v-for="f in filters"
               :key="f.value"
               class="border cursor-pointer transition-all h-8 px-2 text-sm"
-              :class="activeFilter === f.value
-                ? 'border-gray-900 text-accent'
-                : 'border-gray-200 bg-white text-gray-900'"
+              :class="
+                activeFilter === f.value
+                  ? 'border-gray-900 text-accent'
+                  : 'border-gray-200 bg-white text-gray-900'
+              "
               :style="activeFilter === f.value ? { background: 'var(--color-accent-soft)' } : {}"
               @click="activeFilter = f.value"
             >
@@ -225,12 +232,13 @@ onUnmounted(() => {})
             </button>
           </div>
           <button
-            class="flex items-center gap-1.5 h-8 px-2 border border-gray-200 bg-white text-sm text-gray-700 cursor-pointer hover:bg-gray-50 transition-all shrink-0"
+            class="button flex items-center gap-1.5 border border-gray-200 bg-white text-sm text-gray-700 cursor-pointer hover:bg-gray-50 transition-all shrink-0"
             @click="toggleSort"
           >
             <ListFilter class="w-4 h-4" />
             {{ sortDirection === 'newest' ? 'Newest' : 'Oldest' }}
           </button>
+          <button class="button button-primary">Import job <PlusIcon :size="20" /></button>
         </div>
       </header>
 
@@ -242,16 +250,14 @@ onUnmounted(() => {})
 
       <!-- Jobs body -->
       <section class="flex-1 bg-white border border-gray-200 flex flex-col min-h-0">
-        <div v-if="loading" class="m-4.5 bg-white p-6 border border-gray-200">
-          Loading jobs…
-        </div>
-        <div
-          v-else-if="error"
-          class="m-4.5 p-6 border border-red-200 bg-red-50 text-red-700"
-        >
+        <div v-if="loading" class="m-4.5 bg-white p-6 border border-gray-200">Loading jobs…</div>
+        <div v-else-if="error" class="m-4.5 p-6 border border-red-200 bg-red-50 text-red-700">
           {{ error }}
         </div>
-        <div v-else-if="filteredJobs.length === 0" class="m-4.5 bg-white p-6 border border-gray-200">
+        <div
+          v-else-if="filteredJobs.length === 0"
+          class="m-4.5 bg-white p-6 border border-gray-200"
+        >
           No jobs match this filter.
         </div>
         <div v-else class="flex-1 overflow-y-auto min-h-0">
@@ -309,7 +315,7 @@ onUnmounted(() => {})
 <style scoped>
 /* Mobile overrides — kept in <style> because Tailwind can't conditionally swap grid-template-columns easily */
 @media (max-width: 768px) {
-  div[style*="grid-template-columns"] {
+  div[style*='grid-template-columns'] {
     grid-template-columns: 1fr !important;
   }
 
@@ -317,7 +323,7 @@ onUnmounted(() => {})
     display: flex !important;
   }
 
-  div[class*="overflow-y-auto"][class*="min-h-0"] {
+  div[class*='overflow-y-auto'][class*='min-h-0'] {
     max-height: calc(100vh - 320px);
   }
 }

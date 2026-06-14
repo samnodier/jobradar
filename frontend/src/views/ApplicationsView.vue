@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import ApplicationDetail from '@/components/ApplicationDetail.vue'
-import AppSidebar from '@/components/AppSidebar.vue'
-import type { Application } from '@/types/application'
 import { ArrowLeft, Clipboard, Plus } from '@lucide/vue'
 import { computed, onMounted, ref } from 'vue'
 import { statusLabels } from '@/constants/applicationStatus'
 import { statusOrder } from '@/constants/applicationStatus'
+import type { Application } from '@/types/application'
+import ApplicationDetail from '@/components/ApplicationDetail.vue'
+import AppSidebar from '@/components/AppSidebar.vue'
 
 const applications = ref<Application[]>([])
 const selectedApplicationID = ref<string | null>(null)

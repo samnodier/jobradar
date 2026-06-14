@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import type { Application } from '@/types/application'
-import { ArrowUpRight, Building2, Calendar, Clock, MapPin, RefreshCw, Wifi, X } from '@lucide/vue'
-import { statusLabels, statusOrder } from '@/constants/applicationStatus'
 import { computed, ref, watch } from 'vue'
+import type { Application } from '@/types/application'
+import { VueDatePicker } from '@vuepic/vue-datepicker'
+import '@vuepic/vue-datepicker/dist/main.css'
+import { ArrowUpRight, Building2, Calendar, Clock, MapPin, RefreshCw, Wifi, X } from '@lucide/vue'
 import { useToast } from '@/composables/useToast'
+import { statusLabels, statusOrder } from '@/constants/applicationStatus'
 
 const toast = useToast()
 
@@ -26,11 +28,6 @@ const companyInitials = computed(() => {
   if (words.length === 1) return words[0]!.slice(0, 2).toUpperCase()
   return (words[0]![0]! + words[1]![0]!).toUpperCase()
 })
-
-const formatDateForInput = (date: string | null | undefined) => {
-  if (!date) return ''
-  return new Date(date).toISOString().split('T')[0]
-}
 
 async function updateApplication(
   payload: Partial<Application> & {
@@ -93,11 +90,12 @@ function handleStatusChange(event: Event) {
   updateApplication({ application_status: val })
 }
 
-function handleDateChange(field: 'applied_at' | 'follow_up_at', event: Event) {
-  const val = (event.target as HTMLInputElement).value
-  if (val) {
-    updateApplication({ [field]: new Date(val).toISOString() })
+function handleDateChange(field: 'applied_at' | 'follow_up_at', date: Date | null) {
+  if (date) {
+    // The component emits a native Date object -> convert directly
+    updateApplication({ [field]: date.toISOString() })
   } else {
+    // Handles when the user clears the input
     updateApplication({ [field]: null, [`clear_${field}`]: true })
   }
 }
@@ -223,22 +221,26 @@ function formatDateShort(date: string | null | undefined): string {
               <Calendar :size="13" />
             </div>
             <span class="text-sm text-gray-400">Applied</span>
-            <input
-              type="date"
-              class="text-xs border border-gray-200 bg-black/4 text-gray-900 px-1 py-0.5 cursor-pointer ml-auto max-w-35 min-w-0 focus:outline-none focus:border-accent"
-              :value="formatDateForInput(app.applied_at)"
-              @change="handleDateChange('applied_at', $event)"
+            <VueDatePicker
+              :model-value="app.applied_at ? new Date(app.applied_at) : null"
+              :time-config="{ enableTimePicker: false }"
+              auto-apply
+              :clearable="false"
+              input-class-name="text-xs border border-gray-200 bg-black/4 text-gray-900 px-1 py-0.5 cursor-pointer max-w-35 min-w-0 focus:outline-none focus:border-accent"
+              @update:model-value="(d) => handleDateChange('applied_at', d)"
             />
           </div>
 
           <div class="grid items-center gap-2" style="grid-template-columns: 20px 1fr auto">
             <div class="flex items-center justify-center text-gray-500"><Clock :size="13" /></div>
             <span class="text-sm text-gray-400">Follow up</span>
-            <input
-              type="date"
-              class="text-xs border border-gray-200 bg-black/4 text-gray-900 px-1 py-0.5 cursor-pointer ml-auto max-w-35 min-w-0 focus:outline-none focus:border-accent"
-              :value="formatDateForInput(app.follow_up_at)"
-              @change="handleDateChange('follow_up_at', $event)"
+            <VueDatePicker
+              :model-value="app.follow_up_at ? new Date(app.follow_up_at) : null"
+              :time-config="{ enableTimePicker: false }"
+              auto-apply
+              :clearable="true"
+              input-class-name="text-xs border border-gray-200 bg-black/4 text-gray-900 px-1 py-0.5 cursor-pointer max-w-35 min-w-0 focus:outline-none focus:border-accent"
+              @update:model-value="(d) => handleDateChange('follow_up_at', d)"
             />
           </div>
 
@@ -286,7 +288,7 @@ function formatDateShort(date: string | null | undefined): string {
         :href="app.source_url"
         target="_blank"
         rel="noreferrer"
-        class="w-full h-8 inline-flex items-center justify-center gap-1 text-white text-sm font-semibold no-underline cursor-pointer transition-opacity hover:opacity-[0.88]"
+        class="primary button-primary w-full h-8 inline-flex items-center justify-center gap-1 text-white text-sm font-semibold no-underline cursor-pointer transition-opacity hover:opacity-[0.88]"
         :style="{ background: 'var(--color-accent)' }"
       >
         View job posting
