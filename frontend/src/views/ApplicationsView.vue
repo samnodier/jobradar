@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowLeft, Clipboard, Plus } from '@lucide/vue'
+import { Clipboard, Plus } from '@lucide/vue'
 import { computed, onMounted, ref } from 'vue'
 import { statusLabels } from '@/constants/applicationStatus'
 import { statusOrder } from '@/constants/applicationStatus'
@@ -142,33 +142,20 @@ const applicationByStatus = computed(() => {
       </div>
     </main>
 
-    <!-- Detail overlay -->
+    <!-- Job Detail overlay -->
     <Teleport to="body">
       <Transition name="detail-slide">
         <div
           v-if="detailOpen"
-          class="fixed inset-0 z-100 flex justify-end pointer-events-none"
-          style="top: var(--topbar-height)"
+          class="fixed inset-0 z-100 bg-black/45 flex justify-end top-(--topbar-height)"
           @click.self="closeDetail"
         >
-          <div
-            class="w-[50vw] min-w-140 max-w-full h-full bg-white flex flex-col overflow-y-auto pointer-events-auto shadow-[-4px_0_12px_rgba(0,0,0,0.1)]"
-          >
-            <!-- Back: hidden on desktop, shown on mobile -->
-            <div
-              class="hidden items-center gap-2 p-3 border-b border-gray-200 text-gray-400 cursor-pointer text-sm shrink-0"
-              @click="closeDetail"
-            >
-              <ArrowLeft class="w-4 h-4" />
-              Back to jobs
-            </div>
-            <ApplicationDetail
-              v-if="selectedApplication"
-              :app="selectedApplication"
-              @close="closeDetail"
-              @updated="handleApplicationUpdate"
-            />
-          </div>
+          <ApplicationDetail
+            v-if="selectedApplication"
+            :app="selectedApplication"
+            @close="closeDetail"
+            @updated="handleApplicationUpdate"
+          />
         </div>
       </Transition>
     </Teleport>

@@ -120,7 +120,9 @@ function formatDateShort(date: string | null | undefined): string {
 </script>
 
 <template>
-  <aside class="bg-white flex flex-col h-full" style="font-family: var(--font-base)">
+  <aside
+    class="bg-white w-full max-w-xl min-w-xl h-full flex flex-col overflow-y-auto pointer-events-auto font-base"
+  >
     <!-- Header -->
     <div class="p-4 border-b border-gray-200 shrink-0 flex flex-col gap-3">
       <!-- Top: logo + meta -->
