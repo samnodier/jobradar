@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { Search, ListFilter, X, PlusIcon } from '@lucide/vue'
 import { useToast } from '@/composables/useToast'
-import AppSidebar from '@/components/AppSidebar.vue'
 import JobRow from '@/components/JobRow.vue'
-import { ArrowLeft, Search, ListFilter, X, PlusIcon } from '@lucide/vue'
 import JobDetail from '@/components/JobDetail.vue'
 import type { Job } from '@/types/job'
+import AppSidebar from '@/components/AppSidebar.vue'
+import ImportJobPanel from '@/components/ImportJobPanel.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -14,6 +15,7 @@ const toast = useToast()
 
 const jobs = ref<Job[]>([])
 const loading = ref(false)
+const isJobImportOpen = ref(false)
 const error = ref('')
 const selectedJobId = ref<string | null>(null)
 const sortDirection = ref<'newest' | 'oldest'>('newest')
@@ -97,6 +99,11 @@ const selectedJob = computed(() => {
 
 const detailOpen = computed(() => !!selectedJob.value)
 
+function handleImportJobCreated(job: Job) {
+  isJobImportOpen.value = false
+  jobs.value.unshift(job)
+}
+
 function closeDetail() {
   selectedJobId.value = null
 }
@@ -108,9 +115,6 @@ function fetchJobs() {
     .then(async (response) => {
       if (!response.ok) throw new Error('Failed to load jobs')
       jobs.value = await response.json()
-      if (!selectedJobId.value && jobs.value.length) {
-        selectedJobId.value = jobs.value[0]?.id || null
-      }
     })
     .catch((err) => {
       error.value = err instanceof Error ? err.message : 'Unknown error'
@@ -238,7 +242,9 @@ onUnmounted(() => {})
             <ListFilter class="w-4 h-4" />
             {{ sortDirection === 'newest' ? 'Newest' : 'Oldest' }}
           </button>
-          <button class="button button-primary">Import job <PlusIcon :size="20" /></button>
+          <button @click="isJobImportOpen = true" class="button button-primary">
+            Import job <PlusIcon :size="20" />
+          </button>
         </div>
       </header>
 
@@ -284,28 +290,32 @@ onUnmounted(() => {})
       <Transition name="detail-slide">
         <div
           v-if="detailOpen"
-          class="fixed inset-0 z-100 flex justify-end pointer-events-none"
-          style="top: var(--topbar-height)"
+          class="fixed inset-0 z-100 bg-black/45 flex justify-end pointer-events-none top-(--topbar-height)"
           @click.self="closeDetail"
         >
-          <div
-            class="w-[50vw] min-w-140 max-w-full h-full bg-white flex flex-col overflow-y-auto pointer-events-auto shadow-[-4px_0_12px_rgba(0,0,0,0.1)]"
-          >
-            <!-- Back button: hidden on desktop, visible on mobile -->
-            <div
-              class="hidden items-center gap-2 p-3 border-b border-gray-200 text-gray-400 cursor-pointer text-sm shrink-0 md:hidden"
-              @click="closeDetail"
-            >
-              <ArrowLeft class="w-4 h-4" />
-              Back to jobs
-            </div>
-            <JobDetail
-              v-if="selectedJob"
-              :job="selectedJob"
-              @close="closeDetail"
-              @save="handleSaveJob"
-            />
-          </div>
+          <JobDetail
+            v-if="selectedJob"
+            :job="selectedJob"
+            @close="closeDetail"
+            @save="handleSaveJob"
+          />
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Job Import -->
+    <Teleport to="body">
+      <Transition name="detail-slide">
+        <div
+          v-if="isJobImportOpen"
+          class="fixed inset-0 z-100 bg-black/45 flex justify-end top-(--topbar-height)"
+          @click.self="isJobImportOpen = false"
+        >
+          <ImportJobPanel
+            v-if="isJobImportOpen"
+            @close="isJobImportOpen = false"
+            @created="handleImportJobCreated"
+          />
         </div>
       </Transition>
     </Teleport>

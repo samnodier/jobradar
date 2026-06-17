@@ -1,5 +1,57 @@
+<script setup lang="ts">
+import type { Job } from '@/types/job'
+import {
+  MapPin,
+  Briefcase,
+  Check,
+  ChevronDown,
+  Clock,
+  DollarSign,
+  ExternalLink,
+  Bookmark,
+  Link2,
+  Sparkles,
+  X,
+} from '@lucide/vue'
+import { ref, watch } from 'vue'
+import DOMPurify from 'dompurify'
+import { useJobFormatting } from '@/composables/useJobFormatting'
+const { scoreBadgeClass, formatSalary, timeAgo } = useJobFormatting()
+
+const props = defineProps<{ job: Job }>()
+defineEmits(['close', 'save'])
+
+const analysisOpen = ref(false)
+const analysisSeen = ref(false)
+
+function toggleAnalysis() {
+  analysisOpen.value = !analysisOpen.value
+  if (!analysisSeen.value) analysisSeen.value = true
+}
+
+const copied = ref(false)
+
+async function copyLink() {
+  try {
+    await navigator.clipboard.writeText(props.job.source_url)
+    copied.value = true
+    setTimeout(() => (copied.value = false), 2000)
+  } catch {}
+}
+
+watch(
+  () => props.job,
+  () => {
+    analysisOpen.value = false
+    analysisSeen.value = false
+  },
+)
+</script>
+
 <template>
-  <aside class="bg-white flex flex-col h-full gap-2" style="font-family: var(--font-base)">
+  <aside
+    class="bg-white min-w-xl h-full flex flex-col overflow-y-auto pointer-events-auto gap-2 max-w-xl font-base"
+  >
     <!-- Header -->
     <div class="px-4 py-4 border-b border-gray-200 shrink-0">
       <div class="flex items-center gap-2 mb-1">
@@ -214,56 +266,6 @@
     </a>
   </aside>
 </template>
-
-<script setup lang="ts">
-import type { Job } from '@/types/job'
-import {
-  MapPin,
-  Briefcase,
-  Check,
-  ChevronDown,
-  Clock,
-  DollarSign,
-  ExternalLink,
-  Bookmark,
-  Link2,
-  Sparkles,
-  X,
-} from '@lucide/vue'
-import { ref, watch } from 'vue'
-import DOMPurify from 'dompurify'
-import { useJobFormatting } from '@/composables/useJobFormatting'
-const { scoreBadgeClass, formatSalary, timeAgo } = useJobFormatting()
-
-const props = defineProps<{ job: Job }>()
-defineEmits(['close', 'save'])
-
-const analysisOpen = ref(false)
-const analysisSeen = ref(false)
-
-function toggleAnalysis() {
-  analysisOpen.value = !analysisOpen.value
-  if (!analysisSeen.value) analysisSeen.value = true
-}
-
-const copied = ref(false)
-
-async function copyLink() {
-  try {
-    await navigator.clipboard.writeText(props.job.source_url)
-    copied.value = true
-    setTimeout(() => (copied.value = false), 2000)
-  } catch {}
-}
-
-watch(
-  () => props.job,
-  () => {
-    analysisOpen.value = false
-    analysisSeen.value = false
-  },
-)
-</script>
 
 <style scoped>
 /* Only :deep() rules remain — Tailwind cannot reach into v-html content */
