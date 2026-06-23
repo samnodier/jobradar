@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, computed } from 'vue'
+import { reactive, ref } from 'vue'
 import type { Job } from '@/types/job'
 import { X, Loader2 } from '@lucide/vue'
 import { useToast } from '@/composables/useToast'
@@ -9,6 +9,7 @@ const emit = defineEmits<{ close: []; created: [job: Job] }>()
 
 type Step = 'url' | 'loading' | 'review'
 const step = ref<Step>('url')
+const skillInput = ref('')
 
 const url = ref('')
 const error = ref('')
@@ -60,49 +61,63 @@ function validate(): boolean {
   return Object.keys(errors).length === 0
 }
 
-// skills as a comma-separated string for the input, synced to the array
-const skillsText = computed({
-  get: () => form.skills.join(', '),
-  set: (val: string) => {
-    form.skills = val
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean)
-  },
-})
+function addSkill() {
+  const trimmed = skillInput.value.trim()
+  if (!trimmed) return
+  // avoid duplicates (case-insensitive)
+  const exists = form.skills.some((s) => s.toLowerCase() === trimmed.toLowerCase())
+  if (!exists) {
+    form.skills.push(trimmed)
+  }
+  skillInput.value = ''
+}
+
+function removeSkill(index: number) {
+  form.skills.splice(index, 1)
+}
 
 async function handleExtract() {
-  if (!validate()) return
+  const trimmedURL = url.value.trim()
+  if (!trimmedURL) return
   step.value = 'loading'
-  error.value = ''
   try {
     const res = await fetch('/api/jobs/import', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ url: url.value.trim() }),
+      body: JSON.stringify({ url: trimmedURL }),
     })
 
-    if (res.status === 422) {
-      error.value =
-        'Add a Gemini API key in Settings to auto-fill job details — or enter them manually below.'
-      // still let them proceed manually
-      Object.assign(form, emptyDraft(), { source_url: url.value.trim() })
+    // Success - merge whatever came back (partial or full) and review
+    if (res.ok) {
+      const draft = await res.json()
+      Object.assign(form, emptyDraft(), draft, { source_url: trimmedURL })
       step.value = 'review'
       return
     }
-    if (!res.ok) {
-      const data = await res.json().catch(() => null)
-      throw new Error(data?.error ?? 'Could not import that URL')
+
+    const data = await res.json().catch(() => null)
+    const message = data?.error ?? 'Could not import that URL'
+
+    // 502: transiet LLM failure - Gemini congested/503
+    // 422: couldn't not fetch that url (dead host, SSRF block, timeout)
+    // 422: no gemini API key configured
+    // 422: ErrPermanent - bad/revoked key, extraction wont ever proceed
+    if (res.status === 502 || res.status === 422) {
+      toast.error(message)
+      enterManually()
+      return
     }
 
-    const draft = await res.json()
-    // Merge whatever came back over an empty draft — partial or full,
-    // both land here; missing fields just stay empty.
-    Object.assign(form, emptyDraft(), draft, { source_url: trimmed })
-    step.value = 'review'
+    // 400: bad body/ unparseable URL / bad scheme / no host
+    // 500: server's fault (parse/decrypt/extractor build)
+    // 401, 413, 429 and other errors.
+    // And any other errors as well
+    toast.error(message)
+    step.value = 'url'
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Import failed'
+    // Network/parse failure - couldn't reach the API
+    toast.error(err instanceof Error ? err.message : 'Import failed')
     step.value = 'url' // hard failure (bad URL, blocked host) → back to entry
   }
 }
@@ -113,8 +128,7 @@ function enterManually() {
 }
 
 async function handleConfirm() {
-  if (!form.title.trim() || !form.company_name.trim() || !form.description.trim()) {
-    error.value = 'Title company are required.'
+  if (!validate()) {
     return
   }
   isSaving.value = true
@@ -160,6 +174,7 @@ async function handleConfirm() {
       <template v-if="step === 'url'">
         <label for="url" class="text-sm font-semibold text-gray-900">Job posting URL</label>
         <input
+          id="url"
           v-model="url"
           name="url"
           type="url"
@@ -222,7 +237,7 @@ async function handleConfirm() {
         </div>
 
         <label for="is-remote" class="flex items-center gap-2 text-sm text-gray-900">
-          <input name="remote" v-model="form.is_remote" type="checkbox" />
+          <input id="is-remote" name="remote" v-model="form.is_remote" type="checkbox" />
           Remote
         </label>
 
@@ -254,12 +269,31 @@ async function handleConfirm() {
         </div>
 
         <div class="flex flex-col gap-1">
-          <label class="text-sm font-semibold text-gray-900">Skills</label>
+          <label for="job-skills" class="text-sm font-semibold text-gray-900">Skills</label>
+          <div class="flex flex-wrap gap-1.5 mb-1">
+            <span
+              v-for="(skill, index) in form.skills"
+              :key="skill"
+              class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-black/4 border border-gray-200 text-gray-700"
+            >
+              {{ skill }}
+              <button
+                type="button"
+                class="text-gray-400 hover:text-gray-900 cursor-pointer"
+                @click="removeSkill(index)"
+              >
+                <X :size="12" />
+              </button>
+            </span>
+          </div>
           <input
-            v-model="skillsText"
+            id="job-skills"
+            name="skills"
+            v-model="skillInput"
             type="text"
-            placeholder="Go, PostgreSQL, Vue"
+            placeholder="Type a skill and press Enter"
             class="px-4 py-2 border border-gray-200 text-sm w-full focus:outline-none focus:border-accent"
+            @keydown.enter.prevent="addSkill"
           />
           <span class="text-xs text-gray-400">Comma-separated</span>
         </div>

@@ -369,3 +369,5 @@ An LLM extracting from untrusted text will fabricate any field the schema asks f
 A computed is a pure derivation (read-only); a wrong value comes from a write, never from the computed that reads it — debug the assignment, not the derivation.
 
 A field-level error is something the user can fix on that specific input; a toast is the outcome of the whole operation. Validation failures are per-field; network/server failures are per-form. Also think about when you clear errors.title — on resubmit (reset the object) and/or when the user edits that field. A stale "Required" sitting under a now-filled box is its own bug.
+
+(1) an early broad if (status === X) { ...; return } makes any later status === X branch unreachable; overlapping conditions are first-match-wins. (2) Branch on status code, display the server's message; don't hardcode client copy for a condition the server already describes, and don't add a discriminator field until the client needs to branch on it (different text ≠ different behavior).

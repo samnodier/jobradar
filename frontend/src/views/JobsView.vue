@@ -197,6 +197,8 @@ onUnmounted(() => {})
         <div class="flex items-center gap-2 border border-gray-200 bg-white pl-3 h-9">
           <Search class="w-4 h-4 text-gray-400 shrink-0" />
           <input
+            id="search"
+            name="search"
             v-model="searchTerm"
             type="text"
             placeholder="Search by title, company, or skill"
