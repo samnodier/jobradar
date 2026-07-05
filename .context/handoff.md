@@ -4,7 +4,7 @@
 
 ## Date
 
-2026-06-14
+2026-06-21
 
 ## Branch
 
@@ -12,55 +12,46 @@
 
 ## Accomplished
 
-Frontend session. Started the Phase 8.5 import UI and replaced the application date inputs with a themed date picker. Backend was untouched (import pipeline already verified live last session).
+Frontend session on the Phase 8.5 user-submitted job import panel (`frontend/src/components/ImportJobPanel.vue`). All committed in `0fc44f1`.
 
-- **Added `@vuepic/vue-datepicker` (`^14.0.0`)** to `frontend/package.json` and integrated it into `ApplicationDetail.vue` for the **Applied** and **Follow up** dates, replacing the native `<input type="date">`.
-- **Fixed the "date doesn't show" bug** in `ApplicationDetail.vue`: the picker had `model-value="..."` (a static string prop) instead of `:model-value="..."` (a v-bind). Without the colon, Vue passed the literal expression text to the picker, so it never rendered the set date. Added the colon on both pickers; `applied_at`/`follow_up_at` now display correctly.
-- **Themed the date picker to match the brand** via `--dp-*` CSS custom properties added to `frontend/src/styles/globals.css` (font-family → `var(--font-base)`, sharp corners, accent color). Variables live in global CSS (not scoped) because the picker's calendar menu teleports to `<body>` and scoped styles can't reach it. Picker now matches the page font and sharp-corner look.
-- **Started the import entry point** in `JobsView.vue`: an `Import job` button (`.button-primary` + `PlusIcon` from `@lucide/vue`) in the header. ~70 lines of diff — entry point wired, panel not yet built.
-- **Created `frontend/src/components/ImportJobPanel.vue`** — currently an **empty placeholder file (0 lines)**.
-- Small unreviewed edits to `JobRow.vue` (+12) and `ApplicationsView.vue` (+6).
+- **Skills as chips** — `addSkill()` / `removeSkill(index)` add one skill at a time, rendered at the top of the form (like applications/experiences). Dedupes case-insensitively (`.some(s => s.toLowerCase() === ...)`); input uses `@keydown.enter.prevent="addSkill"` so Enter adds a chip without submitting.
+- **Error-channel split** — per-field validation errors render inline, keyed off an `errors` reactive object set by `validate()`; whole-operation failures go to a toast. `validate()` clears the object, then sets `errors.title` / `errors.company_name` / `errors.description` for empty trimmed fields; `handleConfirm()` bails on `!validate()`.
+- **Accessibility** — `for` / `id` / `name` on labels and inputs. Also added `id`/`name` to the search input in `JobsView.vue`.
+- **Graceful degradation in `handleExtract()`** — rewrote the extract flow so it never dead-ends:
+  - `res.ok` → merge draft over `emptyDraft()` → review step
+  - `422` (no key / bad key / can't-fetch) or `502` (Gemini congested/down) → toast the **server's** message + drop into manual entry via `enterManually()`
+  - any other non-ok status → catch-all branch: toast + back to URL step (stops an unexpected 401/413 from hanging the loading spinner)
+  - network/parse failure → `catch` → back to URL step
+  - Deleted the old special-cased `422` branch that hardcoded an "add a Gemini key" message; the body is now parsed once into `message` and echoed for every status, so each 422 sub-case shows its own correct server message.
+- **LEARNINGS.md** — two entries: (1) an early broad `if (status === X){...return}` makes any later `status === X` branch unreachable (first-match-wins); (2) branch on behavior/status and *display* the server's message — don't hardcode client copy, and don't add a discriminator field until the client must actually *branch* differently (different text ≠ different behavior).
 
 ## Current State
 
-App builds/runs (Sam confirmed the date picker shows and is styled). The date picker work is the stable, finished piece of this session. The import feature is **mid-build and not functional**: `JobsView.vue` has an `Import job` button but it isn't wired to anything, and `ImportJobPanel.vue` is an empty file. All changes are **uncommitted** in the working tree. No known runtime bugs in what's finished; the import UI is simply incomplete.
+Working tree is clean; everything is committed in `0fc44f1` (HEAD). The extract → review → confirm flow is wired and the extract path degrades gracefully. **Not yet exercised end-to-end in the running app** — the logic was reasoned through and reviewed, not manually tested this session, because Gemini was returning 503s (which is what drove the graceful-degradation work). Last stable state = current HEAD.
 
 ## What Didn't Work
 
-- The date picker initially showed the selector but **not the selected date** — root cause was the missing `:` on `model-value` (static string vs binding), not a library or timezone issue. Fixed.
-- Styling the picker with scoped CSS would not have reached the calendar popup (it teleports to `body`) — using `--dp-*` variables in global CSS was the correct route.
+- **Gemini extraction kept returning 503 UNAVAILABLE** during testing. This is Google-side server congestion (transient), **not** a quota cap (that would be 429). Changing the model id from `gemini-3.5-flash` (doesn't exist — would 404) to `gemini-2.5-flash` did not help; the 503 is external and not fixable client-side. This is exactly why the import flow was made to fall through to manual entry instead of dead-ending.
 
 ## Next Steps
 
-1. **Delete the stray file** literally named `'` in the repo root — it's an accidental 11KB dump of `JobsView.vue`'s script (likely an unclosed-quote shell mishap), not intentional. `rm "'"`.
-2. **Build `ImportJobPanel.vue`** (currently empty) as a slide-over: clone the overlay shell + footer from `ExperienceForm.vue` (`:168-193`, `:451-457`) — `max-w-140`, `border-l`, mobile bottom-sheet override. Drive it with an internal `phase` ref: `'url' → 'loading' → 'review'`.
-3. **Wire the `Import job` button** in `JobsView.vue` to open the panel.
-4. **Phase 'url':** URL input + validate at the edge (scheme ∈ {http,https}, non-empty host) before sending; `POST /api/jobs/import` with `credentials: 'include'`; spinner during the ~13s LLM round-trip (consider `AbortController` so closing cancels).
-5. **Phase 'review':** editable draft form using the existing field convention; render `source_url` **read-only**, populated from the URL the user typed (the draft does NOT echo it back, by design).
-6. **Submit → `POST /api/jobs/import/confirm`**; on `201`, emit the new job up to `JobsView` and prepend it to the `jobs` ref (stale-state spread pattern). Show it unmatched (don't poll for the score yet).
-7. **Error states:** `422` no-key → message linking to Settings; `422`/`502` transient → client-driven Retry button; malformed-URL `4xx` → inline field error.
-8. **Guard `job.skills` for `null`** in imported-job display, and fix the `Job` type (`types/job.ts:17`) which declares `skills: string[]` non-optional while imports can store `NULL`.
-9. **Date timezone cleanup (deferred):** `handleDateChange` in `ApplicationDetail.vue` still does `date.toISOString()` — a UTC off-by-one near midnight. Format from local date components instead.
+1. Fix the description **label** in `ImportJobPanel.vue` — it uses `id=` instead of `for=`, duplicating the textarea's id. Change the label to `for=`.
+2. Remove the leftover "Comma-separated" hint text under the skills input — it's chips now, that hint is stale.
+3. Verify the confirm-step fetch body field names match the Go `jobConfirmImportRequest` struct in `cmd/jobradar/handler_import.go`: `source_url`, `title`, `company_name`, `description`, `salary_min`, `salary_max`, `currency`, `job_location`, `is_remote`, `skills`, `logo_url`.
+4. Exercise the full flow end-to-end with the app running: paste a URL → extract → review → confirm → confirm the job appears (`jobs.value.unshift`) and a match job is enqueued.
+5. Test the degradation paths deliberately: no Gemini key (422) and a forced extract failure (502) — confirm both land in manual entry with the right toast; confirm an unexpected status doesn't hang the spinner.
 
 ## Open Questions
 
-- **Sharp-corner consistency:** the only `rounded-*` in the app is the RemoteOK/Adzuna source dots in `AppSidebar.vue:40,45` (`rounded-full`). Intentional status LEDs, or make them sharp too?
-- **Import panel state ownership:** recommended local component state / small `useJobImport` composable, **no Pinia store** (used in one place; jobs list itself is a local ref). Confirm before building.
-- **No match score on a freshly imported job** — confirm enqueues matching async, so the new row shows unmatched until the worker runs + a refetch. Decided: show unmatched, no polling for now.
-- **Provider/company logo for imports** — `logo_url` is no longer extracted; imported jobs fall back to company initials. Optionally derive a favicon from the `source_url` host later.
-- `JobRow.vue` (+12) and `ApplicationsView.vue` (+6) edits were not reviewed this session — confirm what they were before committing.
+- The backend's **422 is overloaded** — it means three different things (can't-fetch, no-key, bad-key). The frontend treats all three identically (toast server message + manual entry), which is correct *today* because they all route to the same behavior. Revisit only if a sub-case ever needs *different* frontend behavior — then add a machine-readable code, not message-string sniffing.
+- End-to-end behavior is unverified because Gemini was 503-ing. Confirm extraction actually populates the draft once Gemini is reachable.
 
 ## Files Changed
 
-Uncommitted in the working tree (`git diff --name-only HEAD` + untracked):
+This session's commit (`0fc44f1`) touched:
 
-- `frontend/package.json` (added `@vuepic/vue-datepicker ^14.0.0`)
-- `frontend/package-lock.json` (lockfile update)
-- `frontend/src/components/ApplicationDetail.vue` (date picker integration + `:model-value` fix)
-- `frontend/src/styles/globals.css` (`--dp-*` theming variables)
-- `frontend/src/views/JobsView.vue` (Import job button / entry point)
-- `frontend/src/components/JobRow.vue` (+12, unreviewed)
-- `frontend/src/views/ApplicationsView.vue` (+6, unreviewed)
-- `frontend/src/components/ImportJobPanel.vue` (**new, empty placeholder**)
-- `'` (untracked stray file in repo root — accidental, delete it)
-- `.context/handoff.md` (this file)
+- `frontend/src/components/ImportJobPanel.vue`
+- `frontend/src/views/JobsView.vue`
+- `LEARNINGS.md`
+
+Working tree is currently clean (nothing uncommitted).

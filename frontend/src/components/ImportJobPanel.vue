@@ -295,11 +295,10 @@ async function handleConfirm() {
             class="px-4 py-2 border border-gray-200 text-sm w-full focus:outline-none focus:border-accent"
             @keydown.enter.prevent="addSkill"
           />
-          <span class="text-xs text-gray-400">Comma-separated</span>
         </div>
 
         <div class="flex flex-col gap-1">
-          <label id="job-description" class="text-sm font-semibold text-gray-900"
+          <label for="job-description" class="text-sm font-semibold text-gray-900"
             >Description</label
           >
           <textarea

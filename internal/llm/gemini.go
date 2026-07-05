@@ -47,7 +47,7 @@ func NewGeminiExtractor(ctx context.Context, apiKey string) (Extractor, error) {
 	return &geminiExtractor{client: client}, nil
 }
 
-const enrichInstructions = `You are a career assistant speaking directly to a job-seeker about a specific role.
+const EnrichInstructions = `You are a career assistant speaking directly to a job-seeker about a specific role.
 Write a concise 2-3 sentence summary addressing the user as "you"
 	— for example: "You have strong experience in X" or "You're missing Y which this role requires."
   - Be specific
@@ -55,7 +55,7 @@ Write a concise 2-3 sentence summary addressing the user as "you"
 	Do not invent skills or experience the user does not have.
 	Respond only with valid JSON matching the schema provided. No markdown, no preamble.`
 
-const extractInstructions = `You are a precise job-posting data extractor.
+const ExtractInstructions = `You are a precise job-posting data extractor.
 	You are given the raw text content of a single job posting page.
 	Your only task is to extract structured fields from that text and return them as JSON matching the provided schema.
 	Rules:
@@ -94,7 +94,7 @@ func (g *geminiEnricher) Enrich(ctx context.Context, input EnrichmentInput) (Enr
 		model,
 		genai.Text(userContent),
 		&genai.GenerateContentConfig{
-			SystemInstruction: genai.NewContentFromText(enrichInstructions, ""),
+			SystemInstruction: genai.NewContentFromText(EnrichInstructions, ""),
 			ResponseMIMEType:  "application/json",
 			ResponseSchema: &genai.Schema{
 				Type: genai.TypeObject,
@@ -127,7 +127,7 @@ func (g *geminiExtractor) Extract(ctx context.Context, input ExtractionInput) (E
 		model,
 		genai.Text(userContent),
 		&genai.GenerateContentConfig{
-			SystemInstruction: genai.NewContentFromText(extractInstructions, ""),
+			SystemInstruction: genai.NewContentFromText(ExtractInstructions, ""),
 			ResponseMIMEType:  "application/json",
 			ResponseSchema: &genai.Schema{
 				Type: genai.TypeObject,
