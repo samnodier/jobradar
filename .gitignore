@@ -31,6 +31,7 @@ go.work.sum
 
 # Database files
 postgres_data/
+pgdata/
 
 # IDE & OS Junk
 .DS_Store
