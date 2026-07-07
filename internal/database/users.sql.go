@@ -18,7 +18,7 @@ INSERT INTO users (
 ) VALUES (
     $1, $2, $3, $4
 )
-RETURNING id, email, username, full_name, avatar_url, phone, user_location, website_url, linkedin_url, github_url, headline, user_summary, availability, min_salary, max_salary, salary_currency, years_of_experience, preferred_job_types, preferred_industries, company_stage_preference, notify_jobs, is_admin, created_at, updated_at, encrypted_gemini_api_key
+RETURNING id, email, username, full_name, avatar_url, phone, user_location, website_url, linkedin_url, github_url, headline, user_summary, availability, min_salary, max_salary, salary_currency, years_of_experience, preferred_job_types, preferred_industries, company_stage_preference, notify_jobs, is_admin, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -61,7 +61,6 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.IsAdmin,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.EncryptedGeminiApiKey,
 	)
 	return i, err
 }
@@ -101,26 +100,6 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]uuid.UUID, error) {
 	return items, nil
 }
 
-const getGeminiKeyByUserID = `-- name: GetGeminiKeyByUserID :one
-SELECT
-    id,
-    encrypted_gemini_api_key
-FROM users
-WHERE id = $1
-`
-
-type GetGeminiKeyByUserIDRow struct {
-	ID                    uuid.UUID `json:"id"`
-	EncryptedGeminiApiKey *string   `json:"encrypted_gemini_api_key"`
-}
-
-func (q *Queries) GetGeminiKeyByUserID(ctx context.Context, id uuid.UUID) (GetGeminiKeyByUserIDRow, error) {
-	row := q.db.QueryRow(ctx, getGeminiKeyByUserID, id)
-	var i GetGeminiKeyByUserIDRow
-	err := row.Scan(&i.ID, &i.EncryptedGeminiApiKey)
-	return i, err
-}
-
 const getUserByID = `-- name: GetUserByID :one
 SELECT
     id,
@@ -145,11 +124,15 @@ SELECT
     company_stage_preference,
     notify_jobs,
     is_admin,
-    (encrypted_gemini_api_key IS NOT NULL)::boolean AS has_gemini_key,
+    ARRAY(
+        SELECT k.provider FROM user_api_keys AS k
+        WHERE k.user_id = users.id
+        ORDER BY k.provider
+    )::text [] AS configured_providers,
     created_at,
     updated_at
 FROM users
-WHERE id = $1
+WHERE users.id = $1
 `
 
 type GetUserByIDRow struct {
@@ -175,7 +158,7 @@ type GetUserByIDRow struct {
 	CompanyStagePreference []string   `json:"company_stage_preference"`
 	NotifyJobs             *bool      `json:"notify_jobs"`
 	IsAdmin                *bool      `json:"is_admin"`
-	HasGeminiKey           bool       `json:"has_gemini_key"`
+	ConfiguredProviders    []string   `json:"configured_providers"`
 	CreatedAt              *time.Time `json:"created_at"`
 	UpdatedAt              *time.Time `json:"updated_at"`
 }
@@ -206,7 +189,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (GetUserByIDRow
 		&i.CompanyStagePreference,
 		&i.NotifyJobs,
 		&i.IsAdmin,
-		&i.HasGeminiKey,
+		&i.ConfiguredProviders,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -237,7 +220,11 @@ SELECT
     u.company_stage_preference,
     u.notify_jobs,
     u.is_admin,
-    (u.encrypted_gemini_api_key IS NOT NULL)::boolean AS has_gemini_key,
+    ARRAY(
+        SELECT k.provider FROM user_api_keys AS k
+        WHERE k.user_id = u.id
+        ORDER BY k.provider
+    )::text [] AS configured_providers,
     u.created_at,
     u.updated_at
 FROM users AS u
@@ -273,7 +260,7 @@ type GetUserByProviderIdentityRow struct {
 	CompanyStagePreference []string   `json:"company_stage_preference"`
 	NotifyJobs             *bool      `json:"notify_jobs"`
 	IsAdmin                *bool      `json:"is_admin"`
-	HasGeminiKey           bool       `json:"has_gemini_key"`
+	ConfiguredProviders    []string   `json:"configured_providers"`
 	CreatedAt              *time.Time `json:"created_at"`
 	UpdatedAt              *time.Time `json:"updated_at"`
 }
@@ -304,27 +291,11 @@ func (q *Queries) GetUserByProviderIdentity(ctx context.Context, arg GetUserByPr
 		&i.CompanyStagePreference,
 		&i.NotifyJobs,
 		&i.IsAdmin,
-		&i.HasGeminiKey,
+		&i.ConfiguredProviders,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
-}
-
-const setGeminiKeyByUserID = `-- name: SetGeminiKeyByUserID :exec
-UPDATE users
-SET encrypted_gemini_api_key = $2
-WHERE id = $1
-`
-
-type SetGeminiKeyByUserIDParams struct {
-	ID                    uuid.UUID `json:"id"`
-	EncryptedGeminiApiKey *string   `json:"encrypted_gemini_api_key"`
-}
-
-func (q *Queries) SetGeminiKeyByUserID(ctx context.Context, arg SetGeminiKeyByUserIDParams) error {
-	_, err := q.db.Exec(ctx, setGeminiKeyByUserID, arg.ID, arg.EncryptedGeminiApiKey)
-	return err
 }
 
 const updateUser = `-- name: UpdateUser :one
@@ -356,7 +327,7 @@ SET
     notify_jobs = COALESCE($19, notify_jobs),
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, email, username, full_name, avatar_url, phone, user_location, website_url, linkedin_url, github_url, headline, user_summary, availability, min_salary, max_salary, salary_currency, years_of_experience, preferred_job_types, preferred_industries, company_stage_preference, notify_jobs, is_admin, created_at, updated_at, encrypted_gemini_api_key
+RETURNING id, email, username, full_name, avatar_url, phone, user_location, website_url, linkedin_url, github_url, headline, user_summary, availability, min_salary, max_salary, salary_currency, years_of_experience, preferred_job_types, preferred_industries, company_stage_preference, notify_jobs, is_admin, created_at, updated_at
 `
 
 type UpdateUserParams struct {
@@ -429,7 +400,6 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.IsAdmin,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.EncryptedGeminiApiKey,
 	)
 	return i, err
 }

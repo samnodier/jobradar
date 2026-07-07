@@ -1,6 +1,9 @@
 ## Database Schema
 
-**users** — `id`, `email`, `username`, `full_name`, `avatar_url`, `phone`, `user_location`, `website_url`, `linkedin_url`, `github_url`, `headline`, `user_summary`, `availability`, `min_salary`, `max_salary`, `salary_currency`, `years_of_experience`, `preferred_job_types`, `preferred_industries`, `company_stage_preference`, `notify_jobs`, `is_admin`, `encrypted_gemini_api_key` (AES-256-GCM ciphertext; never sent to client), `created_at`, `updated_at`
+**users** — `id`, `email`, `username`, `full_name`, `avatar_url`, `phone`, `user_location`, `website_url`, `linkedin_url`, `github_url`, `headline`, `user_summary`, `availability`, `min_salary`, `max_salary`, `salary_currency`, `years_of_experience`, `preferred_job_types`, `preferred_industries`, `company_stage_preference`, `notify_jobs`, `is_admin`, `created_at`, `updated_at`
+*(`encrypted_gemini_api_key` was dropped in migration `20260706100000` — keys now live in `user_api_keys`)*
+
+**user_api_keys** — `id`, `user_id` (FK→users CASCADE), `provider` CHECK('gemini','groq'), `encrypted_key` (AES-256-GCM ciphertext; never sent to client), `created_at`, `updated_at`, UNIQUE(user_id, provider)
 
 **user_accounts** — `id`, `user_id` (FK→users CASCADE), `auth_provider`, `auth_provider_id`, `access_token`, `created_at`
 
@@ -30,4 +33,6 @@
 
 **applications:** `CreateApplication`, `GetApplicationByID`, `GetApplicationByUserAndJob`, `GetApplicationsByUserID`, `UpdateApplicationStatus`, `UpdateApplicationNotes`, `UpdateApplicationFollowUp`, `DeleteApplication`
 
-**users:** `CreateUser`, `GetUserByID` (derives `has_gemini_key` boolean in SQL; never selects the ciphertext), `GetUserByProviderIdentity`, `UpdateUser`, `DeleteUserByID`, `GetAllUsers`, `SetGeminiKeyByUserID` (store ciphertext), `GetGeminiKeyByUserID` (read ciphertext for the enrichment worker only)
+**users:** `CreateUser`, `GetUserByID` (derives `configured_providers text[]` via ARRAY subquery on user_api_keys; never selects ciphertext), `GetUserByProviderIdentity`, `UpdateUser`, `DeleteUserByID`, `GetAllUsers`
+
+**user_api_keys:** `UpsertUserAPIKey` (ON CONFLICT (user_id, provider) replaces the ciphertext), `GetUserAPIKey` (read ciphertext for workers/handlers only), `ListUserAPIKeyProviders`, `DeleteUserAPIKey`

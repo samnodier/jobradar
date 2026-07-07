@@ -309,7 +309,7 @@ async function handleConfirm() {
             class="px-4 py-2 border border-gray-200 text-sm w-full focus:outline-none focus:border-accent resize-y"
           />
         </div>
-        <p v-if="errors.title" class="text-xs text-red-600">{{ errors.description }}</p>
+        <p v-if="errors.description" class="text-xs text-red-600">{{ errors.description }}</p>
       </template>
     </div>
 

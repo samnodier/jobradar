@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { usePreferencesStore } from '@/stores/preferences'
@@ -18,8 +18,39 @@ const isDeleteConfirmVisible = ref(false)
 const typedEmail = ref('')
 const deleteError = ref('')
 
-const geminiInput = ref('')
-const isReplacingKey = ref(false)
+interface ApiProvider {
+  id: string
+  label: string
+  keyUrl: string
+  keyUrlText: string
+  placeholder: string
+}
+
+// The AI providers a user can bring a key for. Must stay in sync with the
+// backend allowlist (internal/llm IsKnownProvider).
+const apiProviders: ApiProvider[] = [
+  {
+    id: 'groq',
+    label: 'Groq API Key',
+    keyUrl: 'https://console.groq.com/keys',
+    keyUrlText: 'Groq Console',
+    placeholder: 'gsk_...',
+  },
+  {
+    id: 'gemini',
+    label: 'Google Gemini API Key',
+    keyUrl: 'https://aistudio.google.com/apikey',
+    keyUrlText: 'Google AI Studio',
+    placeholder: 'AIzaSy...',
+  },
+]
+
+const keyInputs = reactive<Record<string, string>>({})
+const replacingKey = reactive<Record<string, boolean>>({})
+
+function isConfigured(providerId: string): boolean {
+  return props.user?.configured_providers?.includes(providerId) ?? false
+}
 
 const { preferences } = storeToRefs(preferencesStore)
 
@@ -65,24 +96,35 @@ async function confirmDelete() {
   }
 }
 
-async function saveGeminiKey() {
-  if (!geminiInput.value) return
-  const key = geminiInput.value
+async function saveApiKey(providerId: string) {
+  const key = keyInputs[providerId]
+  if (!key) return
 
-  await authStore.setGeminiKey(key)
+  await authStore.setApiKey(providerId, key)
   if (!authStore.error) {
     toast.success('API Key securely saved')
-    // Clear the plaintext from the ref immediately
-    geminiInput.value = ''
-    isReplacingKey.value = false
+    // Clear the plaintext from state immediately
+    keyInputs[providerId] = ''
+    replacingKey[providerId] = false
   } else {
     toast.error(authStore.error)
   }
 }
 
-function cancelReplaceKey() {
-  isReplacingKey.value = false
-  geminiInput.value = ''
+function cancelReplaceKey(providerId: string) {
+  replacingKey[providerId] = false
+  keyInputs[providerId] = ''
+}
+
+async function removeApiKey(providerId: string) {
+  await authStore.deleteApiKey(providerId)
+  if (!authStore.error) {
+    toast.success('API key removed')
+    replacingKey[providerId] = false
+    keyInputs[providerId] = ''
+  } else {
+    toast.error(authStore.error)
+  }
 }
 </script>
 <template>
@@ -107,52 +149,78 @@ function cancelReplaceKey() {
 
       <section class="p-6 bg-white border border-gray-200">
         <h2 class="text-lg font-semibold text-black mb-4">Integrations</h2>
-        <div class="flex flex-col gap-2">
-          <label class="text-sm font-semibold text-black">Google Gemini API Key</label>
-          <p class="text-xs text-black mb-4">
-            Required for AI job matching. Get your free key from
+        <p class="text-xs text-black mb-4">
+          Bring your own API key for AI job matching and imports. When more than one key is
+          configured, the fastest provider is used first and the others act as fallbacks if it
+          fails.
+        </p>
+        <div
+          v-for="provider in apiProviders"
+          :key="provider.id"
+          class="flex flex-col gap-2 mb-6 last:mb-0"
+        >
+          <label :for="`api-key-${provider.id}`" class="text-sm font-semibold text-black">{{
+            provider.label
+          }}</label>
+          <p class="text-xs text-black mb-2">
+            Get your free key from
             <a
-              href="https://aistudio.google.com/apikey"
+              :href="provider.keyUrl"
               target="_blank"
               rel="noopener noreferrer"
               class="text-accent hover:underline"
-              >Google AI Studio</a
+              >{{ provider.keyUrlText }}</a
             >.
           </p>
 
           <div
-            v-if="props.user?.has_gemini_key && !isReplacingKey"
+            v-if="isConfigured(provider.id) && !replacingKey[provider.id]"
             class="flex items-center justify-between bg-green-50 p-1 border border-green-200"
           >
             <span class="text-sm text-green-700 flex items-center gap-2">
               <Check />
               Key Configured
             </span>
-            <button class="button button-secondary text-sm" @click="isReplacingKey = true">
-              Replace
-            </button>
+            <div class="flex gap-2">
+              <button
+                class="button button-secondary text-sm"
+                @click="replacingKey[provider.id] = true"
+                :disabled="authStore.isSaving"
+              >
+                Replace
+              </button>
+              <button
+                class="button button-danger text-sm"
+                @click="removeApiKey(provider.id)"
+                :disabled="authStore.isSaving"
+              >
+                Remove
+              </button>
+            </div>
           </div>
 
           <div v-else class="flex flex-col gap-2">
             <input
-              v-model="geminiInput"
+              :id="`api-key-${provider.id}`"
+              :name="`api-key-${provider.id}`"
+              v-model="keyInputs[provider.id]"
               type="password"
-              placeholder="AIzaSy..."
+              :placeholder="provider.placeholder"
               class="px-4 py-2 border border-gray-200 text-sm bg-white text-black w-full focus:outline-none focus:border-accent transition-all"
               :disabled="authStore.isSaving"
             />
             <div class="flex gap-2 mt-1">
               <button
                 class="button button-primary"
-                @click="saveGeminiKey"
-                :disabled="!geminiInput || authStore.isSaving"
+                @click="saveApiKey(provider.id)"
+                :disabled="!keyInputs[provider.id] || authStore.isSaving"
               >
                 {{ authStore.isSaving ? 'Saving...' : 'Save Key' }}
               </button>
               <button
-                v-if="props.user?.has_gemini_key && isReplacingKey"
+                v-if="isConfigured(provider.id) && replacingKey[provider.id]"
                 class="button button-secondary"
-                @click="cancelReplaceKey"
+                @click="cancelReplaceKey(provider.id)"
                 :disabled="authStore.isSaving"
               >
                 Cancel

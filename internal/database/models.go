@@ -114,7 +114,6 @@ type User struct {
 	IsAdmin                *bool      `json:"is_admin"`
 	CreatedAt              *time.Time `json:"created_at"`
 	UpdatedAt              *time.Time `json:"updated_at"`
-	EncryptedGeminiApiKey  *string    `json:"encrypted_gemini_api_key"`
 }
 
 type UserAccount struct {
@@ -128,6 +127,15 @@ type UserAccount struct {
 	RevokedAt      *time.Time `json:"revoked_at"`
 	CreatedAt      *time.Time `json:"created_at"`
 	UpdatedAt      *time.Time `json:"updated_at"`
+}
+
+type UserApiKey struct {
+	ID           uuid.UUID          `json:"id"`
+	UserID       uuid.UUID          `json:"user_id"`
+	Provider     string             `json:"provider"`
+	EncryptedKey string             `json:"encrypted_key"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
 type UserCertification struct {

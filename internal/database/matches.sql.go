@@ -12,6 +12,21 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const deleteMatch = `-- name: DeleteMatch :exec
+DELETE FROM user_job_matches
+WHERE user_id = $1 AND job_id = $2
+`
+
+type DeleteMatchParams struct {
+	UserID uuid.UUID `json:"user_id"`
+	JobID  uuid.UUID `json:"job_id"`
+}
+
+func (q *Queries) DeleteMatch(ctx context.Context, arg DeleteMatchParams) error {
+	_, err := q.db.Exec(ctx, deleteMatch, arg.UserID, arg.JobID)
+	return err
+}
+
 const updateMatchEnrichment = `-- name: UpdateMatchEnrichment :exec
 UPDATE user_job_matches
 SET

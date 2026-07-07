@@ -21,5 +21,5 @@ export interface User {
   company_stage_preference: string[]
   notify_jobs: boolean
   is_admin: boolean | null
-  has_gemini_key: boolean
+  configured_providers: string[]
 }

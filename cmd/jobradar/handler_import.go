@@ -83,48 +83,46 @@ func (cfg *apiConfig) handlerExtractJob(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Get the user Gemini Key
-	geminiKeyPointer, err := cfg.db.GetGeminiKeyByUserID(ctx, userID)
+	// Every provider the user has a key for, in priority order
+	keys, err := cfg.selectProviderKeys(ctx, userID)
 	if err != nil {
-		log.Printf("handleExtractJob: failed to fetch gemini key for user: %s. Err: %v", userID, err)
-		httpx.RespondError(w, http.StatusInternalServerError, "can't fetch the gemini key")
-		return
-	}
-	if geminiKeyPointer.EncryptedGeminiApiKey == nil {
-		httpx.RespondError(w, http.StatusUnprocessableEntity, "no Gemini API key configured - add one in Settings")
-		return
-	}
-
-	geminiKey, err := cfg.crypto.Decrypt(*geminiKeyPointer.EncryptedGeminiApiKey)
-	if err != nil {
-		log.Printf("handleExtractJob: failed to decrypt gemini key for user %s: %v", userID, err)
-		httpx.RespondError(w, http.StatusInternalServerError, "failed to decrypt the gemini key")
-		return
-	}
-
-	llmExtractor, err := cfg.newExtractor(ctx, geminiKey)
-	if err != nil {
-		log.Printf("handleExtractJob: failed to create extractor for user %s: %v", userID, err)
-		httpx.RespondError(w, http.StatusInternalServerError, "failed to create extractor")
-		return
-	}
-
-	result, err := llmExtractor.Extract(ctx, llm.ExtractionInput{
-		PageText: text,
-	})
-	if err != nil {
-		// The permanent error (bad key -> 401) is the user's problem (422)
-		if errors.Is(err, llm.ErrPermanent) {
-			log.Printf("handleExtractJob: permanent failure for URL %s user %s, dropping: %v", parsedURL, userID, err)
-			httpx.RespondError(w, http.StatusUnprocessableEntity, "failed to extract the job details from the url")
-			return // drop it, don't retry
-		} else {
-			// Transient error are a service's problem
-			// We should try again
-			log.Printf("handleExtractJob: transient failure for URL %s user %s, retrying: %v", parsedURL, userID, err)
-			httpx.RespondError(w, http.StatusBadGateway, "service unavailable")
+		if errors.Is(err, errNoAPIKey) {
+			httpx.RespondError(w, http.StatusUnprocessableEntity, "no AI provider API key configured - add one in Settings")
 			return
 		}
+		log.Printf("handleExtractJob: failed to load api keys for user %s: %v", userID, err)
+		httpx.RespondError(w, http.StatusInternalServerError, "failed to load your API key")
+		return
+	}
+
+	// Try each provider in turn; fall back to the next one on any failure
+	// (down, rate-limited, revoked key). extractErr holds the last failure.
+	var result llm.ExtractionResult
+	var extractErr error
+	for _, pk := range keys {
+		var llmExtractor llm.Extractor
+		llmExtractor, extractErr = cfg.newExtractor(ctx, pk.provider, pk.apiKey)
+		if extractErr != nil {
+			log.Printf("handleExtractJob: failed to create %s extractor for user %s: %v", pk.provider, userID, extractErr)
+			continue
+		}
+		result, extractErr = llmExtractor.Extract(ctx, llm.ExtractionInput{
+			PageText: text,
+		})
+		if extractErr == nil {
+			break
+		}
+		log.Printf("handleExtractJob: %s extract failed for URL %s user %s (trying next provider if any): %v", pk.provider, parsedURL, userID, extractErr)
+	}
+	if extractErr != nil {
+		// The permanent error (bad key -> 401) is the user's problem (422)
+		if errors.Is(extractErr, llm.ErrPermanent) {
+			httpx.RespondError(w, http.StatusUnprocessableEntity, "failed to extract the job details from the url")
+			return // drop it, don't retry
+		}
+		// Transient errors are the service's problem — the user can retry
+		httpx.RespondError(w, http.StatusBadGateway, "service unavailable")
+		return
 	}
 
 	httpx.RespondJSON(w, http.StatusOK, result)

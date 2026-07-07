@@ -74,24 +74,14 @@ const ExtractInstructions = `You are a precise job-posting data extractor.
 	- "job_location" is the location as written (e.g. "Berlin, Germany" or "Remote — US").
 Respond only with JSON matching the schema. Nomarkdown, no code fences, no preamble.`
 
-const model = "gemini-3.5-flash"
+const geminiModel = "gemini-2.5-flash"
 
 func (g *geminiEnricher) Enrich(ctx context.Context, input EnrichmentInput) (EnrichmentResult, error) {
-	userContent := fmt.Sprintf(
-		`
-		Job Title: %s
-		Job Location: %s
-    Job Description: %s
-
-		Candidate Desired Roles: %s
-		Candidate Skills: %s
-		Candidate Experience: %s
-		`, input.JobTitle, input.JobLocation, input.JobDescription, strings.Join(input.DesiredRoles, ", "), strings.Join(input.UserSkills, ", "), formatExperience(input.UserExperiences),
-	)
+	userContent := buildEnrichPrompt(input)
 
 	result, err := g.client.Models.GenerateContent(
 		ctx,
-		model,
+		geminiModel,
 		genai.Text(userContent),
 		&genai.GenerateContentConfig{
 			SystemInstruction: genai.NewContentFromText(EnrichInstructions, ""),
@@ -124,7 +114,7 @@ func (g *geminiExtractor) Extract(ctx context.Context, input ExtractionInput) (E
 	userContent := input.PageText
 	result, err := g.client.Models.GenerateContent(
 		ctx,
-		model,
+		geminiModel,
 		genai.Text(userContent),
 		&genai.GenerateContentConfig{
 			SystemInstruction: genai.NewContentFromText(ExtractInstructions, ""),

@@ -1,7 +1,7 @@
 ## Current Status
 
-Phase: Phase 5 — AI Matching
-Status: In Progress — enrichment scaffolding built (Enricher interface + gemini client + queue plumbing); live wiring pending
+Phase: Phase 8.5 — User-Submitted Job Import (plus multi-provider key restructure)
+Status: Import happy path verified live 2026-07-07 (Groq extract → confirm → job created). Same day: fixed why imported jobs never matched/enriched (title gate + enrich threshold now bypassed for imports; enrich worker could not see private jobs due to a uuid.Nil lookup), added provider fallback, delete-key UI, and resolved the matcher/worker TODOs. Degradation paths (no key → 422, bad key → 422/manual entry) still need a manual pass.
 
 ## The Vision — What Jobradar Becomes
 
@@ -62,7 +62,7 @@ Jobradar is a full job search command center inspired by career-ops (<https://gi
 
 ### Phase 5.5 — User API Key Management
 
-- **Status:** Done
+- **Status:** Done — restructured 2026-07-06 into multi-provider `user_api_keys` (one row per user+provider; gemini and groq). `PUT/DELETE /api/users/me/api-keys/{provider}` replaced the gemini-key route; `has_gemini_key` became `configured_providers: string[]` on the user payload; SettingsTab renders a provider list. Provider selection at runtime: `llm.ProviderPriority` (groq first), decrypt in `selectProviderKey` (cmd/jobradar/apikeys.go).
 - **Description:** Let users provide their own Gemini API key from the Settings page. Store encrypted at rest (AES-256, server-side key from env). Never log. Link to aistudio.google.com/apikey. Schema: add `encrypted_gemini_api_key TEXT` column to users.
 - **Built:**
   - `encrypted_gemini_api_key TEXT` column on `users` (migration `20260531153511`)
@@ -99,8 +99,11 @@ Jobradar is a full job search command center inspired by career-ops (<https://gi
 
 ### Phase 8.5 — User-Submitted Job Import
 
-- **Status:** Not Started
+- **Status:** Built — pending end-to-end verification
 - **Description:** User pastes a URL to any job posting (LinkedIn, Greenhouse, Ashby, Lever, company page). Backend fetches and scrapes the page, extracts title/company/description/location/skills using LLM. Creates a job record flagged as user-private (visible only to that user). Enqueues match + enrichment automatically. This gives users matching and resume generation for jobs they find outside Jobradar's feed.
+- **Built:** SSRF-safe fetcher (dial-time IP guard), HTML-to-text, `Extractor` interface with Gemini + Groq implementations (Ollama experiment removed 2026-07-06), extract/confirm endpoints, private-job ownership + dedup upsert, import panel with chips/inline errors/manual-entry fallback, match enqueue on confirm. Verified live 2026-07-07 with a Groq key. Imported jobs bypass the title gate and enrich threshold (user intent); enrich worker sees private jobs (uuid.Nil bug fixed).
+- **Remaining:** manual pass on degradation paths (no key → 422 — now testable from the UI via the Remove button; bad key → 422 + manual-entry fallback), and a second import to confirm the match+enrich chain end-to-end.
+- **Future (deliberately not built yet):** user-selectable preferred provider (a `preferred_provider` user setting overriding `llm.ProviderPriority` — fixed priority + automatic fallback covers today's need); UI nudge "set a desired role to get match scores" when the profile has no desired roles (belongs with the match-display UI).
 
 ### Phase 9 — Discord Bot (Optional)
 
