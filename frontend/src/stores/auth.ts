@@ -87,12 +87,12 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    async setGeminiKey(key: string) {
+    async setApiKey(provider: string, key: string) {
       this.isSaving = true
       this.error = null
 
       try {
-        const response = await fetch('/api/users/me/gemini-key', {
+        const response = await fetch(`/api/users/me/api-keys/${provider}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -108,9 +108,39 @@ export const useAuthStore = defineStore('auth', {
           throw new Error(data?.error ?? "Failed to add user's api key")
         }
 
-        if (this.user) this.user.has_gemini_key = true
+        // Optimistic update: the server confirmed the save, no refetch needed
+        if (this.user && !this.user.configured_providers.includes(provider)) {
+          this.user.configured_providers.push(provider)
+        }
       } catch (err) {
         this.error = err instanceof Error ? err.message : 'Failed to add the api key'
+      } finally {
+        this.isSaving = false
+      }
+    },
+
+    async deleteApiKey(provider: string) {
+      this.isSaving = true
+      this.error = null
+
+      try {
+        const response = await fetch(`/api/users/me/api-keys/${provider}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        })
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => null)
+          throw new Error(data?.error ?? 'Failed to remove the api key')
+        }
+
+        if (this.user) {
+          this.user.configured_providers = this.user.configured_providers.filter(
+            (p) => p !== provider,
+          )
+        }
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to remove the api key'
       } finally {
         this.isSaving = false
       }

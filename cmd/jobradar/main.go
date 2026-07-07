@@ -34,8 +34,8 @@ type apiConfig struct {
 	rootCtx          context.Context
 	crypto           *crypto.Service
 	aiMatchThreshold int32
-	newEnricher      func(ctx context.Context, apiKey string) (llm.Enricher, error)
-	newExtractor     func(ctx context.Context, apiKey string) (llm.Extractor, error)
+	newEnricher      func(ctx context.Context, provider, apiKey string) (llm.Enricher, error)
+	newExtractor     func(ctx context.Context, provider, apiKey string) (llm.Extractor, error)
 	IsProduction     bool
 }
 
@@ -77,17 +77,14 @@ func main() {
 	aiMatchThreshold = max(int32(0), min(int32(100), aiMatchThreshold))
 
 	cfg := &apiConfig{
-		db:          dbClient.Queries,
-		rdb:         rdb,
-		pool:        dbClient.Pool,
-		queue:       q,
-		rootCtx:     context.Background(),
-		crypto:      cryptoService,
-		newEnricher: llm.NewGeminiEnricher,
-		// newExtractor:     llm.NewGeminiExtractor,
-		newExtractor: func(ctx context.Context, apiKey string) (llm.Extractor, error) {
-			return llm.NewOllamaExtractor("http://100.107.145.124:11434", "qwen3:4b")
-		},
+		db:               dbClient.Queries,
+		rdb:              rdb,
+		pool:             dbClient.Pool,
+		queue:            q,
+		rootCtx:          context.Background(),
+		crypto:           cryptoService,
+		newEnricher:      llm.NewEnricher,
+		newExtractor:     llm.NewExtractor,
 		aiMatchThreshold: aiMatchThreshold,
 		IsProduction:     os.Getenv("APP_ENV") == "production",
 	}
@@ -225,7 +222,8 @@ func main() {
 			r.Get("/users/me", cfg.handlerUserGet)
 			r.Patch("/users/me", cfg.handlerUserUpdate)
 			r.Delete("/users/me", cfg.HandleDeleteAccount)
-			r.Put("/users/me/gemini-key", cfg.handlerUserSetGeminiKey)
+			r.Put("/users/me/api-keys/{provider}", cfg.handlerUserSetAPIKey)
+			r.Delete("/users/me/api-keys/{provider}", cfg.handlerUserDeleteAPIKey)
 		})
 	})
 

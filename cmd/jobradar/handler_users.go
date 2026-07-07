@@ -7,10 +7,12 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/samnodier/jobradar/internal/database"
 	"github.com/samnodier/jobradar/internal/httpx"
+	"github.com/samnodier/jobradar/internal/llm"
 )
 
 type userUpdateRequest struct {
@@ -34,7 +36,7 @@ type userUpdateRequest struct {
 	NotifyJobs             *bool    `json:"notify_jobs"`
 }
 
-type geminiKeyRequest struct {
+type apiKeyRequest struct {
 	Key *string `json:"key"`
 }
 
@@ -163,15 +165,21 @@ func (cfg *apiConfig) HandleDeleteAccount(w http.ResponseWriter, r *http.Request
 	})
 }
 
-func (cfg *apiConfig) handlerUserSetGeminiKey(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerUserSetAPIKey(w http.ResponseWriter, r *http.Request) {
 	userID, ok := getUserIDFromRequest(w, r)
 	if !ok {
 		return
 	}
 
-	var req geminiKeyRequest
+	provider := chi.URLParam(r, "provider")
+	if !llm.IsKnownProvider(provider) {
+		httpx.RespondError(w, http.StatusBadRequest, "unknown provider")
+		return
+	}
+
+	var req apiKeyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httpx.RespondError(w, http.StatusBadRequest, "invalid gemini key request body")
+		httpx.RespondError(w, http.StatusBadRequest, "invalid api key request body")
 		return
 	}
 
@@ -180,29 +188,55 @@ func (cfg *apiConfig) handlerUserSetGeminiKey(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Get the key in plain text
-	plainTextGeminiKey := *req.Key
-
-	// Encrypt the key
-	encryptedGeminiKey, err := cfg.crypto.Encrypt(plainTextGeminiKey)
+	// Encrypt the key — the plaintext never touches logs or the DB
+	encryptedKey, err := cfg.crypto.Encrypt(*req.Key)
 	if err != nil {
-		log.Printf("[ERROR] failed to encrypt gemini key for user %s: %v\n", userID, err)
+		log.Printf("[ERROR] failed to encrypt %s key for user %s: %v\n", provider, userID, err)
 		httpx.RespondError(w, http.StatusInternalServerError, "internal error while securing the key")
 		return
 	}
 
-	// Set the gemini api key
-	err = cfg.db.SetGeminiKeyByUserID(r.Context(), database.SetGeminiKeyByUserIDParams{
-		ID:                    userID,
-		EncryptedGeminiApiKey: &encryptedGeminiKey,
+	err = cfg.db.UpsertUserAPIKey(r.Context(), database.UpsertUserAPIKeyParams{
+		UserID:       userID,
+		Provider:     provider,
+		EncryptedKey: encryptedKey,
 	})
 	if err != nil {
+		log.Printf("[ERROR] failed to save %s key for user %s: %v\n", provider, userID, err)
 		httpx.RespondError(w, http.StatusInternalServerError, "failed to set the api key")
-		log.Printf("[ERROR] failed to save gemini key for user %s: %v\n", userID, err)
 		return
 	}
 
 	httpx.RespondJSON(w, http.StatusOK, map[string]string{
-		"message": "saved",
+		"message":  "saved",
+		"provider": provider,
+	})
+}
+
+func (cfg *apiConfig) handlerUserDeleteAPIKey(w http.ResponseWriter, r *http.Request) {
+	userID, ok := getUserIDFromRequest(w, r)
+	if !ok {
+		return
+	}
+
+	provider := chi.URLParam(r, "provider")
+	if !llm.IsKnownProvider(provider) {
+		httpx.RespondError(w, http.StatusBadRequest, "unknown provider")
+		return
+	}
+
+	err := cfg.db.DeleteUserAPIKey(r.Context(), database.DeleteUserAPIKeyParams{
+		UserID:   userID,
+		Provider: provider,
+	})
+	if err != nil {
+		log.Printf("[ERROR] failed to delete %s key for user %s: %v\n", provider, userID, err)
+		httpx.RespondError(w, http.StatusInternalServerError, "failed to delete the api key")
+		return
+	}
+
+	httpx.RespondJSON(w, http.StatusOK, map[string]string{
+		"message":  "deleted",
+		"provider": provider,
 	})
 }

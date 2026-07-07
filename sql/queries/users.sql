@@ -34,11 +34,15 @@ SELECT
     company_stage_preference,
     notify_jobs,
     is_admin,
-    (encrypted_gemini_api_key IS NOT NULL)::boolean AS has_gemini_key,
+    ARRAY(
+        SELECT k.provider FROM user_api_keys AS k
+        WHERE k.user_id = users.id
+        ORDER BY k.provider
+    )::text [] AS configured_providers,
     created_at,
     updated_at
 FROM users
-WHERE id = $1;
+WHERE users.id = $1;
 
 -- name: GetUserByProviderIdentity :one
 SELECT
@@ -64,7 +68,11 @@ SELECT
     u.company_stage_preference,
     u.notify_jobs,
     u.is_admin,
-    (u.encrypted_gemini_api_key IS NOT NULL)::boolean AS has_gemini_key,
+    ARRAY(
+        SELECT k.provider FROM user_api_keys AS k
+        WHERE k.user_id = u.id
+        ORDER BY k.provider
+    )::text [] AS configured_providers,
     u.created_at,
     u.updated_at
 FROM users AS u
@@ -104,16 +112,4 @@ RETURNING *;
 
 -- name: DeleteUserByID :exec
 DELETE FROM users
-WHERE id = $1;
-
--- name: GetGeminiKeyByUserID :one
-SELECT
-    id,
-    encrypted_gemini_api_key
-FROM users
-WHERE id = $1;
-
--- name: SetGeminiKeyByUserID :exec
-UPDATE users
-SET encrypted_gemini_api_key = $2
 WHERE id = $1;

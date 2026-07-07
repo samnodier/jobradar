@@ -220,6 +220,7 @@ SELECT
     j.is_remote,
     j.skills,
     j.logo_url,
+    j.created_by_user_id,
     j.created_at,
     j.updated_at,
     m.match_score,
@@ -262,6 +263,7 @@ type GetJobByIDRow struct {
 	IsRemote        *bool         `json:"is_remote"`
 	Skills          []string      `json:"skills"`
 	LogoUrl         *string       `json:"logo_url"`
+	CreatedByUserID pgtype.UUID   `json:"created_by_user_id"`
 	CreatedAt       *time.Time    `json:"created_at"`
 	UpdatedAt       *time.Time    `json:"updated_at"`
 	MatchScore      *int32        `json:"match_score"`
@@ -297,6 +299,7 @@ func (q *Queries) GetJobByID(ctx context.Context, arg GetJobByIDParams) (GetJobB
 		&i.IsRemote,
 		&i.Skills,
 		&i.LogoUrl,
+		&i.CreatedByUserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.MatchScore,
@@ -355,6 +358,7 @@ SELECT
     j.is_remote,
     j.skills,
     j.logo_url,
+    j.created_by_user_id,
     j.created_at,
     j.updated_at,
     m.match_score,
@@ -393,6 +397,7 @@ type GetJobsRow struct {
 	IsRemote        *bool         `json:"is_remote"`
 	Skills          []string      `json:"skills"`
 	LogoUrl         *string       `json:"logo_url"`
+	CreatedByUserID pgtype.UUID   `json:"created_by_user_id"`
 	CreatedAt       *time.Time    `json:"created_at"`
 	UpdatedAt       *time.Time    `json:"updated_at"`
 	MatchScore      *int32        `json:"match_score"`
@@ -434,6 +439,7 @@ func (q *Queries) GetJobs(ctx context.Context, userID uuid.UUID) ([]GetJobsRow, 
 			&i.IsRemote,
 			&i.Skills,
 			&i.LogoUrl,
+			&i.CreatedByUserID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.MatchScore,

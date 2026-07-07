@@ -10,7 +10,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/samnodier/jobradar/internal/convert"
 	"github.com/samnodier/jobradar/internal/database"
 	"github.com/samnodier/jobradar/internal/matcher"
@@ -124,51 +123,59 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 		jobDesc = *job.Description
 	}
 
-	// Jaro-Winkler threshold = 0.55
-	result := matcher.MatchJob(job.Title, jobDesc, desiredRoles, userSkills, job.Skills, userExperiences, 0.55)
-	var score int32
-	titleScore := pgtype.Float8{}
-	skillScore := pgtype.Float8{}
-	expScore := pgtype.Float8{}
-	matchedSkills := []string{}
-	missingSkills := []string{}
-	notEnriched := false
-	if !result.Skipped {
-		score = int32(result.Score)
-		titleScore = convert.ToFloat8(result.TitleScore)
-		skillScore = convert.ToFloat8(result.SkillScore)
-		expScore = convert.ToFloat8(result.ExpScore)
-		matchedSkills = result.MatchedSkills
-		// Compute the missing skills: the job's required skills the user
-		// hasn't demonstrated (case-insensitive). These are the gaps the
-		// user would need to fill to qualify.
-		// NOTE: (design debt) matchedSet is description-derived — it holds the
-		// user's skills found in the job's prose, not the user's full skill
-		// set. So a skill the user genuinely has can be flagged "missing" if
-		// the description never spells it out. Revisit the canonical skill
-		// universe before the LLM prompt consumes matched/missing skills.
-		matchedSet := make(map[string]bool)
-		for _, ms := range matchedSkills {
-			matchedSet[strings.ToLower(ms)] = true
-		}
-		for _, s := range job.Skills {
-			jobSkillLower := strings.ToLower(s)
-			if !matchedSet[jobSkillLower] {
-				missingSkills = append(missingSkills, s)
-			}
-		}
-
-	} else {
-		score = 0
+	// A user-imported (private) job is explicit intent — the user chose it, so
+	// the title gate that filters the scraped firehose doesn't apply. Passing
+	// titleThreshold 0 disables the matcher's early exit; the title still
+	// contributes its honest (possibly low) score.
+	isImported := job.CreatedByUserID.Valid
+	titleThreshold := 0.55 // Jaro-Winkler
+	if isImported {
+		titleThreshold = 0
 	}
-	// TODO: (scale / re-match correctness) we currently upsert a score=0 row
-	// even for skipped (non-matching) jobs, so user_job_matches grows to
-	// jobs × users including all non-matches. The cleaner design is to NOT
-	// write skips. BUT do not ship "don't write skips" alone — if a job that
-	// previously scored above threshold drops below it on a profile re-match,
-	// the stale high-score row would linger. "Don't write skips" must arrive
-	// together with a DeleteMatch query. Fold this into the re-match-scale
-	// work (coalescing → batch RematchUser job), see LEARNINGS.md.
+	result := matcher.MatchJob(job.Title, jobDesc, desiredRoles, userSkills, job.Skills, userExperiences, titleThreshold)
+
+	if result.Skipped {
+		// Don't persist skips — user_job_matches would grow to jobs × users
+		// including every non-match. Delete instead of skipping the write:
+		// a job that previously scored above threshold may have dropped below
+		// it after a profile re-match, and the stale high-score row must go.
+		if err := cfg.db.DeleteMatch(ctx, database.DeleteMatchParams{
+			UserID: userID,
+			JobID:  jobID,
+		}); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	score := int32(result.Score)
+	titleScore := convert.ToFloat8(result.TitleScore)
+	skillScore := convert.ToFloat8(result.SkillScore)
+	expScore := convert.ToFloat8(result.ExpScore)
+	notEnriched := false
+	matchedSkills := result.MatchedSkills
+	if matchedSkills == nil {
+		matchedSkills = []string{}
+	}
+	// Compute the missing skills: the job's required skills the user
+	// hasn't demonstrated (case-insensitive). These are the gaps the
+	// user would need to fill to qualify.
+	// NOTE: (design debt) matchedSet is description-derived — it holds the
+	// user's skills found in the job's prose, not the user's full skill
+	// set. So a skill the user genuinely has can be flagged "missing" if
+	// the description never spells it out. Revisit the canonical skill
+	// universe before the LLM prompt consumes matched/missing skills.
+	missingSkills := []string{}
+	matchedSet := make(map[string]bool)
+	for _, ms := range matchedSkills {
+		matchedSet[strings.ToLower(ms)] = true
+	}
+	for _, s := range job.Skills {
+		jobSkillLower := strings.ToLower(s)
+		if !matchedSet[jobSkillLower] {
+			missingSkills = append(missingSkills, s)
+		}
+	}
 
 	// Update Job in the database with match scores
 	err = cfg.db.UpsertMatch(ctx, database.UpsertMatchParams{
@@ -186,15 +193,16 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 	if err != nil {
 		return err
 	}
-	// If this match scored high enough And the user has a Gemini key
-	// Push an enrich job
-	if score >= cfg.aiMatchThreshold {
-		user, err := cfg.db.GetUserByID(ctx, userID)
+	// If this match scored high enough And the user has an AI provider key
+	// Push an enrich job. Imported jobs skip the threshold: the user asked
+	// for this specific job, so they always get the AI summary if a key exists.
+	if score >= cfg.aiMatchThreshold || isImported {
+		providers, err := cfg.db.ListUserAPIKeyProviders(ctx, userID)
 		if err != nil {
-			log.Printf("handlerMatchJob: failed to fetch user %s: %v", userID, err)
+			log.Printf("handlerMatchJob: failed to fetch api key providers for user %s: %v", userID, err)
 			return nil
 		}
-		if user.HasGeminiKey {
+		if len(providers) > 0 {
 			enrichPayload, err := json.Marshal(EnrichJobPayload{
 				JobID:  jobID.String(),
 				UserID: userID.String(),

@@ -33,32 +33,22 @@ func (cfg *apiConfig) handleEnrichJob(ctx context.Context, qJob *queue.Job) erro
 		return nil
 	}
 
-	geminiKeyPointer, err := cfg.db.GetGeminiKeyByUserID(ctx, userID)
+	// Re-check the key defensively — the producer's gate can go stale
+	keys, err := cfg.selectProviderKeys(ctx, userID)
 	if err != nil {
-		return err
-	}
-	if geminiKeyPointer.EncryptedGeminiApiKey == nil {
-		log.Printf("handleEnrichJob: no gemini key found for user %s", userID)
-		return nil
-	}
-
-	geminiKey, err := cfg.crypto.Decrypt(*geminiKeyPointer.EncryptedGeminiApiKey)
-	if err != nil {
-		log.Printf("handleEnrichJob: failed to decrypt gemini key for user %s: %v", userID, err)
-		return nil
-	}
-
-	llmEnricher, err := cfg.newEnricher(ctx, geminiKey)
-	if err != nil {
-		log.Printf("handleEnrichJob: failed to create enricher for user %s: %v", userID, err)
-		return nil
+		if errors.Is(err, errNoAPIKey) {
+			log.Printf("handleEnrichJob: no api key found for user %s", userID)
+			return nil // nothing to retry — the user removed their key
+		}
+		return err // DB/decrypt trouble — let the backoff retry it
 	}
 
 	// Fetch the job
 	job, err := cfg.db.GetJobByID(ctx, database.GetJobByIDParams{
-		// GetJobByID needs a user ID because of the left join with saved_jobs/applications.
-		// We can pass a blank UUID since we only need the raw job description/title details
-		UserID: uuid.Nil,
+		// Pass the real user ID: GetJobByID only returns public-or-owned rows,
+		// so uuid.Nil would hide this user's imported (private) jobs and the
+		// enrichment would silently drop with "not found".
+		UserID: userID,
 		ID:     jobID,
 	})
 	if err != nil {
@@ -151,13 +141,28 @@ func (cfg *apiConfig) handleEnrichJob(ctx context.Context, qJob *queue.Job) erro
 		UserExperiences: userExperiences,
 	}
 
-	result, err := llmEnricher.Enrich(ctx, input)
-	if err != nil {
-		if errors.Is(err, llm.ErrPermanent) {
-			log.Printf("handleEnrichJob: permanent failure for job %s user %s, dropping: %v", jobID, userID, err)
+	// Try each provider in priority order; fall back to the next on failure
+	var result llm.EnrichmentResult
+	var enrichErr error
+	for _, pk := range keys {
+		var llmEnricher llm.Enricher
+		llmEnricher, enrichErr = cfg.newEnricher(ctx, pk.provider, pk.apiKey)
+		if enrichErr != nil {
+			log.Printf("handleEnrichJob: failed to create %s enricher for user %s: %v", pk.provider, userID, enrichErr)
+			continue
+		}
+		result, enrichErr = llmEnricher.Enrich(ctx, input)
+		if enrichErr == nil {
+			break
+		}
+		log.Printf("handleEnrichJob: %s enrich failed for job %s user %s (trying next provider if any): %v", pk.provider, jobID, userID, enrichErr)
+	}
+	if enrichErr != nil {
+		if errors.Is(enrichErr, llm.ErrPermanent) {
+			log.Printf("handleEnrichJob: permanent failure for job %s user %s, dropping: %v", jobID, userID, enrichErr)
 			return nil // drop it, don't retry
 		}
-		return err // transient — Asynq backoff retries it
+		return enrichErr // transient — the queue's backoff retries the job
 	}
 
 	err = cfg.db.UpdateMatchEnrichment(ctx, database.UpdateMatchEnrichmentParams{

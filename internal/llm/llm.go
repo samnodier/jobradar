@@ -1,7 +1,11 @@
 // Package llm provides a simple interface for LLMs to enrich job postings with summaries
 package llm
 
-import "context"
+import (
+	"context"
+	"fmt"
+	"strings"
+)
 
 type EnrichmentInput struct {
 	JobTitle       string
@@ -40,4 +44,26 @@ type Enricher interface {
 
 type Extractor interface {
 	Extract(ctx context.Context, input ExtractionInput) (ExtractionResult, error)
+}
+
+// buildEnrichPrompt renders the user-content half of an enrichment request.
+// Shared by all providers so they reason over identical inputs.
+func buildEnrichPrompt(input EnrichmentInput) string {
+	return fmt.Sprintf(
+		`
+		Job Title: %s
+		Job Location: %s
+		Job Description: %s
+
+		Candidate Desired Roles: %s
+		Candidate Skills: %s
+		Candidate Experience: %s
+		`,
+		input.JobTitle,
+		input.JobLocation,
+		input.JobDescription,
+		strings.Join(input.DesiredRoles, ", "),
+		strings.Join(input.UserSkills, ", "),
+		formatExperience(input.UserExperiences),
+	)
 }

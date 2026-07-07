@@ -30,30 +30,30 @@ func MatchJob(
 	activeWeight := 0.0
 
 	// 1. Title Matching (Early Exit)
+	// The title dimension only participates when the user has desired roles.
+	// No roles = a missing signal, not a zero — title drops out and the other
+	// dimensions renormalize, exactly like skills/experience below. The early
+	// exit therefore also only applies when roles exist; callers can disable
+	// it entirely with titleThreshold 0 (used for user-imported jobs, where
+	// explicit intent overrides the firehose filter).
 	bestTitleScore := 0.0
-	for _, role := range desiredRoles {
-		score := TokenSortJaroWinkler(jobTitle, role)
-		if score > bestTitleScore {
-			bestTitleScore = score
+	if len(desiredRoles) > 0 {
+		for _, role := range desiredRoles {
+			score := TokenSortJaroWinkler(jobTitle, role)
+			if score > bestTitleScore {
+				bestTitleScore = score
+			}
 		}
-	}
 
-	// Early exit check
-	// TODO: (policy decision) if desiredRoles is empty, bestTitleScore stays 0
-	// and EVERY job is skipped — a user with skills + experience but no roles
-	// set gets zero matches, silently. This is inconsistent with skills/exp,
-	// which drop out (renormalize) when absent. Decide: (A) when no roles,
-	// skip the gate and let title drop out of the accumulator like the others,
-	// or (B) keep this and surface a UI nudge ("set a desired role to get
-	// matches"). Leaning B; not yet implemented.
-	if bestTitleScore < titleThreshold {
-		return MatchResult{
-			Score:   0,
-			Skipped: true,
+		if bestTitleScore < titleThreshold {
+			return MatchResult{
+				Score:   0,
+				Skipped: true,
+			}
 		}
+		weightedSum += 0.45 * bestTitleScore
+		activeWeight += 0.45
 	}
-	weightedSum += 0.45 * bestTitleScore
-	activeWeight += 0.45
 
 	// 2. Skill Matching
 	// NOTE: matchedSkills is computed for DISPLAY whenever the user has skills,
@@ -89,8 +89,16 @@ func MatchJob(
 	}
 
 	// 4. Calculate final weighted score (0 to 100)
-	// Weights: Title (45%), Skills (30%), Experience (25%)
-	// activeWeight >= 0.45 always; title is unconditional past the gate
+	// Weights: Title (45%), Skills (30%), Experience (25%), renormalized over
+	// the dimensions actually present.
+	if activeWeight == 0 {
+		// No roles, no skills, no experiences — there is nothing to score.
+		// Skip rather than fabricate a number from zero signal.
+		return MatchResult{
+			Score:   0,
+			Skipped: true,
+		}
+	}
 	finalWeightedScore := weightedSum / activeWeight
 	scoreInt := max(
 		// Clamp between 0 and 100

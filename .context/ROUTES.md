@@ -8,7 +8,10 @@
 | GET    | `/api/jobs/{jobID}`               | Yes   | ✅ Done                 |
 | GET    | `/auth/users/me`                  | Yes   | ✅ Done                 |
 | DELETE | `/api/users/me`                   | Yes   | ✅ Done                 |
-| PUT    | `/api/users/me/gemini-key`        | Yes   | ✅ Done                 |
+| PUT    | `/api/users/me/api-keys/{provider}` | Yes | ✅ Done (replaces gemini-key) |
+| DELETE | `/api/users/me/api-keys/{provider}` | Yes | ✅ Done                 |
+| POST   | `/api/jobs/import`                | Yes   | ✅ Done                 |
+| POST   | `/api/jobs/import/confirm`        | Yes   | ✅ Done                 |
 | GET    | `/auth/github/login`              | No    | ✅ Done                 |
 | GET    | `/auth/github/callback`           | No    | ✅ Done                 |
 | GET    | `/auth/onboarding`                | Token | ✅ Done                 |

@@ -24,6 +24,10 @@ ON CONFLICT (user_id, job_id) DO UPDATE SET
     is_enriched = excluded.is_enriched,
     updated_at = NOW();
 
+-- name: DeleteMatch :exec
+DELETE FROM user_job_matches
+WHERE user_id = $1 AND job_id = $2;
+
 -- name: UpdateMatchEnrichment :exec
 UPDATE user_job_matches
 SET
