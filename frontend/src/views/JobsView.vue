@@ -15,6 +15,11 @@ const toast = useToast()
 
 const jobs = ref<Job[]>([])
 const loading = ref(false)
+const hasMore = ref(false)
+let requestController: AbortController | undefined
+let refreshTimer: ReturnType<typeof setInterval> | undefined
+let searchTimer: ReturnType<typeof setTimeout> | undefined
+const pageSize = 50
 const isJobImportOpen = ref(false)
 const error = ref('')
 const selectedJobId = ref<string | null>(null)
@@ -101,28 +106,64 @@ const detailOpen = computed(() => !!selectedJob.value)
 
 function handleImportJobCreated(job: Job) {
   isJobImportOpen.value = false
-  jobs.value.unshift(job)
+  jobs.value = [job, ...jobs.value.filter((existing) => existing.id !== job.id)]
+  let attempts = 0
+  if (refreshTimer) clearInterval(refreshTimer)
+  refreshTimer = setInterval(async () => {
+    attempts++
+    try {
+      const response = await fetch(`/api/jobs/${job.id}`, { credentials: 'include' })
+      if (response.ok) {
+        const updated: Job = await response.json()
+        jobs.value = jobs.value.map((existing) => (existing.id === updated.id ? updated : existing))
+        if (updated.is_enriched || attempts >= 12) clearInterval(refreshTimer)
+      }
+    } catch {
+      /* The normal refresh button remains available after a network failure. */
+    }
+    if (attempts >= 12) clearInterval(refreshTimer)
+  }, 5000)
 }
 
 function closeDetail() {
   selectedJobId.value = null
 }
 
-function fetchJobs() {
+async function fetchJobs(append = false) {
+  requestController?.abort()
+  const controller = new AbortController()
+  requestController = controller
   loading.value = true
   error.value = ''
-  fetch('/api/jobs', { credentials: 'include' })
-    .then(async (response) => {
-      if (!response.ok) throw new Error('Failed to load jobs')
-      jobs.value = await response.json()
+  const params = new URLSearchParams({
+    limit: String(pageSize),
+    offset: String(append ? jobs.value.length : 0),
+    q: searchTerm.value.trim(),
+    filter: activeFilter.value,
+    order: sortDirection.value,
+  })
+  try {
+    const response = await fetch(`/api/jobs?${params}`, {
+      credentials: 'include',
+      signal: controller.signal,
     })
-    .catch((err) => {
-      error.value = err instanceof Error ? err.message : 'Unknown error'
-    })
-    .finally(() => {
-      loading.value = false
-    })
+    if (!response.ok) throw new Error('Failed to load jobs')
+    const batch: Job[] = (await response.json()) ?? []
+    hasMore.value = batch.length === pageSize
+    jobs.value = append
+      ? [...jobs.value, ...batch.filter((job) => !jobs.value.some((old) => old.id === job.id))]
+      : batch
+  } catch (err) {
+    if (!controller.signal.aborted)
+      error.value = err instanceof Error ? err.message : 'Could not load jobs'
+  } finally {
+    if (!controller.signal.aborted) loading.value = false
+  }
 }
+watch([searchTerm, activeFilter, sortDirection], () => {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => fetchJobs(), 300)
+})
 
 async function handleSaveJob(job: Job) {
   if (job.is_saved) {
@@ -164,7 +205,6 @@ async function handleApplyJob(job: Job) {
     })
     if (response.ok) {
       job.is_applied = true
-      job.is_saved = true
     } else {
       const data = await response.json().catch(() => null)
       toast.error(data?.error ?? 'Failed to track application')
@@ -183,7 +223,11 @@ function toggleSort() {
 }
 
 onMounted(() => fetchJobs())
-onUnmounted(() => {})
+onUnmounted(() => {
+  requestController?.abort()
+  clearInterval(refreshTimer)
+  clearTimeout(searchTimer)
+})
 </script>
 
 <template>
@@ -244,12 +288,23 @@ onUnmounted(() => {})
             <ListFilter class="w-4 h-4" />
             {{ sortDirection === 'newest' ? 'Newest' : 'Oldest' }}
           </button>
+          <button class="button button-secondary" @click="fetchJobs()" :disabled="loading">
+            Refresh
+          </button>
           <button @click="isJobImportOpen = true" class="button button-primary">
             Import job <PlusIcon :size="20" />
           </button>
         </div>
       </header>
 
+      <button
+        v-if="hasMore"
+        class="button button-secondary"
+        :disabled="loading"
+        @click="fetchJobs(true)"
+      >
+        Load more jobs
+      </button>
       <!-- Count row -->
       <div class="flex items-center gap-1 text-sm shrink-0">
         <span class="font-semibold text-gray-900">{{ formatCount(filteredJobs.length) }}</span>

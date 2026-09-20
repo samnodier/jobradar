@@ -248,6 +248,16 @@ watch(
     <!-- Description -->
     <div class="px-4 py-4">
       <p class="text-xs font-medium text-gray-500 uppercase mb-2">About the role</p>
+      <p v-if="job.job_source === 'adzuna'" class="text-sm py-2 flex items-center gap-1">
+        <a href="https://www.adzuna.com" target="_blank" rel="noopener noreferrer">Jobs</a> by
+        <a href="https://www.adzuna.com" target="_blank" rel="noopener noreferrer"
+          ><img
+            src="https://zunastatic-abf.kxcdn.com/images/global/landing/press/logo_normal.png"
+            alt="Adzuna"
+            width="116"
+            height="23"
+        /></a>
+      </p>
       <div
         v-html="DOMPurify.sanitize(job.description || 'No description available.')"
         class="raw-description text-sm text-gray-900 leading-snug m-0 whitespace-pre-line"

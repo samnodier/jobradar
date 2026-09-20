@@ -1,19 +1,76 @@
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import AppSidebar from '@/components/AppSidebar.vue'
+interface DigestStatus {
+  enabled: boolean
+  hour: number
+  timezone: string
+  min_score: number
+  history: {
+    id: string
+    digest_date: string
+    status: string
+    attempts: number
+    sent_at: string | null
+    last_error: string | null
+  }[]
+}
+const digest = ref<DigestStatus | null>(null)
+const error = ref('')
+onMounted(async () => {
+  try {
+    const response = await fetch('/api/digest', { credentials: 'include' })
+    if (!response.ok) throw new Error('Could not load digest status')
+    digest.value = await response.json()
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Could not load dashboard'
+  }
+})
+</script>
 <template>
-  <div class="flex h-full bg-black/4">
+  <div class="flex h-full">
     <AppSidebar />
-    <main class="flex-1 p-8 flex flex-col gap-6 overflow-y-auto">
-      <header class="border-b border-gray-200 pb-4">
-        <h1 class="text-2xl font-bold">Dashboard</h1>
-        <p class="text-sm text-gray-500 mt-1">Your personalized overview is coming soon.</p>
-      </header>
-
-      <div class="grid gap-4" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr))">
-        <div v-for="i in 3" :key="i" class="h-50 bg-white border border-gray-200 rounded-md" />
-      </div>
+    <main class="flex-1 p-8 overflow-y-auto space-y-6">
+      <h1 class="text-2xl font-bold">Your job search</h1>
+      <p>
+        <RouterLink to="/jobs" class="button button-primary">Browse jobs</RouterLink>
+        <RouterLink to="/profile" class="button button-secondary"
+          >Update matching preferences</RouterLink
+        >
+      </p>
+      <p v-if="error" role="alert">{{ error }}</p>
+      <section v-if="digest" class="border p-5 space-y-3">
+        <h2 class="text-lg font-semibold">Daily email digest</h2>
+        <p v-if="digest.enabled">
+          Scheduled after {{ String(digest.hour).padStart(2, '0') }}:00 {{ digest.timezone }} for
+          new matches scoring at least {{ digest.min_score }}%. Your notification preference
+          controls delivery.
+        </p>
+        <p v-else>
+          Email delivery is not enabled for this account. You can still browse and track jobs.
+        </p>
+        <a
+          v-if="digest.enabled"
+          href="/api/digest/preview"
+          target="_blank"
+          rel="noopener"
+          class="button button-secondary"
+          >Preview next digest</a
+        >
+        <p v-if="!digest.history.length">No digest has been prepared yet.</p>
+        <ul v-else class="space-y-3">
+          <li v-for="item in digest.history" :key="item.id" class="border-t pt-3">
+            <strong>{{ item.digest_date }} — {{ item.status }}</strong>
+            <p v-if="item.last_error">{{ item.last_error }}</p>
+            <p v-if="item.status === 'sent'">
+              Accepted by the email provider. Check your inbox and spam folder.
+            </p>
+            <p v-if="item.status === 'uncertain'">
+              Delivery needs review in your email provider before retrying.
+            </p>
+          </li>
+        </ul>
+      </section>
     </main>
   </div>
 </template>
-
-<script setup lang="ts">
-import AppSidebar from '@/components/AppSidebar.vue'
-</script>

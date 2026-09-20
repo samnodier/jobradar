@@ -1,43 +1,52 @@
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue'
+import AppSidebar from '@/components/AppSidebar.vue'
+interface SystemStatus {
+  database: boolean
+  redis: boolean
+  pending_matches: number
+  sources: { name: string; status: string; last_success: string | null }[]
+}
+const status = ref<SystemStatus | null>(null)
+const error = ref('')
+let timer: ReturnType<typeof setInterval> | undefined
+async function refresh() {
+  try {
+    const response = await fetch('/api/system/status', { credentials: 'include' })
+    if (!response.ok) throw new Error('Service status unavailable')
+    status.value = await response.json()
+    error.value = ''
+  } catch {
+    error.value = 'Could not reach the status endpoint'
+    status.value = null
+  }
+}
+onMounted(() => {
+  refresh()
+  timer = setInterval(refresh, 30000)
+})
+onUnmounted(() => clearInterval(timer))
+</script>
 <template>
-  <div class="flex h-full bg-black/0.04">
+  <div class="flex h-full">
     <AppSidebar />
-    <main class="flex-1 p-8 flex flex-col gap-6 overflow-y-auto">
-      <header class="border-b border-gray-200 pb-4">
-        <h1 class="text-2xl font-bold">System Status</h1>
-        <p class="text-sm text-gray-500 mt-1">Real-time health monitoring for JobRadar services.</p>
-      </header>
-
-      <div class="flex flex-col gap-3">
-        <div
-          v-for="service in services"
-          :key="service.name"
-          class="flex items-center gap-4 bg-white p-4 border border-gray-200"
-        >
-          <div
-            class="w-3 h-3 shrink-0"
-            :class="{
-              'bg-green-500': service.status === 'up',
-              'bg-yellow-400': service.status === 'warning',
-              'bg-red-500': service.status === 'down',
-            }"
-          />
-          <div>
-            <h3 class="text-sm font-semibold">{{ service.name }}</h3>
-            <p class="text-xs text-gray-400">{{ service.statusText }}</p>
-          </div>
+    <main class="flex-1 p-8 overflow-y-auto space-y-4">
+      <h1 class="text-2xl font-bold">System status</h1>
+      <p v-if="error" role="alert">{{ error }}</p>
+      <template v-if="status"
+        ><p>PostgreSQL: {{ status.database ? 'connected' : 'unavailable' }}</p>
+        <p>Redis: {{ status.redis ? 'connected' : 'unavailable' }}</p>
+        <p>Matching tasks waiting for completion: {{ status.pending_matches }}</p>
+        <h2 class="font-semibold">Job sources</h2>
+        <p v-if="!status.sources.length">No source has completed a fetch yet.</p>
+        <div v-for="source in status.sources" :key="source.name" class="border p-4">
+          <strong>{{ source.name }}: {{ source.status }}</strong>
+          <p>
+            Last successful fetch:
+            {{ source.last_success ? new Date(source.last_success).toLocaleString() : 'not yet' }}
+          </p>
         </div>
-      </div>
+      </template>
     </main>
   </div>
 </template>
-
-<script setup lang="ts">
-import AppSidebar from '@/components/AppSidebar.vue'
-
-const services = [
-  { name: 'API Server', status: 'up', statusText: 'Healthy' },
-  { name: 'Database', status: 'up', statusText: 'Healthy' },
-  { name: 'Redis Cache', status: 'up', statusText: 'Healthy' },
-  { name: 'Scrapers', status: 'warning', statusText: 'Degraded' },
-]
-</script>
