@@ -29,6 +29,33 @@ function toggleAnalysis() {
   if (!analysisSeen.value) analysisSeen.value = true
 }
 
+const aiText = ref('')
+const aiError = ref('')
+const aiBusy = ref(false)
+async function copyForAI() {
+  aiBusy.value = true
+  aiError.value = ''
+  try {
+    const response = await fetch(`/api/jobs/${props.job.id}/ai-context`, { credentials: 'include' })
+    if (!response.ok)
+      throw new Error(
+        response.status === 401
+          ? 'Sign in to include your profile'
+          : 'Could not prepare AI context',
+      )
+    aiText.value = await response.text()
+    try {
+      await navigator.clipboard.writeText(aiText.value)
+      aiError.value = 'Copied. Paste into your AI chat and review the result.'
+    } catch {
+      aiError.value = 'Clipboard unavailable. Select and copy the text below.'
+    }
+  } catch (e) {
+    aiError.value = e instanceof Error ? e.message : 'Could not copy'
+  } finally {
+    aiBusy.value = false
+  }
+}
 const copied = ref(false)
 
 async function copyLink() {
@@ -42,6 +69,8 @@ async function copyLink() {
 watch(
   () => props.job,
   () => {
+    aiText.value = ''
+    aiError.value = ''
     analysisOpen.value = false
     analysisSeen.value = false
   },
@@ -80,13 +109,20 @@ watch(
           class="inline-flex items-center gap-1 text-xs text-gray-500 bg-black/0.04 px-2 border border-gray-200 h-22px"
         >
           <MapPin :size="12" />
-          {{ job.job_location || (job.is_remote ? 'Remote' : 'On-site') }}
+          {{
+            job.job_location ||
+            (job.is_remote === true
+              ? 'Remote'
+              : job.is_remote === false
+                ? 'On-site'
+                : 'Location unspecified')
+          }}
         </span>
         <span
           class="inline-flex items-center gap-1 text-xs text-gray-500 bg-black/0.04 px-2 border border-gray-200 h-22px"
         >
           <Briefcase :size="12" />
-          {{ job.employment_type || 'Full time' }}
+          {{ job.employment_type || 'Employment type unspecified' }}
         </span>
         <span
           class="inline-flex items-center gap-1 text-xs px-2 border h-22px font-medium"
@@ -264,6 +300,33 @@ watch(
       ></div>
     </div>
 
+    <section class="border-t p-4 space-y-3">
+      <p v-if="job.preference_eligible === false" class="text-sm text-amber-800">
+        Outside your current preferences. You can still review and apply.
+      </p>
+      <ul v-if="job.preference_notes?.length" class="text-xs text-gray-600">
+        <li v-for="note in job.preference_notes" :key="note">{{ note }}</li>
+      </ul>
+      <button class="button button-secondary" :disabled="aiBusy" @click="copyForAI">
+        {{ aiBusy ? 'Preparing…' : 'Copy for AI' }}
+      </button>
+      <p class="text-xs text-gray-500">
+        Includes this job and your saved resume details. Nothing is sent to an AI service. Paste
+        into your own chat and review before using.
+      </p>
+      <p v-if="aiError" role="status" class="text-sm">{{ aiError }}</p>
+      <details v-if="aiText">
+        <summary>Review or copy Markdown</summary>
+        <textarea
+          :value="aiText"
+          readonly
+          rows="12"
+          aria-label="AI application context"
+          class="w-full border p-2 text-xs"
+          @focus="($event.target as HTMLTextAreaElement).select()"
+        />
+      </details>
+    </section>
     <!-- Footer CTA -->
     <a
       :href="job.source_url"

@@ -713,3 +713,14 @@ The job feed has a Best Matches filter ordered by score on the server before pag
 Questions: Why must ranking happen before LIMIT? Why should a deep link not assume the job is in the first page? Why cancel fetches and timers when components unmount? How do authenticated server queries protect private links?
 
 Code: `JobsView.vue`, `BestMatchesTab.vue`, `NotificationBell.vue`.
+
+
+### Copy for AI: portable context without an API bill
+
+The authenticated Markdown export combines the selected authorized job with saved resume sections and deterministic score details. It uses a read-only repeatable-read transaction for a consistent snapshot, explicitly selects safe profile fields, strips job HTML, excludes API/OAuth secrets and primary contact fields, and disables caching. User-authored resume text may itself contain contact information: review the export before sharing. A clipboard fallback exposes selectable text on browsers without clipboard permission or a secure origin. Nothing calls a model or submits applications.
+
+The prompt asks for truthful tailoring and treats posting content as data. This reduces instruction confusion but cannot guarantee an external model obeys it; inspect all generated claims. Markdown is convenient for manual chat use; JSON sections retain structured facts. Ordinary chat subscriptions do not grant generic API credits. A future agent must use the provider's supported authentication and plan, rather than assuming a chat subscription is an unlimited automation API.
+
+Questions: Why not serialize the entire user object? What is a read-only consistent snapshot? Why is clipboard access sometimes unavailable on a local-network HTTP address? How does prompt injection differ from HTML injection? Why must every rewritten experience bullet remain grounded in actual work?
+
+Code: `handler_ai_context.go`, `JobDetail.vue`.

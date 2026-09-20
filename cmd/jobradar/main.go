@@ -222,6 +222,7 @@ func main() {
 		r.Group(func(r chi.Router) {
 			r.Use(authHandler.RequireAuth)
 
+			r.Get("/jobs/{jobID}/ai-context", cfg.handlerAIContext)
 			r.Post("/jobs/import", cfg.handlerExtractJob)
 			r.Post("/jobs/import/confirm", cfg.handlerImportConfirm)
 

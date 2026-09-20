@@ -30,6 +30,8 @@ export interface Job {
   matched_skills?: string[] | null
   missing_skills?: string[] | null
   ai_summary?: string | null // null until LLM enrichment runs
+  preference_eligible?: boolean | null
+  preference_notes?: string[] | null
   is_enriched?: boolean | null // false = algorithmic only, true = LLM has run
   match_created_at?: string | null
   match_updated_at?: string | null
