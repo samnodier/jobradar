@@ -31,6 +31,10 @@ async function load() {
     if (e instanceof Error && e.name !== 'AbortError') error.value = e.message
   }
 }
+function toggle() {
+  open.value = !open.value
+  if (open.value) load()
+}
 async function visit(n: Notice) {
   try {
     const r = await fetch(`/api/notifications/${n.id}/read`, {
@@ -62,10 +66,7 @@ onUnmounted(() => {
       class="button button-secondary"
       :aria-expanded="open"
       aria-controls="match-notifications"
-      @click="
-        open = !open
-        if (open) load()
-      "
+      @click="toggle"
     >
       Notifications <span v-if="unread">({{ unread }})</span>
     </button>

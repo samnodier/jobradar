@@ -738,3 +738,8 @@ Code: `internal/extraction/page.go`, `handler_import.go`. Schema reference: http
 The earlier environment-driven digest hour/threshold settings were removed once the profile became authoritative. Keeping two conflicting configuration paths would make troubleshooting misleading. Deployment configuration controls whether email is permitted at all; profile settings control relevance, frequency and opt-out.
 
 Question: How do you choose one authoritative source when migrating configuration from environment variables to per-user settings?
+
+
+A production build caught a Vue template expression that type checking accepted after formatting: multiple statements inside a click attribute were parsed differently. Moving the behavior into a named script function fixes the template and improves readability. Run the actual production compiler as well as the type checker; they verify different parts of the application.
+
+Question: Why can type checking pass while the production template build fails? Code: `NotificationBell.vue`.
