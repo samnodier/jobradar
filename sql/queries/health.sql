@@ -21,3 +21,6 @@ ON CONFLICT (service_name) DO UPDATE
         job_count_last_run = excluded.job_count_last_run,
         updated_at = NOW()
 RETURNING *;
+
+-- name: ListServiceHealth :many
+SELECT * FROM service_health ORDER BY service_name;

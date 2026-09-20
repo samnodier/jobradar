@@ -10,6 +10,39 @@ import (
 	"time"
 )
 
+const listServiceHealth = `-- name: ListServiceHealth :many
+SELECT id, service_name, last_run_at, last_success_at, service_status, last_error, job_count_last_run, updated_at FROM service_health ORDER BY service_name
+`
+
+func (q *Queries) ListServiceHealth(ctx context.Context) ([]ServiceHealth, error) {
+	rows, err := q.db.Query(ctx, listServiceHealth)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ServiceHealth
+	for rows.Next() {
+		var i ServiceHealth
+		if err := rows.Scan(
+			&i.ID,
+			&i.ServiceName,
+			&i.LastRunAt,
+			&i.LastSuccessAt,
+			&i.ServiceStatus,
+			&i.LastError,
+			&i.JobCountLastRun,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateServiceHealth = `-- name: UpdateServiceHealth :one
 INSERT INTO service_health (
     service_name,
