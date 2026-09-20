@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/samnodier/jobradar/internal/sources"
 	"os"
@@ -15,7 +16,7 @@ type scheduledSource struct {
 	interval time.Duration
 }
 
-func configuredSources() ([]scheduledSource, error) {
+func (cfg *apiConfig) configuredSources() ([]scheduledSource, error) {
 	interval := 6 * time.Hour
 	if s := os.Getenv("SCRAPE_INTERVAL"); s != "" {
 		v, e := time.ParseDuration(s)
@@ -30,8 +31,6 @@ func configuredSources() ([]scheduledSource, error) {
 	}
 	appID, key := os.Getenv("ADZUNA_APP_ID"), os.Getenv("ADZUNA_APP_KEY")
 	if appID != "" || key != "" {
-		country := os.Getenv("ADZUNA_COUNTRY")
-		queries := splitCSV(os.Getenv("ADZUNA_QUERIES"))
 		pages := 1
 		if s := os.Getenv("ADZUNA_PAGES"); s != "" {
 			var e error
@@ -40,10 +39,10 @@ func configuredSources() ([]scheduledSource, error) {
 				return nil, fmt.Errorf("ADZUNA_PAGES must be an integer")
 			}
 		}
-		if appID == "" || key == "" || !regexp.MustCompile(`^[a-z]{2}$`).MatchString(country) || len(queries) == 0 || len(queries) > 5 || pages < 1 || pages > 3 {
-			return nil, fmt.Errorf("Adzuna requires both credentials, a two-letter country, 1–5 queries, and 1–3 pages")
+		if appID == "" || key == "" || pages < 1 || pages > 3 {
+			return nil, fmt.Errorf("Adzuna requires both credentials and 1–3 pages")
 		}
-		list = append(list, scheduledSource{&sources.Adzuna{AppID: appID, AppKey: key, Country: country, Queries: queries, Pages: pages, Location: os.Getenv("ADZUNA_LOCATION")}, 12 * time.Hour})
+		list = append(list, scheduledSource{&profileAdzuna{cfg: cfg, appID: appID, key: key, pages: pages}, 12 * time.Hour})
 	}
 	for _, board := range splitCSV(os.Getenv("GREENHOUSE_BOARDS")) {
 		if !regexp.MustCompile(`^[a-zA-Z0-9_-]+$`).MatchString(board) {
@@ -61,4 +60,70 @@ func splitCSV(s string) []string {
 		}
 	}
 	return out
+}
+
+// Read profile values on each scheduled fetch, so edits need no server restart.
+type profileAdzuna struct {
+	cfg        *apiConfig
+	appID, key string
+	pages      int
+}
+
+func (a *profileAdzuna) Name() string { return "adzuna" }
+func (a *profileAdzuna) Fetch(ctx context.Context) ([]sources.Job, error) {
+	users, err := a.cfg.db.GetAllUsers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	owner := os.Getenv("PERSONAL_EMAIL")
+	selected := -1
+	for i, id := range users {
+		u, err := a.cfg.db.GetUserByID(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		if owner != "" && strings.EqualFold(u.Email, owner) {
+			selected = i
+			break
+		}
+	}
+	if owner == "" && len(users) == 1 {
+		selected = 0
+	}
+	if selected < 0 {
+		return nil, fmt.Errorf("Adzuna: sign in and configure PERSONAL_EMAIL when more than one account exists")
+	}
+	user := users[selected]
+	roles, err := a.cfg.db.GetUserDesiredRoles(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+	queries := []string{}
+	for _, r := range roles {
+		if len(queries) < 5 {
+			queries = append(queries, r.RoleTitle)
+		}
+	}
+	if len(queries) == 0 {
+		return nil, fmt.Errorf("Adzuna: add desired roles in Profile Preferences")
+	}
+	settings, err := a.cfg.db.GetMatchSettings(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+	locations, err := a.cfg.db.GetUserDesiredLocations(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+	location := ""
+	if len(locations) > 0 {
+		location = locations[0].LocationName
+	}
+	for _, label := range []string{"remote", "worldwide", "anywhere", "on-site", "hybrid"} {
+		if strings.EqualFold(location, label) {
+			location = ""
+		}
+	}
+	source := sources.Adzuna{AppID: a.appID, AppKey: a.key, Country: settings.SearchCountry, Queries: queries, Pages: a.pages, Location: location}
+	return source.Fetch(ctx)
 }

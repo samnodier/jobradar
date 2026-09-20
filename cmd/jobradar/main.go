@@ -136,7 +136,7 @@ func main() {
 	enrichPool.RegisterHandler(queue.JobEnrichMatch, cfg.handleEnrichJob)
 	// Drain legacy enrichment tasks off the main queue without blocking matching.
 	wp.RegisterHandler(queue.JobEnrichMatch, func(ctx context.Context, job *queue.Job) error { return enrichQueue.Enqueue(ctx, job) })
-	sourceList, err := configuredSources()
+	sourceList, err := cfg.configuredSources()
 	if err != nil {
 		log.Fatal(err)
 	}

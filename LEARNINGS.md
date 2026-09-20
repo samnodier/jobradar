@@ -686,3 +686,12 @@ Work mode and geography are different dimensions. The previous location selector
 Questions: Why can a frontend numeric input not replace server validation? Why distinguish source search market from candidate location? Which preferences act immediately, and which wait for rematching or the next source fetch?
 
 Code: `MatchingSettings.vue`, `PreferencesTab.vue`, `SettingsTab.vue`.
+
+
+### Profile-driven source searches
+
+Adzuna credentials are configured once on the server. Each scheduled fetch reads the personal account's current desired roles (up to five), first desired location and selected supported search market. Editing profile preferences does not require restarting the server; new searches run on the next 12-hour poll. Sources that expose entire feeds/boards are collected normally and then filtered per profile. A source cannot promise jobs in an unsupported country. With multiple local accounts, PERSONAL_EMAIL selects which account drives the capped Adzuna search budget.
+
+Questions: How do upstream search criteria differ from downstream matching? Why cap role and page fan-out? Why not fetch every desired location for every role without considering quota? How would this design change for a multi-user product?
+
+Code: `config_sources.go`, `internal/sources/adzuna.go`.
