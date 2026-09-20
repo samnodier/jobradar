@@ -152,3 +152,47 @@ func TestDigestExpiredRetryWindowNeedsReview(t *testing.T) {
 		t.Fatal("resent outside idempotency window")
 	}
 }
+
+func TestMorningEveningSlotsDoNotRepeatJobs(t *testing.T) {
+	s, f, user, p := setup(t)
+	ctx := context.Background()
+	if _, err := p.Exec(ctx, "INSERT INTO user_match_settings(user_id,digest_timezone,digest_hours)VALUES($1,'UTC',ARRAY[8,18])", user); err != nil {
+		t.Fatal(err)
+	}
+	p.Exec(ctx, "DELETE FROM pending_matches WHERE user_id=$1", user)
+	morning := time.Date(2026, 9, 20, 8, 0, 0, 0, time.UTC)
+	if err := s.Tick(ctx, morning, false); err != nil {
+		t.Fatal(err)
+	}
+	job := uuid.New()
+	if _, err := p.Exec(ctx, "INSERT INTO jobs(id,external_id,job_source,title,company_name,source_url,created_by_user_id)VALUES($1,$2,'manual','Evening role','Example','https://example.test/evening',$3)", job, job.String(), user); err != nil {
+		t.Fatal(err)
+	}
+	p.Exec(ctx, "INSERT INTO user_job_matches(user_id,job_id,match_score)VALUES($1,$2,95)", user, job)
+	p.Exec(ctx, "DELETE FROM pending_matches WHERE user_id=$1", user)
+	if err := s.Tick(ctx, morning.Add(time.Hour), false); err != nil {
+		t.Fatal(err)
+	}
+	if f.calls != 1 {
+		t.Fatal("sent twice in the same slot")
+	}
+	if err := s.Tick(ctx, morning.Add(10*time.Hour), false); err != nil {
+		t.Fatal(err)
+	}
+	if f.calls != 2 || strings.Contains(f.messages[1].HTML, "alert(1)") {
+		t.Fatal("evening message repeated morning job or failed to send")
+	}
+}
+func TestDueSlot(t *testing.T) {
+	hours := []int32{8, 18}
+	for _, c := range []struct {
+		hour int
+		slot int32
+		due  bool
+	}{{7, -1, false}, {8, 8, true}, {17, 8, true}, {18, 18, true}, {23, 18, true}} {
+		got, due := dueSlot(time.Date(2026, 9, 20, c.hour, 0, 0, 0, time.UTC), hours, false)
+		if got != c.slot || due != c.due {
+			t.Fatal(c, got, due)
+		}
+	}
+}

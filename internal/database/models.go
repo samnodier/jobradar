@@ -41,6 +41,7 @@ type EmailDigest struct {
 	LastError         *string            `json:"last_error"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	SentAt            *time.Time         `json:"sent_at"`
+	DigestSlot        int32              `json:"digest_slot"`
 }
 
 type EmailDigestJob struct {

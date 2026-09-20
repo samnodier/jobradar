@@ -668,3 +668,12 @@ Best matches use the user's threshold and exclude scores awaiting recomputation.
 Questions: Why separate ranking from filtering? Why is missing information different from false? Can a 90 score mean a 90% hiring chance? Why must a remote US-only job not automatically qualify someone in Kenya? Why exclude stale scores during rematching? What metadata is missing from each source?
 
 Code: `internal/matcher/preferences.go`, `worker_match.go`, `sql/queries/jobs.sql`.
+
+
+### Two digest slots and civil time
+
+Email delivery now uses the profile threshold, timezone, one or two hours, and maximum jobs per message. The environment remains a deployment-wide safety switch and fixes the recipient/provider. A unique `(user, local date, scheduled hour)` prevents duplicate slot sends, while the user/job ledger prevents the morning jobs repeating in the evening. After downtime only the latest due slot is prepared, avoiding a burst of old emails. A repeated daylight-saving hour uses the same slot identity; a skipped hour is caught up when later running. Empty slots do not send filler email.
+
+Questions: Why use an IANA timezone instead of a fixed UTC offset? Why do we need both per-slot and per-job deduplication? What happens when the laptop sleeps through the morning? Why can rolling back a uniqueness migration be unsafe once new data exists?
+
+Code: `internal/digest/service.go`, `20260920000400_digest_slots.sql`.

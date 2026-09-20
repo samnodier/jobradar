@@ -42,7 +42,11 @@ func (s *Service) Preview(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("digest recipient must be a registered user with notifications enabled")
 	}
-	rows, err := q.GetDigestCandidates(ctx, database.GetDigestCandidatesParams{UserID: id, MatchScore: &[]int32{int32(s.Config.MinScore)}[0], Limit: int32(s.Config.MaxJobs)})
+	settings, err := q.GetMatchSettings(ctx, id)
+	if err != nil {
+		return "", err
+	}
+	rows, err := q.GetDigestCandidates(ctx, database.GetDigestCandidatesParams{UserID: id, MatchScore: &settings.MinScore, Limit: settings.DigestMaxJobs})
 	if err != nil {
 		return "", err
 	}
@@ -81,14 +85,26 @@ func (s *Service) Tick(ctx context.Context, now time.Time, force bool) error {
 	if err != nil {
 		return err
 	}
-	local := now.In(s.Config.Location)
+	settings, err := q.GetMatchSettings(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if !settings.EmailEnabled {
+		return nil
+	}
+	location, err := time.LoadLocation(settings.DigestTimezone)
+	if err != nil {
+		return err
+	}
+	local := now.In(location)
+	slot, due := dueSlot(local, settings.DigestHours, force)
 	var pending int
 	if err := s.Pool.QueryRow(ctx, "SELECT count(*) FROM pending_matches WHERE user_id=$1", userID).Scan(&pending); err != nil {
 		return err
 	}
-	if pending == 0 && (force || local.Hour() >= s.Config.Hour) {
+	if pending == 0 && due {
 		date := pgtype.Date{Time: time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.UTC), Valid: true}
-		_, err = q.GetDailyDigest(ctx, database.GetDailyDigestParams{UserID: userID, DigestDate: date})
+		_, err = q.GetDailyDigest(ctx, database.GetDailyDigestParams{UserID: userID, DigestDate: date, DigestSlot: slot})
 		if errors.Is(err, pgx.ErrNoRows) {
 			tx, e := s.Pool.Begin(ctx)
 			if e != nil {
@@ -97,8 +113,8 @@ func (s *Service) Tick(ctx context.Context, now time.Time, force bool) error {
 			e = func() error {
 				defer tx.Rollback(context.Background())
 				tq := q.WithTx(tx)
-				score := int32(s.Config.MinScore)
-				jobs, e := tq.GetDigestCandidates(ctx, database.GetDigestCandidatesParams{UserID: userID, MatchScore: &score, Limit: int32(s.Config.MaxJobs)})
+				score := settings.MinScore
+				jobs, e := tq.GetDigestCandidates(ctx, database.GetDigestCandidatesParams{UserID: userID, MatchScore: &score, Limit: settings.DigestMaxJobs})
 				if e != nil {
 					return e
 				}
@@ -109,7 +125,7 @@ func (s *Service) Tick(ctx context.Context, now time.Time, force bool) error {
 				if e != nil {
 					return e
 				}
-				d, e := tq.CreateDigest(ctx, database.CreateDigestParams{UserID: userID, DigestDate: date, Recipient: s.Config.Recipient, Sender: s.Config.From, Provider: s.Config.Provider, Subject: subject, Html: html})
+				d, e := tq.CreateDigest(ctx, database.CreateDigestParams{UserID: userID, DigestDate: date, Recipient: s.Config.Recipient, Sender: s.Config.From, Provider: s.Config.Provider, Subject: subject, Html: html, DigestSlot: slot})
 				if e != nil {
 					return e
 				}
@@ -171,4 +187,18 @@ func (s *Service) Tick(ctx context.Context, now time.Time, force bool) error {
 	// If this write fails, the durable 'sending' state causes a safe replay (Resend)
 	// or manual reconciliation (GHL). Never pretend a provider success was recorded.
 	return q.FinishDigest(ctx, database.FinishDigestParams{ID: d.ID, ProviderMessageID: &id})
+}
+
+// Catch up only the most recent due slot, avoiding a burst after downtime.
+func dueSlot(local time.Time, hours []int32, force bool) (int32, bool) {
+	slot := int32(-1)
+	for _, h := range hours {
+		if int(h) <= local.Hour() && h > slot {
+			slot = h
+		}
+	}
+	if slot < 0 && force && len(hours) > 0 {
+		slot = hours[0]
+	}
+	return slot, slot >= 0
 }

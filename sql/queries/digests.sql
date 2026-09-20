@@ -16,15 +16,15 @@ ORDER BY m.match_score DESC, j.created_at DESC, j.id
 LIMIT $3;
 
 -- name: CreateDigest :one
-INSERT INTO email_digests (user_id,digest_date,recipient,sender,provider,subject,html)
-VALUES ($1,$2,$3,$4,$5,$6,$7)
-ON CONFLICT (user_id,digest_date) DO NOTHING RETURNING *;
+INSERT INTO email_digests (user_id,digest_date,recipient,sender,provider,subject,html,digest_slot)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+ON CONFLICT (user_id,digest_date,digest_slot) DO NOTHING RETURNING *;
 
 -- name: ReserveDigestJob :exec
 INSERT INTO email_digest_jobs (digest_id,user_id,job_id) VALUES ($1,$2,$3);
 
 -- name: GetDailyDigest :one
-SELECT * FROM email_digests WHERE user_id=$1 AND digest_date=$2;
+SELECT * FROM email_digests WHERE user_id=$1 AND digest_date=$2 AND digest_slot=$3;
 
 -- name: GetPendingDigest :one
 SELECT * FROM email_digests WHERE recipient=$1 AND status IN ('pending','sending')
@@ -42,5 +42,5 @@ UPDATE email_digests SET status='sent',sent_at=now(),provider_message_id=$2,last
 UPDATE email_digests SET status=$2,last_error=$3,next_attempt_at=now()+interval '5 minutes' WHERE id=$1;
 
 -- name: ListDigestHistory :many
-SELECT id,digest_date,status,attempts,created_at,sent_at,last_error
+SELECT id,digest_date,digest_slot,status,attempts,created_at,sent_at,last_error
 FROM email_digests WHERE user_id=$1 ORDER BY created_at DESC LIMIT 10;

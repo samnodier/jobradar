@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 interface DigestStatus {
   enabled: boolean
-  hour: number
+  hours: number[]
   timezone: string
   min_score: number
   history: {
@@ -42,7 +42,7 @@ onMounted(async () => {
       <section v-if="digest" class="border p-5 space-y-3">
         <h2 class="text-lg font-semibold">Daily email digest</h2>
         <p v-if="digest.enabled">
-          Scheduled after {{ String(digest.hour).padStart(2, '0') }}:00 {{ digest.timezone }} for
+          Scheduled after {{ digest.hours.map((h) => String(h).padStart(2, '0') + ':00').join(' and ') }} {{ digest.timezone }} for
           new matches scoring at least {{ digest.min_score }}%. Your notification preference
           controls delivery.
         </p>

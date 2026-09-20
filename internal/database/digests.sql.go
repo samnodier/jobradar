@@ -14,9 +14,9 @@ import (
 )
 
 const createDigest = `-- name: CreateDigest :one
-INSERT INTO email_digests (user_id,digest_date,recipient,sender,provider,subject,html)
-VALUES ($1,$2,$3,$4,$5,$6,$7)
-ON CONFLICT (user_id,digest_date) DO NOTHING RETURNING id, user_id, digest_date, recipient, sender, provider, subject, html, status, attempts, first_attempt_at, next_attempt_at, provider_message_id, last_error, created_at, sent_at
+INSERT INTO email_digests (user_id,digest_date,recipient,sender,provider,subject,html,digest_slot)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+ON CONFLICT (user_id,digest_date,digest_slot) DO NOTHING RETURNING id, user_id, digest_date, recipient, sender, provider, subject, html, status, attempts, first_attempt_at, next_attempt_at, provider_message_id, last_error, created_at, sent_at, digest_slot
 `
 
 type CreateDigestParams struct {
@@ -27,6 +27,7 @@ type CreateDigestParams struct {
 	Provider   string      `json:"provider"`
 	Subject    string      `json:"subject"`
 	Html       string      `json:"html"`
+	DigestSlot int32       `json:"digest_slot"`
 }
 
 func (q *Queries) CreateDigest(ctx context.Context, arg CreateDigestParams) (EmailDigest, error) {
@@ -38,6 +39,7 @@ func (q *Queries) CreateDigest(ctx context.Context, arg CreateDigestParams) (Ema
 		arg.Provider,
 		arg.Subject,
 		arg.Html,
+		arg.DigestSlot,
 	)
 	var i EmailDigest
 	err := row.Scan(
@@ -57,6 +59,7 @@ func (q *Queries) CreateDigest(ctx context.Context, arg CreateDigestParams) (Ema
 		&i.LastError,
 		&i.CreatedAt,
 		&i.SentAt,
+		&i.DigestSlot,
 	)
 	return i, err
 }
@@ -91,16 +94,17 @@ func (q *Queries) FinishDigest(ctx context.Context, arg FinishDigestParams) erro
 }
 
 const getDailyDigest = `-- name: GetDailyDigest :one
-SELECT id, user_id, digest_date, recipient, sender, provider, subject, html, status, attempts, first_attempt_at, next_attempt_at, provider_message_id, last_error, created_at, sent_at FROM email_digests WHERE user_id=$1 AND digest_date=$2
+SELECT id, user_id, digest_date, recipient, sender, provider, subject, html, status, attempts, first_attempt_at, next_attempt_at, provider_message_id, last_error, created_at, sent_at, digest_slot FROM email_digests WHERE user_id=$1 AND digest_date=$2 AND digest_slot=$3
 `
 
 type GetDailyDigestParams struct {
 	UserID     uuid.UUID   `json:"user_id"`
 	DigestDate pgtype.Date `json:"digest_date"`
+	DigestSlot int32       `json:"digest_slot"`
 }
 
 func (q *Queries) GetDailyDigest(ctx context.Context, arg GetDailyDigestParams) (EmailDigest, error) {
-	row := q.db.QueryRow(ctx, getDailyDigest, arg.UserID, arg.DigestDate)
+	row := q.db.QueryRow(ctx, getDailyDigest, arg.UserID, arg.DigestDate, arg.DigestSlot)
 	var i EmailDigest
 	err := row.Scan(
 		&i.ID,
@@ -119,6 +123,7 @@ func (q *Queries) GetDailyDigest(ctx context.Context, arg GetDailyDigestParams) 
 		&i.LastError,
 		&i.CreatedAt,
 		&i.SentAt,
+		&i.DigestSlot,
 	)
 	return i, err
 }
@@ -200,7 +205,7 @@ func (q *Queries) GetDigestUser(ctx context.Context, email string) (uuid.UUID, e
 }
 
 const getPendingDigest = `-- name: GetPendingDigest :one
-SELECT id, user_id, digest_date, recipient, sender, provider, subject, html, status, attempts, first_attempt_at, next_attempt_at, provider_message_id, last_error, created_at, sent_at FROM email_digests WHERE recipient=$1 AND status IN ('pending','sending')
+SELECT id, user_id, digest_date, recipient, sender, provider, subject, html, status, attempts, first_attempt_at, next_attempt_at, provider_message_id, last_error, created_at, sent_at, digest_slot FROM email_digests WHERE recipient=$1 AND status IN ('pending','sending')
 AND next_attempt_at <= now() ORDER BY created_at LIMIT 1
 `
 
@@ -224,18 +229,20 @@ func (q *Queries) GetPendingDigest(ctx context.Context, recipient string) (Email
 		&i.LastError,
 		&i.CreatedAt,
 		&i.SentAt,
+		&i.DigestSlot,
 	)
 	return i, err
 }
 
 const listDigestHistory = `-- name: ListDigestHistory :many
-SELECT id,digest_date,status,attempts,created_at,sent_at,last_error
+SELECT id,digest_date,digest_slot,status,attempts,created_at,sent_at,last_error
 FROM email_digests WHERE user_id=$1 ORDER BY created_at DESC LIMIT 10
 `
 
 type ListDigestHistoryRow struct {
 	ID         uuid.UUID          `json:"id"`
 	DigestDate pgtype.Date        `json:"digest_date"`
+	DigestSlot int32              `json:"digest_slot"`
 	Status     string             `json:"status"`
 	Attempts   int32              `json:"attempts"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
@@ -255,6 +262,7 @@ func (q *Queries) ListDigestHistory(ctx context.Context, userID uuid.UUID) ([]Li
 		if err := rows.Scan(
 			&i.ID,
 			&i.DigestDate,
+			&i.DigestSlot,
 			&i.Status,
 			&i.Attempts,
 			&i.CreatedAt,

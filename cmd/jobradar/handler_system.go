@@ -21,7 +21,12 @@ func (cfg *apiConfig) handlerDigestStatus(w http.ResponseWriter, r *http.Request
 		httpx.RespondError(w, 500, "could not load user")
 		return
 	}
-	enabled := cfg.digest.Config.Enabled && strings.EqualFold(user.Email, cfg.digest.Config.Recipient)
+	settings, err := cfg.db.GetMatchSettings(r.Context(), id)
+	if err != nil {
+		httpx.RespondError(w, 500, "could not load matching settings")
+		return
+	}
+	enabled := cfg.digest.Config.Enabled && settings.EmailEnabled && user.NotifyJobs != nil && *user.NotifyJobs && strings.EqualFold(user.Email, cfg.digest.Config.Recipient)
 	history, err := cfg.db.ListDigestHistory(r.Context(), id)
 	if err != nil {
 		httpx.RespondError(w, 500, "could not load digest history")
@@ -30,7 +35,7 @@ func (cfg *apiConfig) handlerDigestStatus(w http.ResponseWriter, r *http.Request
 	if history == nil {
 		history = []database.ListDigestHistoryRow{}
 	}
-	httpx.RespondJSON(w, 200, map[string]any{"enabled": enabled, "hour": cfg.digest.Config.Hour, "timezone": cfg.digest.Config.Location.String(), "min_score": cfg.digest.Config.MinScore, "history": history})
+	httpx.RespondJSON(w, 200, map[string]any{"enabled": enabled, "hours": settings.DigestHours, "timezone": settings.DigestTimezone, "min_score": settings.MinScore, "history": history})
 }
 func (cfg *apiConfig) handlerDigestPreview(w http.ResponseWriter, r *http.Request) {
 	id, ok := getUserIDFromRequest(w, r)
