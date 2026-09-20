@@ -1,0 +1,57 @@
+# An isolated production stack. Existing development pgdata is never mounted.
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      APP_ENV: production
+      DB_URL: postgres://${DB_USER:-sam}:${DB_PASSWORD}@db:5432/${DB_NAME:-jobradar}?sslmode=disable
+      REDIS_ADDR: redis:6379
+      PORT: 8080
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-sam}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-jobradar}
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.migrations
+    profiles: ["tools"]
+    environment:
+      GOOSE_DBSTRING: postgres://${DB_USER:-sam}:${DB_PASSWORD}@db:5432/${DB_NAME:-jobradar}?sslmode=disable
+      GOOSE_DRIVER: postgres
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  database:
+  redis:

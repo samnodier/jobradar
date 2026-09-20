@@ -4,7 +4,7 @@
 # @file
 # @version 0.1
 
-include .env
+-include .env
 
 # run 'make up' instead of the full docker command
 up:
@@ -38,3 +38,17 @@ test:
 
 .PHONY: up down migrate-up migrate-down migrate-create sqlc exec test
 # end
+
+frontend-build:
+	cd frontend && npm ci && npm run build
+
+digest-preview:
+	go run ./cmd/jobradar --digest-preview
+
+digest-once:
+	go run ./cmd/jobradar --digest-once
+
+integration-test:
+	TEST_DATABASE_URL='postgres://jobradar_test:jobradar_test@127.0.0.1:55432/jobradar_test?sslmode=disable' TEST_REDIS_ADDR=127.0.0.1:56379 go test -race ./internal/... ./cmd/...
+
+.PHONY: build run frontend-build digest-preview digest-once integration-test migrate-reset

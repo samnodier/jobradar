@@ -1,0 +1,12 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: jobradar_test
+      POSTGRES_PASSWORD: jobradar_test
+      POSTGRES_DB: jobradar_test
+    ports: ["127.0.0.1:55432:5432"]
+    tmpfs: [/var/lib/postgresql/data]
+  redis:
+    image: redis:7
+    ports: ["127.0.0.1:56379:6379"]
