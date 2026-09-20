@@ -131,6 +131,14 @@ func TestDurableMatchEndToEnd(t *testing.T) {
 	if err = cfg.handleDurableMatch(ctx, task); err != nil {
 		t.Fatal("duplicate delivery must be harmless:", err)
 	}
+	notifications, err := q.ListMatchNotifications(ctx, id)
+	if err != nil || len(notifications) != 1 {
+		t.Fatalf("expected one notification after duplicate delivery: %v %v", notifications, err)
+	}
+	count, err := q.ReadMatchNotification(ctx, database.ReadMatchNotificationParams{UserID: uuid.New(), ID: notifications[0].ID})
+	if err != nil || count != 0 {
+		t.Fatal("another user could mark notification read", err)
+	}
 	var score int
 	if err = p.QueryRow(ctx, "SELECT match_score FROM user_job_matches WHERE user_id=$1 AND job_id=$2", id, job).Scan(&score); err != nil || score != 100 {
 		t.Fatalf("expected no-AI score 100, got %d: %v", score, err)

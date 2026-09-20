@@ -212,6 +212,11 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 	if err = cfg.db.UpdateMatchEligibility(ctx, database.UpdateMatchEligibilityParams{UserID: userID, JobID: jobID, PreferenceEligible: eligible, PreferenceNotes: notes}); err != nil {
 		return err
 	}
+	if eligible && score >= settings.MinScore && settings.NotificationsEnabled && user.NotifyJobs != nil && *user.NotifyJobs {
+		if err := cfg.db.CreateMatchNotification(ctx, database.CreateMatchNotificationParams{UserID: userID, JobID: jobID}); err != nil {
+			return err
+		}
+	}
 	// If this match scored high enough And the user has an AI provider key
 	// Push an enrich job. Imported jobs skip the threshold: the user asked
 	// for this specific job, so they always get the AI summary if a key exists.

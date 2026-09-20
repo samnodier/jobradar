@@ -83,6 +83,14 @@ type Job struct {
 	LastSeenAt      pgtype.Timestamptz `json:"last_seen_at"`
 }
 
+type MatchNotification struct {
+	ID        uuid.UUID          `json:"id"`
+	UserID    uuid.UUID          `json:"user_id"`
+	JobID     uuid.UUID          `json:"job_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	ReadAt    *time.Time         `json:"read_at"`
+}
+
 type PendingMatch struct {
 	UserID     uuid.UUID  `json:"user_id"`
 	JobID      uuid.UUID  `json:"job_id"`

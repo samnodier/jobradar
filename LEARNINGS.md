@@ -695,3 +695,12 @@ Adzuna credentials are configured once on the server. Each scheduled fetch reads
 Questions: How do upstream search criteria differ from downstream matching? Why cap role and page fan-out? Why not fetch every desired location for every role without considering quota? How would this design change for a multi-user product?
 
 Code: `config_sources.go`, `internal/sources/adzuna.go`.
+
+
+### In-app notifications without external delivery
+
+A qualifying match creates one database notification per user/job in the matching transaction. Repeated processing or rescoring cannot flood the user with duplicates. The list joins current scores/preferences and excludes pending rematches, so raising the threshold immediately hides lower-quality results. Opening a notification marks only that user's record read and deep-links to the job. The bell shows unread items among the latest 50 eligible notifications, not a lifetime total. Polling while the app is open uses the existing server, with no separate notification vendor.
+
+Questions: Why use a unique constraint instead of checking first? How does transaction rollback prevent a notification for a score that was never committed? Why recheck current eligibility when listing old notifications? Why scope mark-read by both notification ID and user ID? When would WebSockets be preferable to polling?
+
+Code: `sql/queries/notifications.sql`, `handler_notifications.go`, `worker_match.go`.

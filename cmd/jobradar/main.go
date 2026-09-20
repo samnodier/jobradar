@@ -225,6 +225,8 @@ func main() {
 			r.Post("/jobs/import", cfg.handlerExtractJob)
 			r.Post("/jobs/import/confirm", cfg.handlerImportConfirm)
 
+			r.Get("/notifications", cfg.handlerNotifications)
+			r.Patch("/notifications/{notificationID}/read", cfg.handlerNotificationRead)
 			r.Get("/digest", cfg.handlerDigestStatus)
 			r.Get("/digest/preview", cfg.handlerDigestPreview)
 			r.Get("/system/status", cfg.handlerSystemStatus)
