@@ -259,6 +259,8 @@ func main() {
 			r.Patch("/profile/languages/{id}", cfg.handlerUpdateLanguage)
 			r.Delete("/profile/languages/{id}", cfg.handlerDeleteLanguage)
 
+			r.Get("/profile/matching", cfg.handlerMatchSettingsGet)
+			r.Put("/profile/matching", cfg.handlerMatchSettingsPut)
 			r.Get("/profile/preferences", cfg.handlerGetPreferences)
 			r.Patch("/profile/preferences", cfg.handlerUpdatePreferences)
 

@@ -646,3 +646,14 @@ Questions for our later walkthrough:
 - How would these same resource limits appear in Laravel workers or a TypeScript service?
 
 Code: [transactional matching](cmd/jobradar/worker_pending.go), [database startup](internal/database/database.go), [prompt bounds](internal/llm/llm.go). Evidence: [release verification](docs/RELEASE_VERIFICATION.md).
+
+
+### Profile matching settings and small commits
+
+Matching preferences belong to the user profile. Provider secrets remain server configuration. A dedicated settings resource uses authenticated GET/PUT, validates score 0–100, supported search country, timezone and one or two distinct delivery hours. PUT replaces the complete settings resource; the server ignores any supplied user ID and derives ownership from the session. PostgreSQL checks protect invariants even outside HTTP. Relevant preference changes schedule rematching transactionally.
+
+Small commits isolate a feature or fix for review and debugging. The unpushed release commit was regrouped without changing its final tree; a local backup reference preserves recovery. No remote history was rewritten. Future changes should be committed as each coherent change passes its checks.
+
+Questions: Why do preferences belong in the database but API credentials stay in the environment? How do PUT and PATCH differ? Why validate both in HTTP and PostgreSQL? How does the session prevent editing another account? How does a smaller commit help git bisect? What changes when rewriting published rather than local history?
+
+Code: `handler_match_settings.go`, `sql/queries/match_settings.sql`, `20260920000200_match_preferences.sql`.

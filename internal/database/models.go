@@ -258,6 +258,19 @@ type UserLanguage struct {
 	UpdatedAt    *time.Time `json:"updated_at"`
 }
 
+type UserMatchSetting struct {
+	UserID               uuid.UUID `json:"user_id"`
+	MinScore             int32     `json:"min_score"`
+	WorkMode             string    `json:"work_mode"`
+	IncludeUnknown       bool      `json:"include_unknown"`
+	SearchCountry        string    `json:"search_country"`
+	EmailEnabled         bool      `json:"email_enabled"`
+	NotificationsEnabled bool      `json:"notifications_enabled"`
+	DigestTimezone       string    `json:"digest_timezone"`
+	DigestHours          []int32   `json:"digest_hours"`
+	DigestMaxJobs        int32     `json:"digest_max_jobs"`
+}
+
 type UserProject struct {
 	ID            uuid.UUID   `json:"id"`
 	UserID        uuid.UUID   `json:"user_id"`
