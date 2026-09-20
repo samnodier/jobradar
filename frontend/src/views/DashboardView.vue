@@ -42,9 +42,10 @@ onMounted(async () => {
       <section v-if="digest" class="border p-5 space-y-3">
         <h2 class="text-lg font-semibold">Daily email digest</h2>
         <p v-if="digest.enabled">
-          Scheduled after {{ digest.hours.map((h) => String(h).padStart(2, '0') + ':00').join(' and ') }} {{ digest.timezone }} for
-          new matches scoring at least {{ digest.min_score }}%. Your notification preference
-          controls delivery.
+          Scheduled after
+          {{ digest.hours.map((h) => String(h).padStart(2, '0') + ':00').join(' and ') }}
+          {{ digest.timezone }} for new matches scoring at least {{ digest.min_score }}%. Your
+          notification preference controls delivery.
         </p>
         <p v-else>
           Email delivery is not enabled for this account. You can still browse and track jobs.

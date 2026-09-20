@@ -677,3 +677,12 @@ Email delivery now uses the profile threshold, timezone, one or two hours, and m
 Questions: Why use an IANA timezone instead of a fixed UTC offset? Why do we need both per-slot and per-job deduplication? What happens when the laptop sleeps through the morning? Why can rolling back a uniqueness migration be unsafe once new data exists?
 
 Code: `internal/digest/service.go`, `20260920000400_digest_slots.sql`.
+
+
+### Preferences UI and honest controls
+
+Work mode and geography are different dimensions. The previous location selector stored labels such as Remote as if they were places. Locations now accept actual alternatives, and matching/delivery settings have their own validated form. Unsupported dimensions are explained rather than silently presented as active filters. The server remains authoritative even when HTML input constraints exist.
+
+Questions: Why can a frontend numeric input not replace server validation? Why distinguish source search market from candidate location? Which preferences act immediately, and which wait for rematching or the next source fetch?
+
+Code: `MatchingSettings.vue`, `PreferencesTab.vue`, `SettingsTab.vue`.

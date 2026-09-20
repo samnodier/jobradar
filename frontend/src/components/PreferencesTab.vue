@@ -39,33 +39,16 @@ const addIndustry = (e: Event) => {
   }
 }
 
-// bridge simple dropdown and desired_locations array
-const preferredLocationSelect = computed({
-  get() {
-    const locs = preferences?.value ? preferences.value?.desired_locations : []
-    if (locs.length === 0) return 'Any'
-    const first = locs[0]
-    if (first?.location_name.toLowerCase() === 'remote') return 'Remote'
-    if (first?.is_remote) return 'Hybrid'
-    return 'On-site'
-  },
-  set(val: string) {
-    if (!preferences?.value) return
-    if (val === 'Any') {
-      preferences.value.desired_locations = []
-    } else if (val === 'Remote') {
-      preferences.value.desired_locations = [
-        { location_name: 'Remote', is_remote: true, priority: 1 },
-      ]
-    } else if (val === 'On-site') {
-      preferences.value.desired_locations = [
-        { location_name: 'On-site', is_remote: false, priority: 1 },
-      ]
-    } else if (val === 'Hybrid') {
-      preferences.value.desired_locations = [
-        { location_name: 'Hybrid', is_remote: true, priority: 1 },
-      ]
-    }
+// Locations are actual places, independent of the work-mode setting.
+const desiredLocationsText = computed({
+  get: () => (preferences.value?.desired_locations ?? []).map((l) => l.location_name).join('; '),
+  set: (value: string) => {
+    if (preferences.value)
+      preferences.value.desired_locations = value
+        .split(';')
+        .map((v) => v.trim())
+        .filter(Boolean)
+        .map((location_name) => ({ location_name, is_remote: null, priority: null }))
   },
 })
 
@@ -209,17 +192,20 @@ async function handleSavePreferences() {
         </div>
 
         <div class="flex flex-col gap-2 mb-4">
-          <label class="text-sm font-semibold text-gray-900">Work Location</label>
-          <select
-            v-model="preferredLocationSelect"
-            @change="handleSavePreferences"
-            class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
+          <label for="desired-locations" class="text-sm font-semibold text-gray-900"
+            >Desired locations</label
           >
-            <option>Remote</option>
-            <option>On-site</option>
-            <option>Hybrid</option>
-            <option>Any</option>
-          </select>
+          <input
+            id="desired-locations"
+            v-model.lazy="desiredLocationsText"
+            @change="handleSavePreferences"
+            placeholder="Nairobi; Kenya; Worldwide"
+            class="border p-2 w-full"
+          />
+          <p class="text-xs text-gray-500">
+            Separate alternatives with semicolons. Use actual locations, not Remote or Hybrid. Set
+            work mode and score threshold in Settings.
+          </p>
         </div>
 
         <div class="flex gap-4">

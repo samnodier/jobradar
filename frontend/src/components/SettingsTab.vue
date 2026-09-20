@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MatchingSettings from './MatchingSettings.vue'
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
@@ -150,9 +151,9 @@ async function removeApiKey(providerId: string) {
       <section class="p-6 bg-white border border-gray-200">
         <h2 class="text-lg font-semibold text-black mb-4">Integrations</h2>
         <p class="text-xs text-black mb-4">
-          Bring your own API key for AI job matching and imports. When more than one key is
-          configured, the fastest provider is used first and the others act as fallbacks if it
-          fails.
+          Optional API keys for AI summaries and URL extraction. Matching and Copy for AI work
+          without keys. When more than one key is configured, the fastest provider is used first and
+          the others act as fallbacks if it fails.
         </p>
         <div
           v-for="provider in apiProviders"
@@ -229,6 +230,8 @@ async function removeApiKey(providerId: string) {
           </div>
         </div>
       </section>
+
+      <MatchingSettings />
 
       <!-- Privacy & Account -->
       <section class="p-6 bg-white border border-gray-200">
