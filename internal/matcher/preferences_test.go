@@ -17,6 +17,8 @@ func TestPreferenceGates(t *testing.T) {
 		{"location boundary", Preferences{Locations: []string{"US"}}, JobFacts{Location: "Australia"}, false},
 		{"Nairobi", Preferences{Locations: []string{"Nairobi"}}, JobFacts{Location: "Nairobi, Kenya"}, true},
 		{"remote restricted geography", Preferences{WorkMode: "remote", Locations: []string{"Kenya"}}, JobFacts{Remote: &remote, Location: "United States only"}, false},
+		{"partial salary strict", Preferences{MinSalary: &min, Currency: "USD"}, JobFacts{Currency: "USD", SalaryMin: &low}, false},
+		{"partial salary allowed", Preferences{MinSalary: &min, Currency: "USD", IncludeUnknown: true}, JobFacts{Currency: "USD", SalaryMin: &low}, true},
 		{"below salary", Preferences{MinSalary: &min, Currency: "USD"}, JobFacts{Currency: "USD", SalaryMax: &low}, false},
 		{"currency unknown", Preferences{MinSalary: &min, Currency: "USD", IncludeUnknown: true}, JobFacts{Currency: "KES", SalaryMax: &low}, true},
 		{"employment punctuation", Preferences{JobTypes: []string{"full_time"}}, JobFacts{JobType: "Full-time"}, true},

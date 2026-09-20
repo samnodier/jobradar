@@ -73,6 +73,12 @@ func CheckPreferences(p Preferences, j JobFacts) (bool, []string) {
 		if j.Currency == "" || p.Currency == "" || !strings.EqualFold(j.Currency, p.Currency) || (j.SalaryMin == nil && j.SalaryMax == nil) {
 			unknown("Salary is missing or uses a different currency; no currency conversion was applied")
 		} else {
+			if p.MinSalary != nil && j.SalaryMax == nil && (j.SalaryMin == nil || *j.SalaryMin < *p.MinSalary) {
+				unknown("Salary upper bound is unknown")
+			}
+			if p.MaxSalary != nil && j.SalaryMin == nil && (j.SalaryMax == nil || *j.SalaryMax > *p.MaxSalary) {
+				unknown("Salary lower bound is unknown")
+			}
 			if p.MinSalary != nil && j.SalaryMax != nil && *j.SalaryMax < *p.MinSalary {
 				reject("Salary range is below your minimum")
 			}
