@@ -1,6 +1,6 @@
 # Session handoff — profile workflows
 
-Sam wants small focused commits, direct implementation and maintained learning notes. The old unpushed release commit was replaced by 12 focused commits with an identical final tree. Backup branch backup/personal-release-4308bb7 preserves the old local tip; never push that backup. Work continues on feature/profile-workflows from dev. No remote history has been changed.
+Sam wants small focused commits, direct implementation and maintained learning notes. The old unpushed release commit was replaced by 12 focused commits with an identical final tree. Backup branch backup/personal-release-4308bb7 preserves the old local tip; never push that backup. Implementation branch: feature/profile-workflows, based on dev. Integration branch: dev; inspect git status for the currently checked-out branch. No remote history has been changed.
 
 New work: profile-owned score/work-mode/unknown/search-market/digest settings, eligibility gates, two daily digest slots, profile-driven Adzuna searches, best-match feed and profile tab, durable in-app notifications/deep links, authenticated Markdown Copy for AI, and structured/no-key URL import. See PLAN/SCHEMA/ROUTES/DECISIONS and docs/PERSONAL_WORKFLOW.md. New migrations through 20260920000500 are required.
 

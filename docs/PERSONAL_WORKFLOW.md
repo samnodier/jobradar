@@ -62,3 +62,8 @@ Ollama is not a dependency. On the deployment machine, first stop/disable its se
 ## Local review before deployment
 
 Run migrations, start dev, and exercise both scenarios above with your profile. Verify filtering, notification links, Copy for AI, digest preview and real delivery. Then promote the reviewed dev commit to main and push the release. Do not push backup branches or replace the remote history with the old large commit.
+
+
+## Editor diagnostics
+
+Targeted Go compilation and language-server checks passed. A broad `go list ./...` still encounters the existing PostgreSQL-owned `pgdata` directory; use `make test` for source packages. `.lazy.lua` adds project-local gopls exclusions for the installed LazyVim setup. Restart Neovim from the repository, accept its project configuration if prompted, and reconnect/restart gopls. If a marker remains, inspect its actual diagnostic text rather than assuming every marker is a compile failure. Database ownership/permissions were not changed.

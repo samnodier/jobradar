@@ -41,3 +41,5 @@ The follow-up implementation on `feature/profile-workflows` was verified with:
 - All migrations on a fresh isolated database, followed by rollback/reapply of migrations 20260920000200 through 20260920000500: passed. The digest-slot rollback intentionally refuses if data would violate the old one-digest-per-day constraint.
 
 These checks used synthetic sessions and fake providers. Sam's manual browser review, actual OAuth, live Adzuna results, sender setup and inbox delivery remain necessary before production promotion. No changes were applied to the existing development database.
+
+Editor follow-up: `go list ./...` reproduced a pgdata permission/traversal error; package-targeted checks remain green. The repository now includes a syntax-checked LazyVim `.lazy.lua` gopls exclusion. The user's running editor must reload it; existing PostgreSQL ownership was preserved.

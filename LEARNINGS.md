@@ -754,3 +754,12 @@ The personal scheduler runs inside the Go process, so free hosting that sleeps a
 Questions: Why does an idle web-service sleep policy break cron-like work inside the process? Why is free compute different from persistent free storage? How would you move scheduling into an external job runner? Why is localhost inside a container different from localhost on the host? Why is a subaccount ID not an email recipient? What should a future read-only agent token allow, and how would it be revoked? Why is a chat plan not automatically an API allowance? What must be backed up besides PostgreSQL data?
 
 Guide and current primary sources: `docs/PERSONAL_WORKFLOW.md`. These are operational tradeoffs, not a promise that external services will remain free forever.
+
+
+### Editor workspace diagnostics versus compilation
+
+Targeted Go tests and gopls checks passed, but `go list ./...` reproduced a workspace traversal failure on PostgreSQL-owned `pgdata`. Git ignore rules do not control Go or language-server directory traversal. The installed editor is LazyVim/Neovim; its project-local `.lazy.lua` adds gopls directory filters for database storage and generated frontend dependencies, preserving the user's existing analysis settings. Reload/restart the editor to load the project spec. `make test` deliberately checks actual source roots (`./internal/... ./cmd/...`) and does not scan runtime storage. No database permissions or files were altered.
+
+Questions: Why does .gitignore not exclude files from every tool? How can a workspace-loading error differ from a Go compilation error? Why should PostgreSQL's restrictive storage permissions remain intact? Why is runtime data outside a source tree preferable in a new deployment?
+
+Code/config: `.lazy.lua`, `Makefile`; source: https://go.dev/gopls/settings#directoryFilters .
