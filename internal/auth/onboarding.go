@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/redis/go-redis/v9"
@@ -38,6 +39,10 @@ func (h *Handler) HandleOnboardingGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.cfg.PersonalEmail != "" && !strings.EqualFold(pending.Email, h.cfg.PersonalEmail) {
+		httpx.RespondError(w, http.StatusForbidden, "this is a personal Jobradar instance")
+		return
+	}
 	// Parse request body
 	httpx.RespondJSON(w, http.StatusOK, map[string]any{
 		"github_id":          pending.GitHubID,
@@ -69,6 +74,10 @@ func (h *Handler) HandleOnboardingComplete(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	if h.cfg.PersonalEmail != "" && !strings.EqualFold(pending.Email, h.cfg.PersonalEmail) {
+		httpx.RespondError(w, http.StatusForbidden, "this is a personal Jobradar instance")
+		return
+	}
 	// Parse request body
 	type request struct {
 		Name     string `json:"name"`

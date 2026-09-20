@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/samnodier/jobradar/internal/httpx"
 )
@@ -22,6 +23,10 @@ func (h *Handler) RequireAuth(next http.Handler) http.Handler {
 			return
 		}
 
+		if h.cfg.PersonalEmail != "" && !strings.EqualFold(session.Email, h.cfg.PersonalEmail) {
+			httpx.RespondError(w, http.StatusForbidden, "this is a personal Jobradar instance")
+			return
+		}
 		// Refresh sthe session if it's getting old
 		h.refreshSessionIfNeeded(w, r.Context(), cookie.Value)
 
@@ -36,7 +41,7 @@ func (h *Handler) TryAuth(next http.Handler) http.Handler {
 		cookie, err := r.Cookie("session_id")
 		if err == nil {
 			session, err := h.getSession(r.Context(), cookie.Value)
-			if err == nil {
+			if err == nil && (h.cfg.PersonalEmail == "" || strings.EqualFold(session.Email, h.cfg.PersonalEmail)) {
 
 				// Refresh the session
 				h.refreshSessionIfNeeded(w, r.Context(), cookie.Value)

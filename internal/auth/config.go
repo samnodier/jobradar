@@ -19,6 +19,7 @@ type AuthConfig struct {
 	OnboardingTTL time.Duration
 	SessionTTL    time.Duration
 	IsProduction  bool
+	PersonalEmail string
 }
 
 func (cfg *AuthConfig) Validate() error {

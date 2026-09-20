@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/redis/go-redis/v9"
@@ -129,6 +130,10 @@ func (h *Handler) handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.cfg.PersonalEmail != "" && !strings.EqualFold(user.Email, h.cfg.PersonalEmail) {
+		httpx.RespondError(w, http.StatusForbidden, "this is a personal Jobradar instance")
+		return
+	}
 	providerID := strconv.FormatInt(user.ID, 10)
 	dbUser, err := h.db.GetUserByProviderIdentity(ctx, database.GetUserByProviderIdentityParams{
 		AuthProvider:   "github",
