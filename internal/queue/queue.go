@@ -12,16 +12,18 @@ import (
 
 const (
 	QueueName = "jobradar:queue:main"
-	DLQName   = "jobradar:queue:dlq"
+	DLQName   = "jobradar:queue:main:dlq"
 )
 
 type RedisQueue struct {
-	rdb *redis.Client
+	rdb  *redis.Client
+	name string
 }
 
 func NewRedisQueue(rdb *redis.Client) *RedisQueue {
 	return &RedisQueue{
-		rdb: rdb,
+		rdb:  rdb,
+		name: QueueName,
 	}
 }
 
@@ -31,7 +33,7 @@ func (rq *RedisQueue) Enqueue(ctx context.Context, job *Job) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshall the job: %w", err)
 	}
-	err = rq.rdb.LPush(ctx, QueueName, jobBytes).Err()
+	err = rq.rdb.LPush(ctx, rq.name, jobBytes).Err()
 	if err != nil {
 		return fmt.Errorf("failed to push to redis: %w", err)
 	}
@@ -44,7 +46,7 @@ func (rq *RedisQueue) EnqueueDLQ(ctx context.Context, job *Job) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshall the job: %w", err)
 	}
-	err = rq.rdb.LPush(ctx, DLQName, jobBytes).Err()
+	err = rq.rdb.LPush(ctx, rq.name+":dlq", jobBytes).Err()
 	if err != nil {
 		return fmt.Errorf("failed to push to redis: %w", err)
 	}
@@ -53,7 +55,7 @@ func (rq *RedisQueue) EnqueueDLQ(ctx context.Context, job *Job) error {
 
 // Dequeue does the BRPOP (pop form the right, blocking right pop up to timeout seconds)
 func (rq *RedisQueue) Dequeue(ctx context.Context, timeout time.Duration) (*Job, error) {
-	result, err := rq.rdb.BRPop(ctx, timeout, QueueName).Result()
+	result, err := rq.rdb.BRPop(ctx, timeout, rq.name).Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			return nil, nil
@@ -69,4 +71,8 @@ func (rq *RedisQueue) Dequeue(ctx context.Context, timeout time.Duration) (*Job,
 		return nil, fmt.Errorf("failed to unmarshall the job: %w", err)
 	}
 	return &job, nil
+}
+
+func NewNamedRedisQueue(rdb *redis.Client, name string) *RedisQueue {
+	return &RedisQueue{rdb: rdb, name: name}
 }

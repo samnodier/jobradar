@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"google.golang.org/genai"
 )
@@ -174,7 +175,7 @@ func classifyGeminiError(err error) error {
 		case 401, 403:
 			return fmt.Errorf("authentication failed: %w: %w", ErrPermanent, apiErr)
 		case 429:
-			return fmt.Errorf("gemini rate limit exceeded: %w", apiErr)
+			return &RetryError{Err: fmt.Errorf("gemini rate limit exceeded: %w", apiErr), Delay: time.Minute}
 		case 500, 503:
 			return fmt.Errorf("gemini service unavailable: %w", apiErr)
 		default:

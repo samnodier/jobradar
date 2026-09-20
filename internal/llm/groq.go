@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -175,7 +176,11 @@ func classifyGroqError(resp *http.Response) error {
 	case resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden:
 		return fmt.Errorf("groq: authentication failed: %w: %s", ErrPermanent, apiMsg)
 	case resp.StatusCode == http.StatusTooManyRequests:
-		return fmt.Errorf("groq: rate limit exceeded: %s", apiMsg)
+		delay := time.Minute
+		if n, e := strconv.Atoi(resp.Header.Get("Retry-After")); e == nil && n > 0 {
+			delay = time.Duration(n) * time.Second
+		}
+		return &RetryError{Err: fmt.Errorf("groq: rate limit exceeded: %s", apiMsg), Delay: delay}
 	case resp.StatusCode >= 400 && resp.StatusCode < 500:
 		return fmt.Errorf("groq: invalid request: %w: %s", ErrPermanent, apiMsg)
 	default:

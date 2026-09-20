@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 )
 
 type EnrichmentInput struct {
@@ -59,11 +60,30 @@ func buildEnrichPrompt(input EnrichmentInput) string {
 		Candidate Skills: %s
 		Candidate Experience: %s
 		`,
-		input.JobTitle,
-		input.JobLocation,
-		input.JobDescription,
-		strings.Join(input.DesiredRoles, ", "),
-		strings.Join(input.UserSkills, ", "),
-		formatExperience(input.UserExperiences),
+		LimitText(input.JobTitle, 300),
+		LimitText(input.JobLocation, 300),
+		LimitText(input.JobDescription, 16000),
+		LimitText(strings.Join(input.DesiredRoles, ", "), 1000),
+		LimitText(strings.Join(input.UserSkills, ", "), 2000),
+		LimitText(formatExperience(input.UserExperiences), 6000),
 	)
 }
+
+// LimitText bounds prompt size without splitting UTF-8 code points.
+func LimitText(s string, maxRunes int) string {
+	r := []rune(s)
+	if len(r) > maxRunes {
+		return string(r[:maxRunes])
+	}
+	return s
+}
+
+// RetryError carries the provider's minimum cooldown to the generic worker.
+type RetryError struct {
+	Err   error
+	Delay time.Duration
+}
+
+func (e *RetryError) Error() string             { return e.Err.Error() }
+func (e *RetryError) Unwrap() error             { return e.Err }
+func (e *RetryError) RetryDelay() time.Duration { return e.Delay }

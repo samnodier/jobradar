@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -14,8 +15,12 @@ import (
 
 // Helper function to get a clean Redis connection pointing to DB 1 (for testing)
 func setupTestRedis(t *testing.T) *redis.Client {
+	addr := os.Getenv("TEST_REDIS_ADDR")
+	if addr == "" {
+		t.Skip("set TEST_REDIS_ADDR to an isolated Redis instance (DB 1 is flushed)")
+	}
 	rdb := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: addr,
 
 		DB: 1,
 	})

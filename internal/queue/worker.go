@@ -108,6 +108,10 @@ func (wp *WorkerPool) handleJobFailure(job *Job, err error) {
 	maxBackoff := float64(int(1) << job.Attempt)
 	backoffSec := rand.Float64() * maxBackoff
 	backoffDur := min(time.Duration(backoffSec*float64(time.Second)), 5*time.Minute)
+	var cooldown interface{ RetryDelay() time.Duration }
+	if errors.As(err, &cooldown) {
+		backoffDur = max(backoffDur, min(cooldown.RetryDelay(), 24*time.Hour))
+	}
 	log.Printf("Scheduling retry %d/%d for job %s in %s", job.Attempt, job.MaxRetry, job.ID, backoffDur)
 
 	// Tell the WorkerPool WaitGroup to track this retry goroutine
