@@ -4,6 +4,7 @@ import (
 	"maps"
 	"math"
 	"slices"
+	"strings"
 )
 
 // MatchResult holds the combined matching scores and outcomes.
@@ -65,12 +66,15 @@ func MatchJob(
 	if len(userSkills) > 0 {
 		sm := NewSkillMatcher(slices.Collect(maps.Keys(userSkills)))
 		matchedSkills = sm.FindSkills(jobDesc)
-		var totalMatchedSkillsWeight float64
-		for _, skill := range matchedSkills {
-			totalMatchedSkillsWeight += userSkills[skill]
+		weights := map[string]float64{}
+		for skill, weight := range userSkills {
+			weights[strings.ToLower(skill)] = weight
 		}
 		if len(jobSkills) > 0 {
-			skillScore = totalMatchedSkillsWeight / float64(len(jobSkills))
+			for _, skill := range jobSkills {
+				skillScore += weights[strings.ToLower(skill)]
+			}
+			skillScore /= float64(len(jobSkills))
 		}
 		skillScore = math.Min(skillScore, 1.0)
 	}

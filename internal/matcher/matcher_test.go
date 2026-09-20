@@ -24,7 +24,7 @@ func TestMatchJob(t *testing.T) {
 			jobTitle:        "Senior Go Software Engineer",
 			jobDesc:         "Looking for a backend  engineer who works with Go, PostgreSQL, and Docker containers.",
 			expectedSkipped: false,
-			expectHighMatch: true,
+			expectHighMatch: false, // Only Go is in the required skill set; prose mentions no longer inflate coverage.
 		},
 		{
 			jobTitle:        "Fullstack Developer",
@@ -118,5 +118,16 @@ func TestMatchJobZeroThresholdBypassesGate(t *testing.T) {
 	)
 	if res.Skipped {
 		t.Fatal("expected no skip with titleThreshold 0")
+	}
+}
+
+func TestRequiredSkillsAreComparedWithProfile(t *testing.T) {
+	result := MatchJob("Developer", "We build products", nil, map[string]float64{"Go": 1}, []string{"go"}, nil, 0)
+	if result.Score != 100 {
+		t.Fatalf("required skill already owned must count even when absent from prose: %+v", result)
+	}
+	result = MatchJob("Developer", "Go Docker SQL Vue", nil, map[string]float64{"Go": 1, "Docker": 1, "SQL": 1, "Vue": 1}, []string{"Java"}, nil, 0)
+	if result.Score != 0 {
+		t.Fatalf("unrelated prose skills must not inflate required-skill coverage: %+v", result)
 	}
 }
