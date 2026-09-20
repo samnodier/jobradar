@@ -92,7 +92,7 @@ func (cfg *apiConfig) handlerApplicationCreate(w http.ResponseWriter, r *http.Re
 
 	application, err := cfg.db.CreateApplication(r.Context(), database.CreateApplicationParams{
 		UserID:            userID,
-		JobID:             req.JobID,
+		ID:                req.JobID,
 		ApplicationStatus: req.ApplicationStatus,
 	})
 	if err != nil {

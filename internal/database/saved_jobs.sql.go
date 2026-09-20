@@ -26,7 +26,7 @@ SELECT
 FROM saved_jobs AS s
 INNER JOIN jobs AS j ON s.job_id = j.id
 LEFT JOIN applications AS a ON s.job_id = a.job_id AND s.user_id = a.user_id
-WHERE s.user_id = $1
+WHERE s.user_id = $1 AND (j.created_by_user_id IS NULL OR j.created_by_user_id = $1)
 ORDER BY s.created_at DESC
 `
 
@@ -74,17 +74,18 @@ func (q *Queries) GetSavedJobsForUser(ctx context.Context, userID uuid.UUID) ([]
 
 const saveJob = `-- name: SaveJob :one
 INSERT INTO saved_jobs (user_id, job_id)
-VALUES ($1, $2)
+SELECT $1, j.id FROM jobs j
+WHERE j.id = $2 AND (j.created_by_user_id IS NULL OR j.created_by_user_id = $1)
 RETURNING id, user_id, job_id, created_at
 `
 
 type SaveJobParams struct {
 	UserID uuid.UUID `json:"user_id"`
-	JobID  uuid.UUID `json:"job_id"`
+	ID     uuid.UUID `json:"id"`
 }
 
 func (q *Queries) SaveJob(ctx context.Context, arg SaveJobParams) (SavedJob, error) {
-	row := q.db.QueryRow(ctx, saveJob, arg.UserID, arg.JobID)
+	row := q.db.QueryRow(ctx, saveJob, arg.UserID, arg.ID)
 	var i SavedJob
 	err := row.Scan(
 		&i.ID,

@@ -12,12 +12,13 @@ SELECT
 FROM saved_jobs AS s
 INNER JOIN jobs AS j ON s.job_id = j.id
 LEFT JOIN applications AS a ON s.job_id = a.job_id AND s.user_id = a.user_id
-WHERE s.user_id = $1
+WHERE s.user_id = $1 AND (j.created_by_user_id IS NULL OR j.created_by_user_id = $1)
 ORDER BY s.created_at DESC;
 
 -- name: SaveJob :one
 INSERT INTO saved_jobs (user_id, job_id)
-VALUES ($1, $2)
+SELECT $1, j.id FROM jobs j
+WHERE j.id = $2 AND (j.created_by_user_id IS NULL OR j.created_by_user_id = $1)
 RETURNING *;
 
 -- name: UnSaveJob :exec

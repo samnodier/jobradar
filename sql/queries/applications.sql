@@ -1,9 +1,8 @@
 -- name: CreateApplication :one
 INSERT INTO applications (
     user_id, job_id, application_status, applied_at, notes, follow_up_at
-) VALUES (
-    $1, $2, $3, $4, $5, $6
-)
+) SELECT $1, j.id, $3, $4, $5, $6 FROM jobs j
+WHERE j.id = $2 AND (j.created_by_user_id IS NULL OR j.created_by_user_id = $1)
 RETURNING *;
 
 -- name: GetApplicationByID :one
@@ -56,7 +55,7 @@ SELECT
     j.logo_url AS job_logo_url
 FROM applications AS a
 INNER JOIN jobs AS j ON a.job_id = j.id
-WHERE a.user_id = $1
+WHERE a.user_id = $1 AND (j.created_by_user_id IS NULL OR j.created_by_user_id = $1)
 ORDER BY a.updated_at DESC;
 
 -- name: UpdateApplication :one

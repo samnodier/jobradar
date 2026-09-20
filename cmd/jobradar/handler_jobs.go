@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -20,11 +21,41 @@ func (cfg *apiConfig) handlerJobsGet(w http.ResponseWriter, r *http.Request) {
 		userID = session.UserID
 	}
 
-	jobs, err := cfg.db.GetJobs(r.Context(), userID)
+	limit, offset := 50, 0
+	if v := r.URL.Query().Get("limit"); v != "" {
+		n, e := strconv.Atoi(v)
+		if e != nil || n < 1 || n > 100 {
+			httpx.RespondError(w, 400, "limit must be 1–100")
+			return
+		}
+		limit = n
+	}
+	if v := r.URL.Query().Get("offset"); v != "" {
+		n, e := strconv.Atoi(v)
+		if e != nil || n < 0 || n > 100000 {
+			httpx.RespondError(w, 400, "invalid offset")
+			return
+		}
+		offset = n
+	}
+	filter := r.URL.Query().Get("filter")
+	if filter == "" {
+		filter = "all"
+	}
+	switch filter {
+	case "all", "saved", "applied", "remote", "today":
+	default:
+		httpx.RespondError(w, 400, "invalid filter")
+		return
+	}
+	jobs, err := cfg.db.GetJobs(r.Context(), database.GetJobsParams{UserID: userID, Limit: int32(limit), Offset: int32(offset), Search: r.URL.Query().Get("q"), Filter: filter, Oldest: r.URL.Query().Get("order") == "oldest"})
 	if err != nil {
 		log.Printf("Error fetching jobs: %v", err)
 		httpx.RespondError(w, http.StatusInternalServerError, "Couldn't fetch jobs")
 		return
+	}
+	if jobs == nil {
+		jobs = []database.GetJobsRow{}
 	}
 	httpx.RespondJSON(w, http.StatusOK, jobs)
 }

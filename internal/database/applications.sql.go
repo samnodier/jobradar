@@ -16,15 +16,14 @@ import (
 const createApplication = `-- name: CreateApplication :one
 INSERT INTO applications (
     user_id, job_id, application_status, applied_at, notes, follow_up_at
-) VALUES (
-    $1, $2, $3, $4, $5, $6
-)
+) SELECT $1, j.id, $3, $4, $5, $6 FROM jobs j
+WHERE j.id = $2 AND (j.created_by_user_id IS NULL OR j.created_by_user_id = $1)
 RETURNING id, user_id, job_id, application_status, applied_at, last_status_changed_at, follow_up_at, notes, created_at, updated_at
 `
 
 type CreateApplicationParams struct {
 	UserID            uuid.UUID  `json:"user_id"`
-	JobID             uuid.UUID  `json:"job_id"`
+	ID                uuid.UUID  `json:"id"`
 	ApplicationStatus string     `json:"application_status"`
 	AppliedAt         *time.Time `json:"applied_at"`
 	Notes             *string    `json:"notes"`
@@ -34,7 +33,7 @@ type CreateApplicationParams struct {
 func (q *Queries) CreateApplication(ctx context.Context, arg CreateApplicationParams) (Application, error) {
 	row := q.db.QueryRow(ctx, createApplication,
 		arg.UserID,
-		arg.JobID,
+		arg.ID,
 		arg.ApplicationStatus,
 		arg.AppliedAt,
 		arg.Notes,
@@ -195,7 +194,7 @@ SELECT
     j.logo_url AS job_logo_url
 FROM applications AS a
 INNER JOIN jobs AS j ON a.job_id = j.id
-WHERE a.user_id = $1
+WHERE a.user_id = $1 AND (j.created_by_user_id IS NULL OR j.created_by_user_id = $1)
 ORDER BY a.updated_at DESC
 `
 

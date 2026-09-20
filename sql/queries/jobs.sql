@@ -57,6 +57,8 @@ SELECT
     j.skills,
     j.logo_url,
     j.created_by_user_id,
+    j.posted_at,
+    j.expires_at,
     j.created_at,
     j.updated_at,
     m.match_score,
@@ -77,7 +79,12 @@ LEFT JOIN saved_jobs AS s ON j.id = s.job_id AND s.user_id = $1
 LEFT JOIN applications AS a ON j.id = a.job_id AND a.user_id = $1
 LEFT JOIN user_job_matches AS m ON j.id = m.job_id AND m.user_id = $1
 WHERE (j.created_by_user_id IS NULL OR j.created_by_user_id = $1)
-ORDER BY j.created_at DESC;
+AND (sqlc.arg(search)::text = '' OR j.title ILIKE '%' || sqlc.arg(search) || '%' OR j.company_name ILIKE '%' || sqlc.arg(search) || '%' OR array_to_string(j.skills, ' ') ILIKE '%' || sqlc.arg(search) || '%')
+AND (sqlc.arg(filter)::text = 'all' OR (sqlc.arg(filter)='saved' AND s.id IS NOT NULL) OR (sqlc.arg(filter)='applied' AND a.id IS NOT NULL)
+ OR (sqlc.arg(filter)='remote' AND j.is_remote=true) OR (sqlc.arg(filter)='today' AND j.created_at >= date_trunc('day',now())))
+ORDER BY CASE WHEN sqlc.arg(oldest)::boolean THEN j.created_at END ASC,
+ CASE WHEN NOT sqlc.arg(oldest)::boolean THEN j.created_at END DESC, j.id DESC
+LIMIT $2 OFFSET $3;
 
 -- name: GetAllJobIDs :many
 SELECT id FROM jobs
@@ -128,7 +135,7 @@ SELECT
         WHERE created_at >= DATE_TRUNC('day', NOW())
     ) AS new_jobs_today,
     MAX(created_at) AS latest_scrape_at
-FROM jobs;
+FROM jobs WHERE created_by_user_id IS NULL;
 
 -- name: SearchJobs :many
 SELECT
@@ -154,3 +161,20 @@ WHERE
     AND ($2::TEXT IS NULL OR $2 = ANY(skills))
     AND (created_by_user_id IS NULL OR created_by_user_id = $3)
 ORDER BY created_at DESC;
+
+-- name: UpsertPublicJob :one
+INSERT INTO jobs (external_id, job_source, title, company_name, description, source_url,
+ salary_min, salary_max, currency, job_location, is_remote, skills, logo_url, posted_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+ON CONFLICT (external_id, job_source) WHERE created_by_user_id IS NULL
+DO UPDATE SET title=excluded.title, company_name=excluded.company_name,
+ description=excluded.description, source_url=excluded.source_url,
+ salary_min=excluded.salary_min, salary_max=excluded.salary_max, currency=excluded.currency,
+ job_location=excluded.job_location, is_remote=excluded.is_remote, skills=excluded.skills,
+ logo_url=excluded.logo_url, posted_at=excluded.posted_at, last_seen_at=now(),
+ updated_at=CASE WHEN (jobs.title,jobs.company_name,jobs.description,jobs.source_url,
+ jobs.salary_min,jobs.salary_max,jobs.currency,jobs.job_location,jobs.is_remote,jobs.skills)
+ IS DISTINCT FROM (excluded.title,excluded.company_name,excluded.description,excluded.source_url,
+ excluded.salary_min,excluded.salary_max,excluded.currency,excluded.job_location,excluded.is_remote,excluded.skills)
+ THEN now() ELSE jobs.updated_at END
+RETURNING *;

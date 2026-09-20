@@ -24,6 +24,31 @@ type Application struct {
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 }
 
+type EmailDigest struct {
+	ID                uuid.UUID          `json:"id"`
+	UserID            uuid.UUID          `json:"user_id"`
+	DigestDate        pgtype.Date        `json:"digest_date"`
+	Recipient         string             `json:"recipient"`
+	Sender            string             `json:"sender"`
+	Provider          string             `json:"provider"`
+	Subject           string             `json:"subject"`
+	Html              string             `json:"html"`
+	Status            string             `json:"status"`
+	Attempts          int32              `json:"attempts"`
+	FirstAttemptAt    *time.Time         `json:"first_attempt_at"`
+	NextAttemptAt     pgtype.Timestamptz `json:"next_attempt_at"`
+	ProviderMessageID *string            `json:"provider_message_id"`
+	LastError         *string            `json:"last_error"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	SentAt            *time.Time         `json:"sent_at"`
+}
+
+type EmailDigestJob struct {
+	DigestID uuid.UUID `json:"digest_id"`
+	UserID   uuid.UUID `json:"user_id"`
+	JobID    uuid.UUID `json:"job_id"`
+}
+
 type ExperienceSkill struct {
 	ExperienceID uuid.UUID  `json:"experience_id"`
 	SkillID      uuid.UUID  `json:"skill_id"`
@@ -32,28 +57,36 @@ type ExperienceSkill struct {
 }
 
 type Job struct {
-	ID              uuid.UUID   `json:"id"`
-	ExternalID      string      `json:"external_id"`
-	JobSource       string      `json:"job_source"`
-	Title           string      `json:"title"`
-	CompanyName     string      `json:"company_name"`
-	Description     *string     `json:"description"`
-	SourceUrl       string      `json:"source_url"`
-	SalaryMin       *int32      `json:"salary_min"`
-	SalaryMax       *int32      `json:"salary_max"`
-	Currency        *string     `json:"currency"`
-	JobLocation     *string     `json:"job_location"`
-	IsRemote        *bool       `json:"is_remote"`
-	JobStatus       *string     `json:"job_status"`
-	EmploymentType  *string     `json:"employment_type"`
-	ExperienceLevel *string     `json:"experience_level"`
-	Skills          []string    `json:"skills"`
-	PostedAt        *time.Time  `json:"posted_at"`
-	ExpiresAt       *time.Time  `json:"expires_at"`
-	CreatedAt       *time.Time  `json:"created_at"`
-	UpdatedAt       *time.Time  `json:"updated_at"`
-	LogoUrl         *string     `json:"logo_url"`
-	CreatedByUserID pgtype.UUID `json:"created_by_user_id"`
+	ID              uuid.UUID          `json:"id"`
+	ExternalID      string             `json:"external_id"`
+	JobSource       string             `json:"job_source"`
+	Title           string             `json:"title"`
+	CompanyName     string             `json:"company_name"`
+	Description     *string            `json:"description"`
+	SourceUrl       string             `json:"source_url"`
+	SalaryMin       *int32             `json:"salary_min"`
+	SalaryMax       *int32             `json:"salary_max"`
+	Currency        *string            `json:"currency"`
+	JobLocation     *string            `json:"job_location"`
+	IsRemote        *bool              `json:"is_remote"`
+	JobStatus       *string            `json:"job_status"`
+	EmploymentType  *string            `json:"employment_type"`
+	ExperienceLevel *string            `json:"experience_level"`
+	Skills          []string           `json:"skills"`
+	PostedAt        *time.Time         `json:"posted_at"`
+	ExpiresAt       *time.Time         `json:"expires_at"`
+	CreatedAt       *time.Time         `json:"created_at"`
+	UpdatedAt       *time.Time         `json:"updated_at"`
+	LogoUrl         *string            `json:"logo_url"`
+	CreatedByUserID pgtype.UUID        `json:"created_by_user_id"`
+	LastSeenAt      pgtype.Timestamptz `json:"last_seen_at"`
+}
+
+type PendingMatch struct {
+	UserID     uuid.UUID  `json:"user_id"`
+	JobID      uuid.UUID  `json:"job_id"`
+	Revision   int64      `json:"revision"`
+	EnqueuedAt *time.Time `json:"enqueued_at"`
 }
 
 type ProjectSkill struct {

@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -12,16 +13,14 @@ type Client struct {
 }
 
 func NewClient(dbURL string) (*Client, error) {
-	pool, err := pgxpool.New(context.Background(), dbURL)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	pool, err := pgxpool.New(ctx, dbURL)
 	if err != nil {
 		return nil, err
 	}
-	// db.Ping()
-	// client := Client{
-	// 	Db:      db,
-	// 	Queries: New(db),
-	// }
-	if err := pool.Ping(context.Background()); err != nil {
+	if err := pool.Ping(ctx); err != nil {
+		pool.Close()
 		return nil, err
 	}
 

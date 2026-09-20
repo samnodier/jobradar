@@ -42,7 +42,7 @@ DO UPDATE
         skills = excluded.skills,
         logo_url = excluded.logo_url,
         updated_at = NOW()
-RETURNING id, external_id, job_source, title, company_name, description, source_url, salary_min, salary_max, currency, job_location, is_remote, job_status, employment_type, experience_level, skills, posted_at, expires_at, created_at, updated_at, logo_url, created_by_user_id
+RETURNING id, external_id, job_source, title, company_name, description, source_url, salary_min, salary_max, currency, job_location, is_remote, job_status, employment_type, experience_level, skills, posted_at, expires_at, created_at, updated_at, logo_url, created_by_user_id, last_seen_at
 `
 
 type CreateImportedJobParams struct {
@@ -103,6 +103,7 @@ func (q *Queries) CreateImportedJob(ctx context.Context, arg CreateImportedJobPa
 		&i.UpdatedAt,
 		&i.LogoUrl,
 		&i.CreatedByUserID,
+		&i.LastSeenAt,
 	)
 	return i, err
 }
@@ -116,7 +117,7 @@ INSERT INTO jobs (
 )
 ON CONFLICT (external_id, job_source)
 WHERE created_by_user_id IS NULL DO NOTHING
-RETURNING id, external_id, job_source, title, company_name, description, source_url, salary_min, salary_max, currency, job_location, is_remote, job_status, employment_type, experience_level, skills, posted_at, expires_at, created_at, updated_at, logo_url, created_by_user_id
+RETURNING id, external_id, job_source, title, company_name, description, source_url, salary_min, salary_max, currency, job_location, is_remote, job_status, employment_type, experience_level, skills, posted_at, expires_at, created_at, updated_at, logo_url, created_by_user_id, last_seen_at
 `
 
 type CreateJobParams struct {
@@ -175,6 +176,7 @@ func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, erro
 		&i.UpdatedAt,
 		&i.LogoUrl,
 		&i.CreatedByUserID,
+		&i.LastSeenAt,
 	)
 	return i, err
 }
@@ -326,7 +328,7 @@ SELECT
         WHERE created_at >= DATE_TRUNC('day', NOW())
     ) AS new_jobs_today,
     MAX(created_at) AS latest_scrape_at
-FROM jobs
+FROM jobs WHERE created_by_user_id IS NULL
 `
 
 type GetJobStatsRow struct {
@@ -359,6 +361,8 @@ SELECT
     j.skills,
     j.logo_url,
     j.created_by_user_id,
+    j.posted_at,
+    j.expires_at,
     j.created_at,
     j.updated_at,
     m.match_score,
@@ -379,8 +383,22 @@ LEFT JOIN saved_jobs AS s ON j.id = s.job_id AND s.user_id = $1
 LEFT JOIN applications AS a ON j.id = a.job_id AND a.user_id = $1
 LEFT JOIN user_job_matches AS m ON j.id = m.job_id AND m.user_id = $1
 WHERE (j.created_by_user_id IS NULL OR j.created_by_user_id = $1)
-ORDER BY j.created_at DESC
+AND ($4::text = '' OR j.title ILIKE '%' || $4 || '%' OR j.company_name ILIKE '%' || $4 || '%' OR array_to_string(j.skills, ' ') ILIKE '%' || $4 || '%')
+AND ($5::text = 'all' OR ($5='saved' AND s.id IS NOT NULL) OR ($5='applied' AND a.id IS NOT NULL)
+ OR ($5='remote' AND j.is_remote=true) OR ($5='today' AND j.created_at >= date_trunc('day',now())))
+ORDER BY CASE WHEN $6::boolean THEN j.created_at END ASC,
+ CASE WHEN NOT $6::boolean THEN j.created_at END DESC, j.id DESC
+LIMIT $2 OFFSET $3
 `
+
+type GetJobsParams struct {
+	UserID uuid.UUID `json:"user_id"`
+	Limit  int32     `json:"limit"`
+	Offset int32     `json:"offset"`
+	Search string    `json:"search"`
+	Filter string    `json:"filter"`
+	Oldest bool      `json:"oldest"`
+}
 
 type GetJobsRow struct {
 	ID              uuid.UUID     `json:"id"`
@@ -398,6 +416,8 @@ type GetJobsRow struct {
 	Skills          []string      `json:"skills"`
 	LogoUrl         *string       `json:"logo_url"`
 	CreatedByUserID pgtype.UUID   `json:"created_by_user_id"`
+	PostedAt        *time.Time    `json:"posted_at"`
+	ExpiresAt       *time.Time    `json:"expires_at"`
 	CreatedAt       *time.Time    `json:"created_at"`
 	UpdatedAt       *time.Time    `json:"updated_at"`
 	MatchScore      *int32        `json:"match_score"`
@@ -415,8 +435,15 @@ type GetJobsRow struct {
 	IsMatched       bool          `json:"is_matched"`
 }
 
-func (q *Queries) GetJobs(ctx context.Context, userID uuid.UUID) ([]GetJobsRow, error) {
-	rows, err := q.db.Query(ctx, getJobs, userID)
+func (q *Queries) GetJobs(ctx context.Context, arg GetJobsParams) ([]GetJobsRow, error) {
+	rows, err := q.db.Query(ctx, getJobs,
+		arg.UserID,
+		arg.Limit,
+		arg.Offset,
+		arg.Search,
+		arg.Filter,
+		arg.Oldest,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -440,6 +467,8 @@ func (q *Queries) GetJobs(ctx context.Context, userID uuid.UUID) ([]GetJobsRow, 
 			&i.Skills,
 			&i.LogoUrl,
 			&i.CreatedByUserID,
+			&i.PostedAt,
+			&i.ExpiresAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.MatchScore,
@@ -552,4 +581,85 @@ func (q *Queries) SearchJobs(ctx context.Context, arg SearchJobsParams) ([]Searc
 		return nil, err
 	}
 	return items, nil
+}
+
+const upsertPublicJob = `-- name: UpsertPublicJob :one
+INSERT INTO jobs (external_id, job_source, title, company_name, description, source_url,
+ salary_min, salary_max, currency, job_location, is_remote, skills, logo_url, posted_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+ON CONFLICT (external_id, job_source) WHERE created_by_user_id IS NULL
+DO UPDATE SET title=excluded.title, company_name=excluded.company_name,
+ description=excluded.description, source_url=excluded.source_url,
+ salary_min=excluded.salary_min, salary_max=excluded.salary_max, currency=excluded.currency,
+ job_location=excluded.job_location, is_remote=excluded.is_remote, skills=excluded.skills,
+ logo_url=excluded.logo_url, posted_at=excluded.posted_at, last_seen_at=now(),
+ updated_at=CASE WHEN (jobs.title,jobs.company_name,jobs.description,jobs.source_url,
+ jobs.salary_min,jobs.salary_max,jobs.currency,jobs.job_location,jobs.is_remote,jobs.skills)
+ IS DISTINCT FROM (excluded.title,excluded.company_name,excluded.description,excluded.source_url,
+ excluded.salary_min,excluded.salary_max,excluded.currency,excluded.job_location,excluded.is_remote,excluded.skills)
+ THEN now() ELSE jobs.updated_at END
+RETURNING id, external_id, job_source, title, company_name, description, source_url, salary_min, salary_max, currency, job_location, is_remote, job_status, employment_type, experience_level, skills, posted_at, expires_at, created_at, updated_at, logo_url, created_by_user_id, last_seen_at
+`
+
+type UpsertPublicJobParams struct {
+	ExternalID  string     `json:"external_id"`
+	JobSource   string     `json:"job_source"`
+	Title       string     `json:"title"`
+	CompanyName string     `json:"company_name"`
+	Description *string    `json:"description"`
+	SourceUrl   string     `json:"source_url"`
+	SalaryMin   *int32     `json:"salary_min"`
+	SalaryMax   *int32     `json:"salary_max"`
+	Currency    *string    `json:"currency"`
+	JobLocation *string    `json:"job_location"`
+	IsRemote    *bool      `json:"is_remote"`
+	Skills      []string   `json:"skills"`
+	LogoUrl     *string    `json:"logo_url"`
+	PostedAt    *time.Time `json:"posted_at"`
+}
+
+func (q *Queries) UpsertPublicJob(ctx context.Context, arg UpsertPublicJobParams) (Job, error) {
+	row := q.db.QueryRow(ctx, upsertPublicJob,
+		arg.ExternalID,
+		arg.JobSource,
+		arg.Title,
+		arg.CompanyName,
+		arg.Description,
+		arg.SourceUrl,
+		arg.SalaryMin,
+		arg.SalaryMax,
+		arg.Currency,
+		arg.JobLocation,
+		arg.IsRemote,
+		arg.Skills,
+		arg.LogoUrl,
+		arg.PostedAt,
+	)
+	var i Job
+	err := row.Scan(
+		&i.ID,
+		&i.ExternalID,
+		&i.JobSource,
+		&i.Title,
+		&i.CompanyName,
+		&i.Description,
+		&i.SourceUrl,
+		&i.SalaryMin,
+		&i.SalaryMax,
+		&i.Currency,
+		&i.JobLocation,
+		&i.IsRemote,
+		&i.JobStatus,
+		&i.EmploymentType,
+		&i.ExperienceLevel,
+		&i.Skills,
+		&i.PostedAt,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LogoUrl,
+		&i.CreatedByUserID,
+		&i.LastSeenAt,
+	)
+	return i, err
 }

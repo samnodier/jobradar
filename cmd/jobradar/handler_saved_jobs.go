@@ -37,9 +37,13 @@ func (cfg *apiConfig) handlerJobSave(w http.ResponseWriter, r *http.Request) {
 
 	savedJob, err := cfg.db.SaveJob(r.Context(), database.SaveJobParams{
 		UserID: userID,
-		JobID:  req.JobID,
+		ID:     req.JobID,
 	})
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			httpx.RespondError(w, http.StatusNotFound, "job not found")
+			return
+		}
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			switch pgErr.Code {
