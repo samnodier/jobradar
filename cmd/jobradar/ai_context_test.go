@@ -45,6 +45,7 @@ func TestAIContextAuthorizationAndSafeExport(t *testing.T) {
 	router := chi.NewRouter()
 	router.Use(h.RequireAuth)
 	router.Get("/jobs/{jobID}/ai-context", cfg.handlerAIContext)
+	router.Put("/profile/matching", cfg.handlerMatchSettingsPut)
 	for _, test := range []struct {
 		id   uuid.UUID
 		want int
@@ -56,6 +57,28 @@ func TestAIContextAuthorizationAndSafeExport(t *testing.T) {
 			rdb.Set(ctx, "session:"+token, b, time.Minute)
 			defer rdb.Del(ctx, "session:"+token)
 			req.AddCookie(&http.Cookie{Name: "session_id", Value: token})
+		}
+		if test.id == owner {
+			for _, body := range []string{
+				`{"min_score":101,"work_mode":"remote","digest_max_jobs":10}`,
+				`{"min_score":70,"work_mode":"remote","digest_max_jobs":10,"search_country":"us","digest_timezone":"Invalid/Zone","digest_hours":[8,18]}`,
+				`{"min_score":70,"work_mode":"remote","digest_max_jobs":10,"search_country":"us","digest_timezone":"UTC","digest_hours":[8,8]}`,
+			} {
+				invalid := httptest.NewRequest("PUT", "/profile/matching", strings.NewReader(body))
+				invalid.Header.Set("Cookie", req.Header.Get("Cookie"))
+				response := httptest.NewRecorder()
+				router.ServeHTTP(response, invalid)
+				if response.Code != 400 {
+					t.Fatal("invalid settings accepted", response.Code, response.Body.String())
+				}
+			}
+			valid := httptest.NewRequest("PUT", "/profile/matching", strings.NewReader(`{"user_id":"`+other.String()+`","min_score":70,"work_mode":"remote","digest_max_jobs":10,"search_country":"us","digest_timezone":"Africa/Nairobi","digest_hours":[8,18]}`))
+			valid.Header.Set("Cookie", req.Header.Get("Cookie"))
+			response := httptest.NewRecorder()
+			router.ServeHTTP(response, valid)
+			if response.Code != 200 || !strings.Contains(response.Body.String(), owner.String()) {
+				t.Fatal("settings ownership failed", response.Body.String())
+			}
 		}
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
