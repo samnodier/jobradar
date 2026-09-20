@@ -733,3 +733,8 @@ Import first checks a fetched page for Schema.org JobPosting JSON-LD, including 
 Questions: Why prefer structured metadata over guessing from prose? Why is a review form still necessary? Why doesn't an HTTP fetch render a JavaScript application? Why must fetching links defend against SSRF? How do fallbacks preserve a useful workflow during provider outages?
 
 Code: `internal/extraction/page.go`, `handler_import.go`. Schema reference: https://schema.org/JobPosting .
+
+
+The earlier environment-driven digest hour/threshold settings were removed once the profile became authoritative. Keeping two conflicting configuration paths would make troubleshooting misleading. Deployment configuration controls whether email is permitted at all; profile settings control relevance, frequency and opt-out.
+
+Question: How do you choose one authoritative source when migrating configuration from environment variables to per-user settings?

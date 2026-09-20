@@ -53,7 +53,7 @@ func setup(t *testing.T) (*Service, *fakeSender, uuid.UUID, *pgxpool.Pool) {
 	}
 	t.Cleanup(func() { p.Exec(ctx, "DELETE FROM users WHERE id=$1", user) })
 	sender := &fakeSender{safe: true}
-	service := &Service{Pool: p, Config: Config{Enabled: true, Recipient: email, From: "jobs@example.test", Provider: "resend", Location: time.UTC, Hour: 8, MinScore: 50, MaxJobs: 10}, Sender: sender}
+	service := &Service{Pool: p, Config: Config{Enabled: true, Recipient: email, From: "jobs@example.test", Provider: "resend"}, Sender: sender}
 	return service, sender, user, p
 }
 func TestDigestPreviewAndDailyDeduplication(t *testing.T) {

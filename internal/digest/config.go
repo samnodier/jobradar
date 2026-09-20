@@ -5,41 +5,15 @@ import (
 	"github.com/samnodier/jobradar/internal/mailer"
 	"net/mail"
 	"os"
-	"strconv"
-	"time"
 )
 
 type Config struct {
 	Enabled                   bool
 	Recipient, From, Provider string
-	Location                  *time.Location
-	Hour, MinScore, MaxJobs   int
 }
 
 func FromEnv() (Config, mailer.Sender, error) {
-	c := Config{Enabled: os.Getenv("DIGEST_ENABLED") == "true", Recipient: os.Getenv("DIGEST_RECIPIENT"), From: os.Getenv("EMAIL_FROM"), Provider: os.Getenv("EMAIL_PROVIDER"), Hour: 8, MinScore: 50, MaxJobs: 10}
-	zone := os.Getenv("DIGEST_TIMEZONE")
-	if zone == "" {
-		zone = "America/New_York"
-	}
-	var err error
-	c.Location, err = time.LoadLocation(zone)
-	if err != nil {
-		return c, nil, fmt.Errorf("invalid DIGEST_TIMEZONE")
-	}
-	for _, item := range []struct {
-		name     string
-		ptr      *int
-		min, max int
-	}{{"DIGEST_HOUR", &c.Hour, 0, 23}, {"DIGEST_MIN_SCORE", &c.MinScore, 0, 100}, {"DIGEST_MAX_JOBS", &c.MaxJobs, 1, 25}} {
-		if val := os.Getenv(item.name); val != "" {
-			n, e := strconv.Atoi(val)
-			if e != nil || n < item.min || n > item.max {
-				return c, nil, fmt.Errorf("invalid %s", item.name)
-			}
-			*item.ptr = n
-		}
-	}
+	c := Config{Enabled: os.Getenv("DIGEST_ENABLED") == "true", Recipient: os.Getenv("DIGEST_RECIPIENT"), From: os.Getenv("EMAIL_FROM"), Provider: os.Getenv("EMAIL_PROVIDER")}
 	if !c.Enabled {
 		return c, nil, nil
 	}
