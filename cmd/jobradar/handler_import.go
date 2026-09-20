@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/samnodier/jobradar/internal/convert"
 	"github.com/samnodier/jobradar/internal/database"
+	"github.com/samnodier/jobradar/internal/extraction"
 	"github.com/samnodier/jobradar/internal/fetcher"
 	"github.com/samnodier/jobradar/internal/htmlx"
 	"github.com/samnodier/jobradar/internal/httpx"
@@ -85,11 +86,16 @@ func (cfg *apiConfig) handlerExtractJob(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	draft, structured := extraction.Page(string(data))
+	if structured {
+		httpx.RespondJSON(w, http.StatusOK, draft)
+		return
+	}
 	// Every provider the user has a key for, in priority order
 	keys, err := cfg.selectProviderKeys(ctx, userID)
 	if err != nil {
 		if errors.Is(err, errNoAPIKey) {
-			httpx.RespondError(w, http.StatusUnprocessableEntity, "no AI provider API key configured - add one in Settings")
+			httpx.RespondJSON(w, http.StatusOK, draft)
 			return
 		}
 		log.Printf("handleExtractJob: failed to load api keys for user %s: %v", userID, err)
@@ -117,13 +123,7 @@ func (cfg *apiConfig) handlerExtractJob(w http.ResponseWriter, r *http.Request) 
 		log.Printf("handleExtractJob: %s extract failed for URL %s user %s (trying next provider if any): %v", pk.provider, parsedURL.Hostname(), userID, extractErr)
 	}
 	if extractErr != nil {
-		// The permanent error (bad key -> 401) is the user's problem (422)
-		if errors.Is(extractErr, llm.ErrPermanent) {
-			httpx.RespondError(w, http.StatusUnprocessableEntity, "failed to extract the job details from the url")
-			return // drop it, don't retry
-		}
-		// Transient errors are the service's problem — the user can retry
-		httpx.RespondError(w, http.StatusBadGateway, "service unavailable")
+		httpx.RespondJSON(w, http.StatusOK, draft)
 		return
 	}
 

@@ -92,6 +92,7 @@ async function handleExtract() {
     if (res.ok) {
       const draft = await res.json()
       Object.assign(form, emptyDraft(), draft, { source_url: trimmedURL })
+      toast.success('Page loaded. Review all fields; missing details must be entered manually.')
       step.value = 'review'
       return
     }

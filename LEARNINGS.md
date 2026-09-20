@@ -724,3 +724,12 @@ The prompt asks for truthful tailoring and treats posting content as data. This 
 Questions: Why not serialize the entire user object? What is a read-only consistent snapshot? Why is clipboard access sometimes unavailable on a local-network HTTP address? How does prompt injection differ from HTML injection? Why must every rewritten experience bullet remain grounded in actual work?
 
 Code: `handler_ai_context.go`, `JobDetail.vue`.
+
+
+### Job import without a model
+
+Import first checks a fetched page for Schema.org JobPosting JSON-LD, including graph/array forms. If available, it reads title, employer, description and location without an AI request. Otherwise it can use an optional configured extractor, then fall back to page title and visible text. It never guesses missing company, pay or remote status. The review form remains mandatory. Private WhatsApp messages, login-only pages, blocked scrapers and JavaScript-only content cannot reliably be fetched as public HTML; manual entry remains available.
+
+Questions: Why prefer structured metadata over guessing from prose? Why is a review form still necessary? Why doesn't an HTTP fetch render a JavaScript application? Why must fetching links defend against SSRF? How do fallbacks preserve a useful workflow during provider outages?
+
+Code: `internal/extraction/page.go`, `handler_import.go`. Schema reference: https://schema.org/JobPosting .
