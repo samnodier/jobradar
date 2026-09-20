@@ -35,3 +35,6 @@ SET
     is_enriched = TRUE,
     updated_at = NOW()
 WHERE user_id = $1 AND job_id = $2;
+
+-- name: UpdateMatchEligibility :exec
+UPDATE user_job_matches SET preference_eligible=$3,preference_notes=$4 WHERE user_id=$1 AND job_id=$2;

@@ -212,6 +212,7 @@ SELECT
     j.external_id,
     j.job_source,
     j.title,
+    j.employment_type,
     j.company_name,
     j.description,
     j.source_url,
@@ -233,6 +234,8 @@ SELECT
     m.missing_skills,
     m.ai_summary,
     m.is_enriched,
+    m.preference_eligible,
+    m.preference_notes,
     m.created_at AS match_created_at,
     m.updated_at AS match_updated_at,
     (s.id IS NOT NULL)::BOOLEAN AS is_saved,
@@ -251,36 +254,39 @@ type GetJobByIDParams struct {
 }
 
 type GetJobByIDRow struct {
-	ID              uuid.UUID     `json:"id"`
-	ExternalID      string        `json:"external_id"`
-	JobSource       string        `json:"job_source"`
-	Title           string        `json:"title"`
-	CompanyName     string        `json:"company_name"`
-	Description     *string       `json:"description"`
-	SourceUrl       string        `json:"source_url"`
-	SalaryMin       *int32        `json:"salary_min"`
-	SalaryMax       *int32        `json:"salary_max"`
-	Currency        *string       `json:"currency"`
-	JobLocation     *string       `json:"job_location"`
-	IsRemote        *bool         `json:"is_remote"`
-	Skills          []string      `json:"skills"`
-	LogoUrl         *string       `json:"logo_url"`
-	CreatedByUserID pgtype.UUID   `json:"created_by_user_id"`
-	CreatedAt       *time.Time    `json:"created_at"`
-	UpdatedAt       *time.Time    `json:"updated_at"`
-	MatchScore      *int32        `json:"match_score"`
-	TitleScore      pgtype.Float8 `json:"title_score"`
-	SkillScore      pgtype.Float8 `json:"skill_score"`
-	ExperienceScore pgtype.Float8 `json:"experience_score"`
-	MatchedSkills   []string      `json:"matched_skills"`
-	MissingSkills   []string      `json:"missing_skills"`
-	AiSummary       *string       `json:"ai_summary"`
-	IsEnriched      *bool         `json:"is_enriched"`
-	MatchCreatedAt  *time.Time    `json:"match_created_at"`
-	MatchUpdatedAt  *time.Time    `json:"match_updated_at"`
-	IsSaved         bool          `json:"is_saved"`
-	IsApplied       bool          `json:"is_applied"`
-	IsMatched       bool          `json:"is_matched"`
+	ID                 uuid.UUID     `json:"id"`
+	ExternalID         string        `json:"external_id"`
+	JobSource          string        `json:"job_source"`
+	Title              string        `json:"title"`
+	EmploymentType     *string       `json:"employment_type"`
+	CompanyName        string        `json:"company_name"`
+	Description        *string       `json:"description"`
+	SourceUrl          string        `json:"source_url"`
+	SalaryMin          *int32        `json:"salary_min"`
+	SalaryMax          *int32        `json:"salary_max"`
+	Currency           *string       `json:"currency"`
+	JobLocation        *string       `json:"job_location"`
+	IsRemote           *bool         `json:"is_remote"`
+	Skills             []string      `json:"skills"`
+	LogoUrl            *string       `json:"logo_url"`
+	CreatedByUserID    pgtype.UUID   `json:"created_by_user_id"`
+	CreatedAt          *time.Time    `json:"created_at"`
+	UpdatedAt          *time.Time    `json:"updated_at"`
+	MatchScore         *int32        `json:"match_score"`
+	TitleScore         pgtype.Float8 `json:"title_score"`
+	SkillScore         pgtype.Float8 `json:"skill_score"`
+	ExperienceScore    pgtype.Float8 `json:"experience_score"`
+	MatchedSkills      []string      `json:"matched_skills"`
+	MissingSkills      []string      `json:"missing_skills"`
+	AiSummary          *string       `json:"ai_summary"`
+	IsEnriched         *bool         `json:"is_enriched"`
+	PreferenceEligible *bool         `json:"preference_eligible"`
+	PreferenceNotes    []string      `json:"preference_notes"`
+	MatchCreatedAt     *time.Time    `json:"match_created_at"`
+	MatchUpdatedAt     *time.Time    `json:"match_updated_at"`
+	IsSaved            bool          `json:"is_saved"`
+	IsApplied          bool          `json:"is_applied"`
+	IsMatched          bool          `json:"is_matched"`
 }
 
 func (q *Queries) GetJobByID(ctx context.Context, arg GetJobByIDParams) (GetJobByIDRow, error) {
@@ -291,6 +297,7 @@ func (q *Queries) GetJobByID(ctx context.Context, arg GetJobByIDParams) (GetJobB
 		&i.ExternalID,
 		&i.JobSource,
 		&i.Title,
+		&i.EmploymentType,
 		&i.CompanyName,
 		&i.Description,
 		&i.SourceUrl,
@@ -312,6 +319,8 @@ func (q *Queries) GetJobByID(ctx context.Context, arg GetJobByIDParams) (GetJobB
 		&i.MissingSkills,
 		&i.AiSummary,
 		&i.IsEnriched,
+		&i.PreferenceEligible,
+		&i.PreferenceNotes,
 		&i.MatchCreatedAt,
 		&i.MatchUpdatedAt,
 		&i.IsSaved,
@@ -350,6 +359,7 @@ SELECT
     j.external_id,
     j.job_source,
     j.title,
+    j.employment_type,
     j.company_name,
     j.description,
     j.source_url,
@@ -373,6 +383,8 @@ SELECT
     m.missing_skills,
     m.ai_summary,
     m.is_enriched,
+    m.preference_eligible,
+    m.preference_notes,
     m.created_at AS match_created_at,
     m.updated_at AS match_updated_at,
     (s.id IS NOT NULL)::BOOLEAN AS is_saved,
@@ -385,8 +397,8 @@ LEFT JOIN user_job_matches AS m ON j.id = m.job_id AND m.user_id = $1
 WHERE (j.created_by_user_id IS NULL OR j.created_by_user_id = $1)
 AND ($4::text = '' OR j.title ILIKE '%' || $4 || '%' OR j.company_name ILIKE '%' || $4 || '%' OR array_to_string(j.skills, ' ') ILIKE '%' || $4 || '%')
 AND ($5::text = 'all' OR ($5='saved' AND s.id IS NOT NULL) OR ($5='applied' AND a.id IS NOT NULL)
- OR ($5='remote' AND j.is_remote=true) OR ($5='today' AND j.created_at >= date_trunc('day',now())))
-ORDER BY CASE WHEN $6::boolean THEN j.created_at END ASC,
+ OR ($5='remote' AND j.is_remote=true) OR ($5='matched' AND m.preference_eligible=true AND m.match_score >= COALESCE((SELECT min_score FROM user_match_settings WHERE user_id=$1),60) AND NOT EXISTS(SELECT 1 FROM pending_matches p WHERE p.user_id=$1 AND p.job_id=j.id)) OR ($5='today' AND j.created_at >= date_trunc('day',now())))
+ORDER BY CASE WHEN $5='matched' THEN m.match_score END DESC NULLS LAST, CASE WHEN $6::boolean THEN j.created_at END ASC,
  CASE WHEN NOT $6::boolean THEN j.created_at END DESC, j.id DESC
 LIMIT $2 OFFSET $3
 `
@@ -401,38 +413,41 @@ type GetJobsParams struct {
 }
 
 type GetJobsRow struct {
-	ID              uuid.UUID     `json:"id"`
-	ExternalID      string        `json:"external_id"`
-	JobSource       string        `json:"job_source"`
-	Title           string        `json:"title"`
-	CompanyName     string        `json:"company_name"`
-	Description     *string       `json:"description"`
-	SourceUrl       string        `json:"source_url"`
-	SalaryMin       *int32        `json:"salary_min"`
-	SalaryMax       *int32        `json:"salary_max"`
-	Currency        *string       `json:"currency"`
-	JobLocation     *string       `json:"job_location"`
-	IsRemote        *bool         `json:"is_remote"`
-	Skills          []string      `json:"skills"`
-	LogoUrl         *string       `json:"logo_url"`
-	CreatedByUserID pgtype.UUID   `json:"created_by_user_id"`
-	PostedAt        *time.Time    `json:"posted_at"`
-	ExpiresAt       *time.Time    `json:"expires_at"`
-	CreatedAt       *time.Time    `json:"created_at"`
-	UpdatedAt       *time.Time    `json:"updated_at"`
-	MatchScore      *int32        `json:"match_score"`
-	TitleScore      pgtype.Float8 `json:"title_score"`
-	SkillScore      pgtype.Float8 `json:"skill_score"`
-	ExperienceScore pgtype.Float8 `json:"experience_score"`
-	MatchedSkills   []string      `json:"matched_skills"`
-	MissingSkills   []string      `json:"missing_skills"`
-	AiSummary       *string       `json:"ai_summary"`
-	IsEnriched      *bool         `json:"is_enriched"`
-	MatchCreatedAt  *time.Time    `json:"match_created_at"`
-	MatchUpdatedAt  *time.Time    `json:"match_updated_at"`
-	IsSaved         bool          `json:"is_saved"`
-	IsApplied       bool          `json:"is_applied"`
-	IsMatched       bool          `json:"is_matched"`
+	ID                 uuid.UUID     `json:"id"`
+	ExternalID         string        `json:"external_id"`
+	JobSource          string        `json:"job_source"`
+	Title              string        `json:"title"`
+	EmploymentType     *string       `json:"employment_type"`
+	CompanyName        string        `json:"company_name"`
+	Description        *string       `json:"description"`
+	SourceUrl          string        `json:"source_url"`
+	SalaryMin          *int32        `json:"salary_min"`
+	SalaryMax          *int32        `json:"salary_max"`
+	Currency           *string       `json:"currency"`
+	JobLocation        *string       `json:"job_location"`
+	IsRemote           *bool         `json:"is_remote"`
+	Skills             []string      `json:"skills"`
+	LogoUrl            *string       `json:"logo_url"`
+	CreatedByUserID    pgtype.UUID   `json:"created_by_user_id"`
+	PostedAt           *time.Time    `json:"posted_at"`
+	ExpiresAt          *time.Time    `json:"expires_at"`
+	CreatedAt          *time.Time    `json:"created_at"`
+	UpdatedAt          *time.Time    `json:"updated_at"`
+	MatchScore         *int32        `json:"match_score"`
+	TitleScore         pgtype.Float8 `json:"title_score"`
+	SkillScore         pgtype.Float8 `json:"skill_score"`
+	ExperienceScore    pgtype.Float8 `json:"experience_score"`
+	MatchedSkills      []string      `json:"matched_skills"`
+	MissingSkills      []string      `json:"missing_skills"`
+	AiSummary          *string       `json:"ai_summary"`
+	IsEnriched         *bool         `json:"is_enriched"`
+	PreferenceEligible *bool         `json:"preference_eligible"`
+	PreferenceNotes    []string      `json:"preference_notes"`
+	MatchCreatedAt     *time.Time    `json:"match_created_at"`
+	MatchUpdatedAt     *time.Time    `json:"match_updated_at"`
+	IsSaved            bool          `json:"is_saved"`
+	IsApplied          bool          `json:"is_applied"`
+	IsMatched          bool          `json:"is_matched"`
 }
 
 func (q *Queries) GetJobs(ctx context.Context, arg GetJobsParams) ([]GetJobsRow, error) {
@@ -456,6 +471,7 @@ func (q *Queries) GetJobs(ctx context.Context, arg GetJobsParams) ([]GetJobsRow,
 			&i.ExternalID,
 			&i.JobSource,
 			&i.Title,
+			&i.EmploymentType,
 			&i.CompanyName,
 			&i.Description,
 			&i.SourceUrl,
@@ -479,6 +495,8 @@ func (q *Queries) GetJobs(ctx context.Context, arg GetJobsParams) ([]GetJobsRow,
 			&i.MissingSkills,
 			&i.AiSummary,
 			&i.IsEnriched,
+			&i.PreferenceEligible,
+			&i.PreferenceNotes,
 			&i.MatchCreatedAt,
 			&i.MatchUpdatedAt,
 			&i.IsSaved,

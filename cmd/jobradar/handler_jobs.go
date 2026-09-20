@@ -43,7 +43,7 @@ func (cfg *apiConfig) handlerJobsGet(w http.ResponseWriter, r *http.Request) {
 		filter = "all"
 	}
 	switch filter {
-	case "all", "saved", "applied", "remote", "today":
+	case "all", "saved", "applied", "remote", "today", "matched":
 	default:
 		httpx.RespondError(w, 400, "invalid filter")
 		return

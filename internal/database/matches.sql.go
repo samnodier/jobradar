@@ -27,6 +27,27 @@ func (q *Queries) DeleteMatch(ctx context.Context, arg DeleteMatchParams) error 
 	return err
 }
 
+const updateMatchEligibility = `-- name: UpdateMatchEligibility :exec
+UPDATE user_job_matches SET preference_eligible=$3,preference_notes=$4 WHERE user_id=$1 AND job_id=$2
+`
+
+type UpdateMatchEligibilityParams struct {
+	UserID             uuid.UUID `json:"user_id"`
+	JobID              uuid.UUID `json:"job_id"`
+	PreferenceEligible bool      `json:"preference_eligible"`
+	PreferenceNotes    []string  `json:"preference_notes"`
+}
+
+func (q *Queries) UpdateMatchEligibility(ctx context.Context, arg UpdateMatchEligibilityParams) error {
+	_, err := q.db.Exec(ctx, updateMatchEligibility,
+		arg.UserID,
+		arg.JobID,
+		arg.PreferenceEligible,
+		arg.PreferenceNotes,
+	)
+	return err
+}
+
 const updateMatchEnrichment = `-- name: UpdateMatchEnrichment :exec
 UPDATE user_job_matches
 SET

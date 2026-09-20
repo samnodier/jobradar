@@ -657,3 +657,14 @@ Small commits isolate a feature or fix for review and debugging. The unpushed re
 Questions: Why do preferences belong in the database but API credentials stay in the environment? How do PUT and PATCH differ? Why validate both in HTTP and PostgreSQL? How does the session prevent editing another account? How does a smaller commit help git bisect? What changes when rewriting published rather than local history?
 
 Code: `handler_match_settings.go`, `sql/queries/match_settings.sql`, `20260920000200_match_preferences.sql`.
+
+
+### Scores versus preference gates
+
+Title similarity contributes 45%, required-skill coverage 30%, and experience text overlap 25%, renormalized over available signals. A score is a ranking heuristic, not a probability of getting hired. Geography, work mode, employment type and compatible salary ranges are separate eligibility gates. The user chooses whether missing metadata is allowed; notes explain missing facts or exclusions. Location matching uses normalized phrases, not geocoding, and remote does not imply worldwide eligibility. Industry/company-stage preferences are recorded but not enforced because sources lack reliable fields. Salary comparisons assume the same pay period and currency; no exchange-rate conversion is performed.
+
+Best matches use the user's threshold and exclude scores awaiting recomputation. Imported jobs remain accessible even when ineligible, allowing deliberate applications outside preferences.
+
+Questions: Why separate ranking from filtering? Why is missing information different from false? Can a 90 score mean a 90% hiring chance? Why must a remote US-only job not automatically qualify someone in Kenya? Why exclude stale scores during rematching? What metadata is missing from each source?
+
+Code: `internal/matcher/preferences.go`, `worker_match.go`, `sql/queries/jobs.sql`.
