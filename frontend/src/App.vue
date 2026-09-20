@@ -2,6 +2,7 @@
 import { onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
+import NotificationBell from './components/NotificationBell.vue'
 import AppToast from './components/AppToast.vue'
 
 const authStore = useAuthStore()
@@ -49,6 +50,7 @@ async function logout() {
       <!-- Auth actions -->
       <div>
         <div v-if="authStore.user" class="flex items-center gap-4">
+          <NotificationBell />
           <RouterLink
             :to="'/@' + authStore.user.username"
             class="inline-flex items-center gap-[0.85rem] px-2 py-1 bg-white/80"

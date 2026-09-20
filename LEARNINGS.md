@@ -704,3 +704,12 @@ A qualifying match creates one database notification per user/job in the matchin
 Questions: Why use a unique constraint instead of checking first? How does transaction rollback prevent a notification for a score that was never committed? Why recheck current eligibility when listing old notifications? Why scope mark-read by both notification ID and user ID? When would WebSockets be preferable to polling?
 
 Code: `sql/queries/notifications.sql`, `handler_notifications.go`, `worker_match.go`.
+
+
+### Best-match views, notification polling and deep links
+
+The job feed has a Best Matches filter ordered by score on the server before pagination. The profile tab shows the first 20 with a link to the full feed. The notification bell polls every 30 seconds while visible and cancels work on unmount. Notifications open `/jobs?job=...`; the detail view fetches that specific authorized job even when it is not in the currently loaded page. Client-side sorting only one page would not produce the globally best matches.
+
+Questions: Why must ranking happen before LIMIT? Why should a deep link not assume the job is in the first page? Why cancel fetches and timers when components unmount? How do authenticated server queries protect private links?
+
+Code: `JobsView.vue`, `BestMatchesTab.vue`, `NotificationBell.vue`.

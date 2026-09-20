@@ -29,6 +29,7 @@ const activeFilter = ref<string>((route.query.filter as string) || 'all')
 
 const filters = [
   { label: 'All', value: 'all' },
+  { label: 'Best matches', value: 'matched' },
   { label: 'Saved', value: 'saved' },
   { label: 'Applied', value: 'applied' },
   { label: 'Remote', value: 'remote' },
@@ -44,13 +45,14 @@ watch(
 
 watch(activeFilter, (value) => {
   if (value === 'all') {
-    router.replace({ query: {} }).catch(() => {})
+    router.replace({ query: { job: route.query.job } }).catch(() => {})
   } else {
     router
       .replace({
         query: {
           filter: value === 'all' ? undefined : value,
           q: route.query.q,
+          job: route.query.job,
         },
       })
       .catch(() => {})
@@ -79,6 +81,8 @@ const filteredJobs = computed(() => {
 })
 
 const sortedJobs = computed(() => {
+  if (activeFilter.value === 'matched') return filteredJobs.value
+
   return [...filteredJobs.value].sort((a, b) => {
     const left = new Date(a.created_at ?? '').getTime()
     const right = new Date(b.created_at ?? '').getTime()
@@ -88,18 +92,28 @@ const sortedJobs = computed(() => {
 
 const groupedJobs = computed(() => {
   return sortedJobs.value.reduce<Record<string, Job[]>>((groups, job) => {
-    const label = job.created_at
-      ? new Date(job.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-      : 'Unknown'
+    const label =
+      activeFilter.value === 'matched'
+        ? 'Best matches — highest score first'
+        : job.created_at
+          ? new Date(job.created_at).toLocaleDateString(undefined, {
+              month: 'short',
+              day: 'numeric',
+            })
+          : 'Unknown'
     groups[label] = groups[label] || []
     groups[label].push(job)
     return groups
   }, {})
 })
 
+const linkedJob = ref<Job | null>(null)
 const selectedJob = computed(() => {
   if (!selectedJobId.value) return null
-  return jobs.value.find((job) => job.id === selectedJobId.value) ?? null
+  return (
+    jobs.value.find((job) => job.id === selectedJobId.value) ??
+    (linkedJob.value?.id === selectedJobId.value ? linkedJob.value : null)
+  )
 })
 
 const detailOpen = computed(() => !!selectedJob.value)
@@ -127,6 +141,10 @@ function handleImportJobCreated(job: Job) {
 
 function closeDetail() {
   selectedJobId.value = null
+  linkedJob.value = null
+  const query = { ...route.query }
+  delete query.job
+  router.replace({ query })
 }
 
 async function fetchJobs(append = false) {
@@ -222,7 +240,23 @@ function toggleSort() {
   sortDirection.value = sortDirection.value === 'newest' ? 'oldest' : 'newest'
 }
 
-onMounted(() => fetchJobs())
+async function openLinkedJob() {
+  const id = route.query.job
+  if (typeof id !== 'string') return
+  try {
+    const r = await fetch(`/api/jobs/${encodeURIComponent(id)}`, { credentials: 'include' })
+    if (!r.ok) throw new Error('Job no longer available')
+    linkedJob.value = await r.json()
+    selectedJobId.value = id
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : 'Could not open job')
+  }
+}
+watch(() => route.query.job, openLinkedJob)
+onMounted(() => {
+  fetchJobs()
+  openLinkedJob()
+})
 onUnmounted(() => {
   requestController?.abort()
   clearInterval(refreshTimer)

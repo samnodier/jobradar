@@ -20,6 +20,7 @@ import LanguageCard from '@/components/LanguageCard.vue'
 import LanguageForm from '@/components/LanguageForm.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import PreferencesTab from '@/components/PreferencesTab.vue'
+import BestMatchesTab from '@/components/BestMatchesTab.vue'
 import SettingsTab from '@/components/SettingsTab.vue'
 
 import type { Education, EducationInput } from '@/types/education'
@@ -29,7 +30,7 @@ import type { Language, LanguageInput } from '@/types/language'
 import type { Experience, ExperienceInput } from '@/types/experience'
 import type { User } from '@/types/user'
 
-type ProfileTab = 'overview' | 'resume details' | 'preferences' | 'settings'
+type ProfileTab = 'overview' | 'resume details' | 'preferences' | 'settings' | 'matches'
 
 const authStore = useAuthStore()
 const profileStore = useProfileStore()
@@ -64,6 +65,7 @@ const tabs: Array<{ key: ProfileTab; label: string }> = [
   { key: 'resume details', label: 'Resume Details' },
   { key: 'preferences', label: 'Preferences' },
   { key: 'settings', label: 'Settings' },
+  { key: 'matches', label: 'Best Matches' },
 ]
 
 const availabilityLabels: Record<string, string> = {
@@ -727,6 +729,7 @@ onMounted(async () => {
           <PreferencesTab v-if="activeTab === 'preferences'" :preferences="preferences" />
 
           <!-- Settings -->
+          <BestMatchesTab v-if="activeTab === 'matches'" />
           <SettingsTab v-if="activeTab === 'settings'" :user="authStore.user" />
         </div>
       </div>

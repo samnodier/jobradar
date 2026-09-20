@@ -27,7 +27,10 @@ const authStore = useAuthStore()
         <RouterLink
           to="/jobs"
           class="flex items-center gap-3 px-4 py-2 text-sm text-gray-500 hover:bg-gray-100/50 hover:text-gray-900 transition-all group"
-          :class="{ 'bg-accent-lighter text-accent font-semibold': $route.path === '/jobs' && !$route.query.filter }"
+          :class="{
+            'bg-accent-lighter text-accent font-semibold':
+              $route.path === '/jobs' && !$route.query.filter,
+          }"
         >
           <Zap
             class="w-4 h-4 opacity-60 group-hover:opacity-100 shrink-0"
@@ -68,7 +71,10 @@ const authStore = useAuthStore()
             query: { filter: 'saved' },
           }"
           class="flex items-center gap-3 px-4 py-2 text-sm text-gray-500 hover:bg-gray-100/50 hover:text-gray-900 transition-all group"
-          :class="{ 'bg-accent-lighter text-accent font-semibold': $route.path === '/jobs' && $route.query.filter === 'saved' }"
+          :class="{
+            'bg-accent-lighter text-accent font-semibold':
+              $route.path === '/jobs' && $route.query.filter === 'saved',
+          }"
         >
           <Bookmark
             class="w-4 h-4 opacity-60 group-hover:opacity-100 shrink-0"
@@ -76,6 +82,11 @@ const authStore = useAuthStore()
           />
           Saved Jobs
         </RouterLink>
+        <RouterLink
+          to="/jobs?filter=matched"
+          class="flex items-center gap-3 px-4 py-2 text-sm text-gray-500 hover:bg-gray-100"
+          >Best Matches</RouterLink
+        >
         <RouterLink
           to="/applications"
           class="flex items-center gap-3 px-4 py-2 text-sm text-gray-500 hover:bg-gray-100/50 hover:text-gray-900 transition-all group"
