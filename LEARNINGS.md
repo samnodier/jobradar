@@ -743,3 +743,14 @@ Question: How do you choose one authoritative source when migrating configuratio
 A production build caught a Vue template expression that type checking accepted after formatting: multiple statements inside a click attribute were parsed differently. Moving the behavior into a named script function fixes the template and improves readability. Run the actual production compiler as well as the type checker; they verify different parts of the application.
 
 Question: Why can type checking pass while the production template build fails? Code: `NotificationBell.vue`.
+
+
+### Personal hosting, email economics and future agents
+
+A digest containing ten jobs is one email to one recipient. Two daily digests use roughly sixty monthly messages, within Resend's documented free transactional quota at verification time. Testing sender domains can restrict the recipient; authentication email, sender authorization and provider acceptance are separate concerns. A GoHighLevel location ID selects a subaccount, while a contact ID identifies the recipient.
+
+The personal scheduler runs inside the Go process, so free hosting that sleeps also stops background work. Render's free PostgreSQL lifetime is another constraint. Existing home hardware can run the application stack without a local model, but power, connectivity, storage/backups and wakefulness remain operational responsibilities. Private HTTPS access can avoid exposing the database or app publicly. A hosted external agent cannot automatically access a private LAN endpoint.
+
+Questions: Why does an idle web-service sleep policy break cron-like work inside the process? Why is free compute different from persistent free storage? How would you move scheduling into an external job runner? Why is localhost inside a container different from localhost on the host? Why is a subaccount ID not an email recipient? What should a future read-only agent token allow, and how would it be revoked? Why is a chat plan not automatically an API allowance? What must be backed up besides PostgreSQL data?
+
+Guide and current primary sources: `docs/PERSONAL_WORKFLOW.md`. These are operational tradeoffs, not a promise that external services will remain free forever.

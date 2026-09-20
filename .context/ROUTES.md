@@ -5,7 +5,7 @@ All `/api` responses are non-cacheable. Job reads allow anonymous access to publ
 | Method | Route | Access / behavior |
 | --- | --- | --- |
 | GET | `/api/health` | Public liveness |
-| GET | `/api/jobs` | Public-or-owned; limit 1–100 (default 50), offset, q, filter=all/saved/applied/remote/today, order=newest/oldest |
+| GET | `/api/jobs` | Public-or-owned; limit 1–100 (default 50), offset, q, filter=all/saved/applied/remote/today/matched (matched uses profile threshold and highest-score-first ordering), order=newest/oldest |
 | GET | `/api/jobs/stats` | Public-job totals |
 | GET | `/api/jobs/{jobID}` | Public-or-owned details and per-user match |
 | POST | `/api/jobs/import` | Auth; extract draft from URL; no database write |
@@ -19,6 +19,10 @@ All `/api` responses are non-cacheable. Job reads allow anonymous access to publ
 | GET/POST | `/api/profile/experiences`, `/educations`, `/projects`, `/certifications`, `/languages` | Auth; own profile records (each collection is under /api/profile) |
 | PATCH/DELETE | `/api/profile/{collection}/{id}` | Auth; own record; language uses its language identifier |
 | GET/PATCH | `/api/profile/preferences` | Auth; own preferences; triggers rematching for relevant rows |
+| GET/PUT | `/api/profile/matching` | Auth; own score/filter/search-market/delivery settings; PUT validates complete resource |
+| GET | `/api/jobs/{jobID}/ai-context` | Auth; public-or-owned job plus own resume, Markdown, no AI call |
+| GET | `/api/notifications` | Auth; latest 50 currently eligible own match notifications |
+| PATCH | `/api/notifications/{notificationID}/read` | Auth; mark own notification read |
 | GET | `/api/digest` | Auth; own digest status/history, no send |
 | GET | `/api/digest/preview` | Auth; configured personal recipient only; HTML preview, no send |
 | GET | `/api/system/status` | Auth; DB/Redis connectivity, backlog and source health |

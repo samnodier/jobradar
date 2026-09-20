@@ -34,13 +34,13 @@ Use your actual domain, configure DNS and the OAuth callback, and ensure the pro
 2. Verify jobs appear and scores are populated. Wait until the matching backlog drains.
 3. Add Adzuna credentials/searches and a small optional Greenhouse watchlist, recreate the app, then check source health.
 4. Preview the digest on the dashboard. A preview sends nothing. Confirm the destination in `.env` and the sending account's verified sender setup.
-5. Set `DIGEST_ENABLED=true` and recreate the app. The background scheduler will deliver after the configured local hour. For an immediate cycle:
+5. Set `DIGEST_ENABLED=true` and recreate the app. The background scheduler will deliver after a configured profile-local hour. For an immediate cycle:
 
 ```sh
 docker compose -p jobradar -f compose.production.yml run --rm app --digest-once
 ```
 
-One daily digest is enforced even if you run the command twice. Empty or low-score results do not produce mail. This is intentional; do not clear delivery records just to force duplicate messages. Check the dashboard's persisted state and the provider's message history. Check spam as well as inbox.
+One digest per configured local-date/hour slot is enforced even if you run the command twice. Profile → Settings controls one or two daily hours, timezone and the score threshold. Jobs are reserved across all slots so morning results do not repeat in the evening. Empty or low-score results do not produce mail. This is intentional; do not clear delivery records just to force duplicate messages. Check the dashboard's persisted state and the provider's message history. Check spam as well as inbox.
 
 Live OAuth, Adzuna access, and inbox delivery require your accounts and cannot be established solely by tests using fake providers.
 
@@ -61,7 +61,7 @@ Self-hosting SMTP is possible, but is unnecessary for this release. It introduce
 - **Email `uncertain`:** inspect the provider's send history. If it accepted the message, mark that digest sent with the provider message ID. If absence is confirmed, choose a deliberate recovery action; do not blindly reset all digests.
 - **Email `failed`:** inspect the sanitized error and correct credentials/sender/configuration. A reviewed reset of that one digest may be appropriate while its idempotency window is valid. Old attempts outside the window require explicit reconciliation; never bypass the safety check casually.
 - **Changed provider/sender:** pending deliveries are held for review rather than sent through a different account automatically.
-- **No digest:** check recipient matches the signed-in account, notifications are enabled, source health, pending matches, score threshold, posting age and whether those jobs were already reserved for an earlier digest.
+- **No digest:** check recipient matches the signed-in account, master notifications and profile email delivery are enabled, source health, pending matches, score threshold, posting age and whether those jobs were already reserved for an earlier digest.
 
 The ledger favors avoiding duplicates when delivery is uncertain. It cannot guarantee exactly-once delivery across a database and an arbitrary email provider. Backing up/restoring old ledger state may also require reconciliation with provider history.
 
@@ -80,3 +80,7 @@ The development `./pgdata` directory and production named volume are separate. T
 ## Upgrade
 
 Build/test on a feature branch, back up, run the pending migrations, deploy the verified image, then inspect health/backlog/delivery history. Keep `dev` as the integration branch and promote a verified release to `main`. Image rollback alone may not undo a schema change; inspect the migration compatibility first.
+
+## Personal home-server workflow
+
+See [PERSONAL_WORKFLOW.md](PERSONAL_WORKFLOW.md) for the two user scenarios, profile settings, matching limitations, sender identity, free-plan limits and self-hosted/private HTTPS deployment. The current version adds new migrations through 20260920000500; run all pending migrations before starting the new binary.

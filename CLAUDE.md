@@ -69,7 +69,7 @@ See `backlog.md` for remaining tasks organized by phase.
 
 ## Current working agreement
 
-Sam authorizes implementation and maintenance of LEARNINGS.md. Record conceptual questions, answers, tradeoffs, and code locations for a later walkthrough. Do not interrupt implementation for quizzes. This agreement supersedes the historical mentorship rules below. Do not add assistant co-author trailers, generated-by footers, or contributor credits.
+Sam authorizes implementation and maintenance of LEARNINGS.md. Keep commits small and focused: verify and commit each coherent fix or feature before continuing. Record conceptual questions, answers, tradeoffs, and code locations for a later walkthrough. Do not interrupt implementation for quizzes. This agreement supersedes the historical mentorship rules below. Do not add assistant co-author trailers, generated-by footers, or contributor credits.
 
 ## Historical Mentorship Rules
 

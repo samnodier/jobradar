@@ -27,3 +27,17 @@ The HTTP check used a synthetic user and Redis session in the isolated environme
 The application builds and runs without an AI provider or local language model. Tests do not establish that any remote provider is available, that credentials are valid, or that an email arrives in the inbox. Automatic AI enrichment remains optional and disabled by default.
 
 Nonblocking frontend build warnings: the vendor bundle exceeds the default 500 kB warning threshold, and a dependency contains misplaced pure annotations. Neither prevented type checking or production asset generation; route-level code splitting can be a later improvement.
+
+
+## Profile workflows verification
+
+The follow-up implementation on `feature/profile-workflows` was verified with:
+
+- Backend unit/integration suite with the race detector, including preference gates, notification deduplication/ownership, safe Markdown export, invalid settings and ownership enforcement, morning/evening slots and cross-slot job deduplication. No real provider sends.
+- Go vet and gopls diagnostics on the originally flagged files and new handlers: no reported diagnostics. Unsaved editor buffers are outside this check.
+- Vue type checks, production build and Vitest shell test: passed. A production-only inline event-expression failure was fixed in its own commit.
+- Full production Docker image build: passed.
+- Running-container HTTP workflow: save profile settings and roles/location; import Nairobi and London jobs; background worker scores both but recommends only the desired location; exactly one eligible notification, mark read; Markdown includes profile/job facts and excludes primary contact email; anonymous export/private-job access rejected; preview includes only the eligible job; digest status uses profile hours/threshold; in-app opt-out hides notifications; deep-link SPA route serves correctly.
+- All migrations on a fresh isolated database, followed by rollback/reapply of migrations 20260920000200 through 20260920000500: passed. The digest-slot rollback intentionally refuses if data would violate the old one-digest-per-day constraint.
+
+These checks used synthetic sessions and fake providers. Sam's manual browser review, actual OAuth, live Adzuna results, sender setup and inbox delivery remain necessary before production promotion. No changes were applied to the existing development database.

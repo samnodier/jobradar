@@ -49,3 +49,11 @@ The original abbreviated list above is historical; migration files and SQLC mode
 - email_digest_jobs: digest_id, user_id, job_id; PRIMARY KEY(user_id,job_id), cascading FKs. Reserves jobs in the same transaction as digest preparation.
 - New queries: UpsertPublicJob; ListPendingMatches, MarkMatchEnqueued, CompletePendingMatch, GetPendingMatchRevision, ScheduleUserMatches; digest preparation/delivery/history queries; ListServiceHealth.
 - GetJobs now takes bounded pagination, search, filter, and sort parameters. SaveJob and CreateApplication insert only from a public-or-owned job selection.
+
+## Profile workflows
+
+- user_match_settings: user_id PK/FK, min_score 0–100, work_mode any/remote/onsite, include_unknown, search_country, email_enabled, notifications_enabled, digest_timezone, digest_hours (1–2 hours 0–23), digest_max_jobs 1–25. GET supplies defaults when a row is absent.
+- user_job_matches adds preference_eligible and preference_notes; ranking and eligibility are separate.
+- email_digests adds digest_slot, changing uniqueness to (user_id,digest_date,digest_slot). User/job reservations still prevent repeat job delivery across slots/days.
+- match_notifications: id, user_id, job_id, created_at, read_at; UNIQUE(user_id,job_id); ownership FKs cascade. List joins current eligible scores/settings.
+- Settings, desired-location and relevant users preference changes schedule rematching.

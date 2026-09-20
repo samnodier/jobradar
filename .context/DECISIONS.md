@@ -32,3 +32,13 @@
 - **No local model dependency:** small-machine operation and predictable failure recovery take precedence over local inference.
 - **Deployment:** preserve current dev pgdata; production Compose uses separate named volumes. Serve built frontend from Go behind an HTTPS reverse proxy. Migrations are an explicit deployment step.
 - **Release scope:** finish job collection → useful matching → daily email before resume automation. Knowledge questions and code links are written into LEARNINGS.md for a later guided review.
+
+## Profile-driven personal workflow
+
+- User preferences are the source of truth for roles, locations, score threshold and delivery times. Environment variables retain provider credentials and a global email safety switch.
+- Eligibility is a separate deterministic gate with explanations; missing source metadata is user-controlled. No inference of worldwide work authorization from remote=true.
+- Notifications are once per user/job, created with the score transaction and filtered against current settings. No external push service in v1.
+- Manual AI tailoring uses authenticated Markdown export. No model charges, no autonomous application submission, no promise that chat subscriptions include arbitrary API automation.
+- Structured JobPosting data precedes optional model extraction; plain page text is the no-key/outage fallback. All imports require review.
+- Two local-time digest slots share the cross-day job delivery ledger; downtime catches up only the latest slot.
+- Small focused commits; verify dev locally with Sam before main promotion and deployment.

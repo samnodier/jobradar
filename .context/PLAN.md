@@ -1,6 +1,6 @@
 ## Current status — personal release
 
-Implementation branch: `feature/personal-release`, created from `dev` and fast-forwarded to the existing job-import work. Integration target: `dev`; production promotion to `main` follows live account verification. September 2026 implementation targets a personal, deployable daily job digest. Do not treat the older phase numbering as release dependencies.
+Implementation branch: `feature/profile-workflows`, created from `dev` and fast-forwarded to the existing job-import work. Integration target: `dev`; production promotion to `main` follows live account verification. September 2026 implementation targets a personal, deployable daily job digest. Do not treat the older phase numbering as release dependencies.
 
 ### Implemented
 
@@ -13,7 +13,11 @@ Implementation branch: `feature/personal-release`, created from `dev` and fast-f
 - Transactional pending-match records created by job/profile triggers; version-aware completion and recovery after lost delivery.
 - Separate optional AI queue; bounded requests/prompts and provider cooldown-aware retries.
 - URL import and manual entry; Groq/Gemini extraction fallback.
-- Daily personal email digest: fixed recipient, opt-out, timezone, threshold, persisted payload/ledger, stable Resend idempotency keys, conservative GoHighLevel ambiguous-send handling.
+- Profile matching settings: score threshold, work mode, unknown-field policy, supported Adzuna market, timezone, 1–2 delivery hours, max jobs and separate channel toggles.
+- Profile-driven Adzuna queries; role/skill/experience ranking plus eligibility gates for work mode, desired locations, employment type and compatible salary ranges.
+- Best Matches feed/profile tab, durable deduplicated in-app notifications and authorized deep links.
+- Markdown Copy for AI with safe profile export; structured JobPosting extraction and no-key text fallback.
+- Personal email digest: fixed recipient, opt-out, timezone, threshold, persisted payload/ledger, stable Resend idempotency keys, conservative GoHighLevel ambiguous-send handling.
 - Digest preview CLI/endpoint; dashboard shows real delivery state; status page reads real dependencies/source health.
 - Paginated/searchable feed, empty-list normalization, import refresh, production SPA serving.
 - Production application/migration Dockerfiles, Compose examples, deployment guide.
@@ -30,15 +34,19 @@ Implementation branch: `feature/personal-release`, created from `dev` and fast-f
 
 ### Remaining configuration for personal use
 
-- Confirm country/location/roles; set Adzuna application credentials.
-- Confirm recipient, sender, timezone and provider; configure either Resend or GoHighLevel.
+- Sam fills roles, locations and matching settings in the profile; set Adzuna application credentials in the environment.
+- Confirm recipient, sender and provider; set timezone/hour in Profile → Settings; configure either Resend or GoHighLevel.
 - Sign in, fill matching preferences, preview a digest, then exercise actual provider delivery.
 - Deploy behind HTTPS, configure OAuth callback, run migrations, verify backups and one week of scheduled operation.
 
 ### Deliberately deferred beyond personal v1
 
-Tailored resume generation, resume upload, in-app notification bell, Discord, broader ATS coverage, public multi-user onboarding, calibrated semantic ranking, cross-source fuzzy deduplication and reliable expired-job detection from partial feeds. Scores do not establish work authorization or geographic eligibility. These are not prerequisites for the personal digest.
+In-app tailored resume generation, resume upload, Discord, broader ATS coverage, public multi-user onboarding, calibrated semantic ranking, cross-source fuzzy deduplication and reliable expired-job detection from partial feeds. Scores do not establish work authorization or geographic eligibility. These are not prerequisites for the personal digest.
 
 ### Working agreement
 
 Sam authorized direct implementation and maintenance of learning notes. Record review questions instead of blocking progress for quizzes. Keep commits on feature branches, verify before merging into dev, and promote to main as a release. Do not add assistant attribution to commits, PRs, or contributors.
+
+## Current delivery agreement
+
+Work is committed in small focused increments. The prior unpushed release commit was regrouped into 12 commits with identical final tree; a local backup branch preserves the old tip. No remote history was rewritten. Sam will manually test dev before main promotion/push and deployment. A home server is the recommended zero-hosting-bill option for this always-running scheduler; no local language model is required.
