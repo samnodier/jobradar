@@ -1,129 +1,84 @@
-<!-- markdownlint-disable MD013 -->
+# Jobradar
 
-# JobRadar — a self-hosted job search command center
+A personal job-search application built with Go, PostgreSQL, Redis, Vue 3 and TypeScript. It collects jobs, ranks them against a profile, tracks applications, and sends a daily personal email digest. Core matching and notifications work without an AI API or a local model.
 
-JobRadar aggregates job listings from multiple sources into one place, scores each one against your profile with AI, and helps you track every application from *saved* to *offer*.
+## Working features
 
-![JobRadar home screen showing job search, scrape stats, and skill-matched recommendations](docs/screenshot.png)
+- GitHub OAuth with Redis sessions and an optional owner-email restriction.
+- RemoteOK, Adzuna searches, and a Greenhouse company-board watchlist.
+- Saved jobs, application tracking, resume/profile sections, and matching preferences.
+- Algorithmic title/skill/experience scoring; optional Groq/Gemini summaries.
+- URL import with extraction/review and manual-entry fallback; imports are private.
+- Durable matching recovery from database records, separate AI worker, bounded requests and retry cooldowns.
+- Daily email to one configured recipient using Resend or GoHighLevel, persisted delivery history and preview.
+- Real service status, paginated job feed, built frontend served by Go.
 
-## Motivation
+Scores are heuristics, not hiring probabilities or proof of work authorization. Sources may omit required skills and remote eligibility. Review the original posting before applying.
 
-Finding a tech job right now is hard, and the tools meant to help are working against you. Every platform is walled off, so the same role gets posted in five places and you have no single feed to watch — some sites actively gatekeep listings to keep you logged in to *their* product. I wanted one place where jobs from many sources are pulled together, and then I wanted the machine to do the tedious parts: score how well each role fits my profile, draft a tailored resume for the ones worth applying to, and notify me when something is a genuinely strong match. You can also paste a link to a job you found yourself and get the same treatment, so JobRadar works even for roles outside its own feed.
+## Local development
 
-I started building it to sharpen my own skills and to actually use it in my own search — most of the alternatives I found were terminal-only or did one slice of the problem. After showing it to a few friends who are also job hunting, they wanted in too. So it ended up being a win for me and for them.
+Requires Go 1.25.8+, Node 24, Docker Compose, Goose and SQLC.
 
-## Tech Stack
+1. Copy `.env.example` to `.env`; fill database and GitHub OAuth credentials. Generate `ENCRYPTION_KEY` with `openssl rand -base64 32`. Keep the key stable: changing it prevents decryption of stored AI credentials.
+2. `make up`, then `make migrate-up`. Existing `pgdata` is preserved; do not reset it.
+3. `make run` starts the API/workers on port 8080.
+4. In `frontend`, run `npm ci` and `npm run dev`. The development proxy handles `/api` and OAuth routes.
+5. Sign in, complete onboarding, and set desired roles, skills and experience. Jobs without enough profile information cannot receive meaningful scores.
 
-- **Backend:** Go, Chi router, SQLC, pgx
-- **Database:** PostgreSQL (core data), Redis (sessions and job queue)
-- **Frontend:** Vue 3, TypeScript, Vite, Pinia, Vue Router
-- **Infrastructure:** Docker Compose
+The default AI enrichment flag is off. URL extraction can still use a key configured in Settings; manual import works without one.
 
-## Features
+## Job sources
 
-- **Job aggregation** — automated fetching from multiple sources (RemoteOK, Adzuna) into a single feed.
-- **AI matching** — every job is scored against your profile by an algorithmic pass (Jaro-Winkler title similarity, Aho-Corasick skill matching) that produces a match score and matched/missing skills, fast and at no API cost. An LLM enrichment pass for high scorers is in progress (see below).
-- **Resume profile** — a structured resume builder (work history, achievements, skills, education, projects) that powers matching and resume generation.
-- **Application tracking** — a Kanban board to manage applications from saved through offer, with notes and follow-up dates.
-- **Background worker engine** — a Redis-backed job queue with worker goroutines, graceful shutdown, exponential backoff, and a dead-letter queue.
-- **Authentication** — GitHub OAuth with Redis-backed sessions and HttpOnly cookies.
+RemoteOK is enabled by default and runs every six hours. Set `REMOTEOK_ENABLED=false` to disable it. `SCRAPE_INTERVAL` must be at least one hour.
 
-### Planned
+For Adzuna, obtain your own application ID/key from [Adzuna](https://developer.adzuna.com/overview) and configure `ADZUNA_APP_ID`, `ADZUNA_APP_KEY`, `ADZUNA_COUNTRY`, comma-separated `ADZUNA_QUERIES`, optional `ADZUNA_LOCATION`, and `ADZUNA_PAGES` (1–3). Runs every 12 hours with at most five searches and a three-second gap between page requests. Every page consumes one API request; retries/restarts consume more. Review [limits and attribution requirements](https://developer.adzuna.com/docs/terms_of_service). Listings retain Adzuna redirect URLs and branding.
 
-- AI-generated tailored resumes delivered by email for high-match jobs.
-- Email and in-app notifications when a strong match appears.
-- Paste-a-link import for jobs found outside JobRadar's feed.
-- More sources, including a Greenhouse / Ashby / Lever portal scanner.
+For Greenhouse, set `GREENHOUSE_BOARDS` to actual board slugs separated by commas. The public [Job Board API](https://docs.greenhouse.io/job-board.html) is company-specific. This adapter does not discover all companies automatically.
 
-## Quick Start
+## Personal email
 
-### Prerequisites
+Configure one provider; keep `DIGEST_ENABLED=false` until ready. The recipient must match a registered Jobradar user whose job notifications are enabled.
 
-- Docker and Docker Compose
-- Go 1.25+
-- Node.js 20+
-- [`goose`](https://github.com/pressly/goose) for database migrations
+- Common: `DIGEST_RECIPIENT`, `EMAIL_FROM`, `DIGEST_TIMEZONE`, `DIGEST_HOUR` (0–23), `DIGEST_MIN_SCORE` (default 50), `DIGEST_MAX_JOBS` (default 10).
+- Resend: `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`. Use an allowed/verified sender and recipient according to your account configuration.
+- GoHighLevel: `EMAIL_PROVIDER=gohighlevel`, `GHL_API_KEY`, `GHL_CONTACT_ID`. Configure email delivery in your sub-account; token needs contact-read and message-write access. The contact email is checked against the configured recipient before sending. Current adapter uses API Version `v3`.
 
-### Steps to run
+`make digest-preview` prints HTML without sending or reserving jobs. Dashboard → Preview opens the same preview in a browser. Once configured, enable delivery and run `make digest-once` for an immediate cycle. This still respects opt-out, matching backlog, and one digest per local calendar day. If no new qualifying matches exist, it sends nothing. Background scheduling checks once per minute, catches up after startup, and sends after the configured hour.
 
-1. **Clone the repository:**
+`sent` means the provider accepted the email. It does not guarantee inbox delivery. Resend retries preserve the exact payload and idempotency key, stopping before the provider's 24-hour deduplication window expires. GoHighLevel ambiguous sends become `uncertain` and require checking provider history. See [deployment and recovery](docs/DEPLOYMENT.md).
 
-   ```bash
-   git clone https://github.com/samnodier/jobradar.git
-   cd jobradar
-   ```
+## Tests
 
-2. **Set up environment variables.** Copy the example file and fill in your database credentials and GitHub OAuth app keys:
+- `make test`: backend unit tests; integration tests skip unless their explicit test environment is set.
+- `cd frontend && npm run build && npm run test:unit -- --run`.
+- For integration tests, use isolated PostgreSQL/Redis: `docker compose -p jobradar-test -f compose.test.yml up -d`.
+- Apply migrations to `postgres://jobradar_test:jobradar_test@127.0.0.1:55432/jobradar_test?sslmode=disable` with Goose, then `make integration-test`.
+- Integration databases must end in `_test`; Redis queue tests flush DB 1 on `TEST_REDIS_ADDR`, never the default development Redis implicitly.
 
-   ```bash
-   cp .env.example .env
-   ```
+## Deploy
 
-3. **Start Postgres and Redis:**
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Production Compose creates separate named volumes and binds the app to localhost for an HTTPS reverse proxy. It does not migrate or mount the development database automatically.
 
-   ```bash
-   make up
-   ```
+## Architecture and learning
 
-4. **Run database migrations:**
+```mermaid
+flowchart LR
+  APIs[RemoteOK / Adzuna / Greenhouse] --> Ingest[Normalize and upsert]
+  Ingest --> PG[(PostgreSQL)]
+  PG --> Pending[Durable pending matches]
+  Pending --> Redis[(Redis delivery)]
+  Redis --> Match[Algorithmic matcher]
+  Match --> PG
+  Match -. optional .-> AI[Separate AI queue]
+  AI --> PG
+  PG --> Digest[Persisted daily digest]
+  Digest --> Email[Email provider]
+  Vue[Vue application] <--> Go[Go HTTP API]
+  Go <--> PG
+```
 
-   ```bash
-   make migrate-up
-   ```
+Project state: [.context/PLAN.md](.context/PLAN.md), [.context/SCHEMA.md](.context/SCHEMA.md), [.context/ROUTES.md](.context/ROUTES.md), [.context/DECISIONS.md](.context/DECISIONS.md).
 
-5. **Run the backend:**
+[LEARNINGS.md](LEARNINGS.md) contains implementation explanations, interview questions, failure scenarios, and a Go/Laravel/TypeScript comparison for a later walkthrough.
 
-   ```bash
-   make run
-   ```
-
-6. **Run the frontend** (in a second terminal):
-
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-
-The backend runs on <http://localhost:8080> and the frontend on <http://localhost:5173>.
-
-## Usage
-
-JobRadar is split into a Go backend (API plus background workers) and a Vue frontend. Day to day, you interact with it through the web app, but the engine underneath is worth knowing.
-
-### How matching works
-
-Matching runs in two stages — fast and free first, expensive and smart only where it pays off:
-
-1. **Algorithmic pass (every job).** Jaro-Winkler similarity on titles, Aho-Corasick multi-pattern matching on skills, and token sorting to handle swapped word order. This produces a `match_score`, `matched_skills`, and `missing_skills` with no API cost.
-2. **LLM enrichment (high scorers only) — in progress.** Jobs that clear a threshold will be enqueued for an LLM pass that adds a one-line summary and semantic validation. Provider is Gemini, using a user-supplied API key.
-
-### The worker engine
-
-New jobs are scraped on an interval (`SCRAPE_INTERVAL`, default 6h). For each new job, the scraper fans out one match job per registered user onto a Redis queue. Worker goroutines pull from the queue with a blocking pop (`BRPOP`), score the job, and write the result. Failed jobs retry with exponential backoff and land in a dead-letter queue after the final attempt.
-
-### Useful Make targets
-
-- `make up` / `make down` — start / stop Postgres and Redis
-- `make run` — run the backend
-- `make migrate-up` / `make migrate-down` — apply / roll back database migrations
-- `make sqlc` — regenerate type-safe Go from SQL queries
-- `make test` — run the Go test suite
-- `make exec` — open a `psql` shell in the database container
-
-### Configuration
-
-Configuration is via environment variables (see `.env.example`):
-
-- `PORT` — backend port (default `8080`)
-- `DB_URL` — Postgres connection string used by migrations
-- `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` / `GITHUB_REDIRECT_URL` — GitHub OAuth app credentials
-- `SESSION_TTL` — session lifetime (default `240h`)
-- `ONBOARDING_TTL` — pending-signup lifetime (default `10m`)
-- `SCRAPE_INTERVAL` — how often the scheduler scrapes new jobs (default `6h`)
-- `REDIS_ADDR` — Redis address (default `localhost:6379`)
-- `ALLOWED_ORIGINS` — comma-separated CORS allowlist
-
-## Contributing
-
-JobRadar is primarily a personal project, but issues and suggestions are welcome. If you want to contribute, open an issue first to discuss the change.
+Future work includes tailored resumes, more ATS adapters, geographic eligibility, and cross-source deduplication. These do not block a personal daily digest.

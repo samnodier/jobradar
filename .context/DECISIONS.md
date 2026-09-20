@@ -21,3 +21,14 @@
 - **Missing title signal renormalizes, like every other dimension** — with no desired roles, the title dimension drops out of the accumulator (unknown ≠ 0) instead of skipping every job; a profile with zero signal (no roles, skills, or experiences) is skipped, never given a fabricated score
 - **Skips are deleted, not written** — `user_job_matches` holds only real matches. On a skip, `DeleteMatch` clears any stale row (a job that dropped below threshold after a profile re-match must not keep its old high score). Prevents the table growing to jobs × users
 - **Provider fallback at the call site** — `selectProviderKeys` returns all configured providers decrypted, in `ProviderPriority` order; the extract handler and enrich worker walk the list, falling back to the next provider on any failure. A decrypt failure still fails loud (it's our bug, not the provider's). A user-facing "preferred provider" setting remains future scope
+
+## Personal release decisions — September 2026
+
+- **AI optional:** automatic enrichment defaults off; deterministic matching and email operate without provider keys. Dedicated enrichment worker prevents slow LLM calls from occupying both core workers.
+- **PostgreSQL pending-match outbox:** triggers persist pending work in the business transaction. Redis delivery remains simple and replaceable; the dispatcher recovers unacknowledged work after five minutes. Revision checks preserve work created during processing. This is at-least-once processing, not exactly-once delivery.
+- **Required-skill coverage:** compare explicit job skills with the profile map; description mentions are display evidence only. Missing skills use the full owned skill set.
+- **Source boundaries:** source adapters produce normalized jobs; shared ingestion owns persistence. Adzuna runs twice daily and caps query/page fan-out. Unknown remote status stays unknown.
+- **Personal digest only:** one configured recipient matching an opted-in account; no arbitrary-recipient send route. Keep a persisted immutable message and user/job ledger. Resend retries use stable keys for less than 24 hours; ambiguous GoHighLevel delivery stops for review. Provider acceptance is not confirmed inbox delivery.
+- **No local model dependency:** small-machine operation and predictable failure recovery take precedence over local inference.
+- **Deployment:** preserve current dev pgdata; production Compose uses separate named volumes. Serve built frontend from Go behind an HTTPS reverse proxy. Migrations are an explicit deployment step.
+- **Release scope:** finish job collection → useful matching → daily email before resume automation. Knowledge questions and code links are written into LEARNINGS.md for a later guided review.

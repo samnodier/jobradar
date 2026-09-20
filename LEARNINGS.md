@@ -334,9 +334,9 @@ Validate at the edge for UX; defend in the core for correctness. A required form
 
 A nil slice is safe to append to (append allocates); a nil map panics on write. Maps must be make()'d before any assignment. Same var x T syntax, opposite safety — because append owns the slice header, but a map write has no such indirection.
 
-A committed (or rolled-back) transaction is dead — its qtx query object can't be reused. Reads that happen after Commit go through the pool (cfg.db), not the tx. Mixing them up gives a post-commit 500 even though the write succeeded. 2. Every 500 branch must log the underlying err. A 500 with no log is a debugging black hole — you end up guessing the cause (you guessed "conflict") instead of reading it. The generic message is for the client; the real err is for your logs.
+A committed (or rolled-back) transaction is dead — its qtx query object can't be reused. Reads that happen after Commit go through the pool (cfg.db), not the tx. Mixing them up gives a post-commit 500 even though the write succeeded.2. Every 500 branch must log the underlying err. A 500 with no log is a debugging black hole — you end up guessing the cause (you guessed "conflict") instead of reading it. The generic message is for the client; the real err is for your logs.
 
-- ordinal vs interval data — why no proficiency→number mapping is "objective," and why a uniform global scale isn't "per-user opinion" - richer signal ⇒ inherited missing-data problem — the moment you upgrade presence to magnitude, you inherit missingness; renormalize/neutral-prior, never let unknown = 0 or 1 - validate-at-edge / defend-in-core — a required form field doesn't let the algorithm assume the data's there (old rows, joined tables, imports) - nil slice vs nil map — append to a nil slice is safe; writing to a nil map panics - build-green ≠ correct — the un-summed accumulator the test caught, not the compiler - tx is dead after commit — post-write read-back goes through the pool; scope a transaction to the atomic unit only - log every 500 — a generic 500 with no logged err is a debugging black hole (you guessed "conflict") - LSP cache vs compiler truth — trust go build over a stale gopls diagnostic; don't refactor real code to satisfy a ghost - free-tier LLM is a per-day demo allowance — 20/day here, not per-minute; meaningful enrichment needs paid billing; a per-day RetryInfo won't refill in 30s
+- ordinal vs interval data — why no proficiency→number mapping is "objective," and why a uniform global scale isn't "per-user opinion"- richer signal ⇒ inherited missing-data problem — the moment you upgrade presence to magnitude, you inherit missingness; renormalize/neutral-prior, never let unknown = 0 or 1- validate-at-edge / defend-in-core — a required form field doesn't let the algorithm assume the data's there (old rows, joined tables, imports)- nil slice vs nil map — append to a nil slice is safe; writing to a nil map panics- build-green ≠ correct — the un-summed accumulator the test caught, not the compiler- tx is dead after commit — post-write read-back goes through the pool; scope a transaction to the atomic unit only- log every 500 — a generic 500 with no logged err is a debugging black hole (you guessed "conflict")- LSP cache vs compiler truth — trust go build over a stale gopls diagnostic; don't refactor real code to satisfy a ghost- free-tier LLM is a per-day demo allowance — 20/day here, not per-minute; meaningful enrichment needs paid billing; a per-day RetryInfo won't refill in 30s
 
 SSRF (Server-Side Request Forgery): an attacker supplies a URL and tricks the server into making the request. Dangerous because the server sits inside the trust boundary — it can reach hosts the public internet can't: localhost services (Redis, Postgres, the app's own API), private-network IPs, and the cloud metadata endpoint (169.254.169.254) which can leak cloud credentials. Two vectors: (1) a direct internal URL, (2) a public URL that redirects inward. Primary defense: resolve the host and reject non-public IPs (loopback/private/link-local). Secondary: disable or re-validate redirects, cap response size, set timeouts, allow only http/https. SSRF = controlling where the request goes; separate from validating what comes back.
 
@@ -371,3 +371,278 @@ A computed is a pure derivation (read-only); a wrong value comes from a write, n
 A field-level error is something the user can fix on that specific input; a toast is the outcome of the whole operation. Validation failures are per-field; network/server failures are per-form. Also think about when you clear errors.title — on resubmit (reset the object) and/or when the user edits that field. A stale "Required" sitting under a now-filled box is its own bug.
 
 (1) an early broad if (status === X) { ...; return } makes any later status === X branch unreachable; overlapping conditions are first-match-wins. (2) Branch on status code, display the server's message; don't hardcode client copy for a condition the server already describes, and don't add a discriminator field until the client needs to branch on it (different text ≠ different behavior).
+
+---
+
+## Personal release review guide — September 2026
+
+This section preserves the repository review findings and the concepts behind the personal release. Older notes above remain a historical learning log; use the current code and `.context/` for implementation status. Knowledge checks are collected here for a walkthrough after the working release, rather than interrupting implementation.
+
+For each topic below, explain it without reading the answer, trace it in the code, and describe a failure scenario. Knowing the vocabulary is not enough: identify the transaction, request, or process boundary where the behavior changes.
+
+### 1. What this application actually does
+
+The reliable path is: external job API → normalized job → PostgreSQL → durable pending match → Redis → algorithmic matcher → stored per-user match → daily digest → email provider. AI summaries and URL extraction are optional. They do not determine whether scheduled job collection or notifications can work.
+
+The original implementation already included a relational database, OAuth, sessions, profiles, matching, import, and tracking. Local Ollama inference was an experiment removed in July. The September review did not prove the historical cause of an API hang: provider errors, two busy workers, and stale frontend state are different failure modes requiring different evidence.
+
+Code: [main](cmd/jobradar/main.go), [source ingestion](cmd/jobradar/scraper_remoteok.go), [matcher](cmd/jobradar/worker_match.go), [digest service](internal/digest/service.go).
+
+Questions:
+- Trace one new job from an API response to an email in my inbox. Which steps write data?
+- Why can this application work with no AI provider key?
+- What evidence distinguishes a frozen HTTP request, a slow queue, and a stale browser view?
+- Which components need to stay running when my laptop sleeps? What catches up after restart?
+- Which features are necessary for a useful personal release, and which are future product scope?
+
+### 2. Atomicity across PostgreSQL and Redis: the transactional outbox
+
+Saving a job and sending a Redis message are two separate effects. A successful database insert followed by a failed enqueue leaves stored data without processing. Re-fetching the same job does not necessarily repair this, because deduplication may skip it.
+
+The release records `pending_matches` in the SAME PostgreSQL transaction as job/profile changes using database triggers. A dispatcher enqueues these durable records and marks their delivery time only after enqueue succeeds. If Redis is unavailable, the pending record remains. If the process dies after enqueue but before marking, it may deliver twice. Duplicate delivery is safer than silently losing the work, provided processing is idempotent.
+
+Questions from the repository review:
+- If a job is saved in PostgreSQL but Redis is unavailable immediately afterward, how should Jobradar discover later that matching still needs to happen?
+- Why is wrapping only the PostgreSQL write in a transaction insufficient to make a Redis enqueue atomic?
+- Why does the dispatcher mark delivery AFTER enqueue rather than before?
+- What does a database trigger buy us? What are its costs in visibility, write overhead, and testing?
+- What happens if an experience edit transaction rolls back after its trigger schedules matching?
+
+Answer outline: the same commit persists both the business change and pending work. A periodic dispatcher can recover without knowing which process originally wrote the job. Trigger writes roll back with the original transaction.
+
+Code: [migration and trigger functions](sql/schema/20260920000100_reliable_personal_release.sql), [pending queries](sql/queries/pending_matches.sql), [dispatcher](cmd/jobradar/worker_pending.go).
+
+### 3. Queue delivery, leases, revisions, and acknowledgements
+
+`LPUSH`/`BRPOP` implements FIFO delivery but `BRPOP` removes a task before processing finishes. It is not a crash-safe acknowledgement protocol. The durable database record remains until successful matching; an enqueue timestamp older than five minutes becomes eligible for redelivery.
+
+A revision changes when a job or profile changes. Completion deletes only the revision the worker processed. This prevents an older worker from acknowledging newer work. A transaction-scoped advisory lock serializes deliveries for the same user/job pair. Work is recomputed from current database state, not from a stale profile copied into a message.
+
+Questions:
+- What is the difference between at-most-once, at-least-once, and exactly-once delivery?
+- Why does a dead-letter queue not recover a task lost during a process crash?
+- Why are graceful shutdown and crash recovery separate concerns?
+- Why can the same task run twice even after adding a durable outbox?
+- How does a revision prevent an old completion from deleting new work?
+- How do an advisory lock, a unique constraint, and a delivery lease solve different problems?
+- What happens to a transaction-scoped advisory lock when its connection dies?
+- Why must a long-term queue failure be visible rather than endlessly hidden in retries?
+
+Code: [Redis queue](internal/queue/queue.go), [worker retries](internal/queue/worker.go), [durable worker](cmd/jobradar/worker_pending.go), [reliability integration tests](cmd/jobradar/reliability_test.go).
+
+### 4. Authentication is not authorization
+
+Authentication identifies a user. Authorization decides whether that user may access a particular resource. A valid UUID is not proof of ownership; UUID unpredictability is not an access policy.
+
+The review found that direct job reads applied public-or-owned filtering, but save/application inserts did not. The repaired SQL inserts from a visible `jobs` selection. If the resource is inaccessible, the query returns no row. Saved/application list queries also enforce visibility. A personal deployment may additionally restrict GitHub sign-in to `PERSONAL_EMAIL`.
+
+Questions:
+- Why does checking authentication middleware not protect another user's private imported job?
+- Why is `INSERT ... SELECT ... WHERE visible` stronger than trusting a client-provided owner ID?
+- When should inaccessible resources return 404 rather than disclose their existence?
+- Why must access rules apply to indirect reads such as saved-job lists?
+- Why do we scope UPDATE and DELETE by both resource ID and user ID?
+- What is the difference between CORS, CSRF protection, cookie flags, and resource authorization?
+- How would Laravel policies or a TypeScript service enforce the same rule?
+
+Code: [saved-job SQL](sql/queries/saved_jobs.sql), [application SQL](sql/queries/applications.sql), [auth middleware](internal/auth/middleware.go), [OAuth callback](internal/auth/github.go), [ownership tests](cmd/jobradar/reliability_test.go).
+
+### 5. An interface makes providers replaceable
+
+RemoteOK, Adzuna, and Greenhouse implement `sources.Source`: a name and a context-aware fetch operation returning normalized jobs. Ingestion owns sanitization, persistence, and health reporting. Adapters own provider URLs, authentication, pagination, and response shape. A provider should not make unrelated application code depend on its vendor-specific JSON.
+
+Adzuna uses application credentials in query parameters, so transport errors must not log the full URL. Pagination consumes quota. Five queries with three pages twice per day are up to 30 scheduled requests/day, before retries and restarts. Remote eligibility is not inferred merely because a search contains the word “remote.” Company-board APIs require a watchlist of board slugs rather than a global search.
+
+Questions:
+- What belongs in a provider adapter, and what belongs in ingestion?
+- Why do optional fields need null/unknown rather than fabricated zero/false values?
+- Why distinguish a provider's external ID from our database UUID?
+- Why can `(source, external_id)` deduplicate within a source but not guarantee cross-source deduplication?
+- What do API rate limits count: jobs returned, HTTP requests, or pages?
+- How do retries and restarts affect a monthly quota budget?
+- Why must credentials in query strings never appear in logs?
+- How would I add a fourth provider without copying database and queue code?
+
+Code: [source interface](internal/sources/sources.go), [Adzuna](internal/sources/adzuna.go), [Greenhouse](internal/sources/greenhouse.go), [configuration](cmd/jobradar/config_sources.go), [source tests](internal/sources/sources_test.go).
+
+Official references: [Adzuna API](https://developer.adzuna.com/overview), [Adzuna limits/attribution](https://developer.adzuna.com/docs/terms_of_service), [Greenhouse job-board API](https://docs.greenhouse.io/job-board.html). Check current terms when changing product usage.
+
+### 6. Idempotent ingestion and job freshness
+
+Repeated fetches update source-owned job fields rather than creating duplicate rows. `last_seen_at` records observation; `posted_at` records source publication when available; `created_at` records first insertion here. These timestamps answer different questions. `updated_at` advances on relevant content changes, avoiding a full rematch on every identical fetch.
+
+The initial schema already contained publication and expiry fields, but old ingestion did not populate publication dates. Digests exclude postings older than 30 days using publication date when known, otherwise insertion date, and respect explicit expiry. This is not proof that a job is still open: source absence/closure and cross-source repost identity remain distinct problems.
+
+Questions:
+- Why can “fetched today” differ from “posted today”?
+- What does an upsert do on insert versus conflict?
+- Why should an unchanged fetch not invalidate every existing match?
+- What are partial unique indexes, and why do public and private jobs need different uniqueness rules?
+- What should happen if a job disappears from a complete company-board feed versus one page of a search API?
+- Why is a migration a versioned transformation rather than a reason to drop a database?
+
+Code: [job queries](sql/queries/jobs.sql), [private/public indexes](sql/schema/20260611025256_jobs_add_created_by_user.sql), [new migration](sql/schema/20260920000100_reliable_personal_release.sql).
+
+### 7. Matching is a heuristic, not a hiring probability
+
+Title similarity, required-skill coverage, and experience overlap produce a ranking. Missing signals renormalize the weights. A score is not calibrated as a probability of receiving an interview. User-imported jobs express intent, so they bypass the title rejection gate.
+
+The review found that prose mentions could inflate skill coverage and that an owned skill could be reported missing when absent from the description. Required-skill coverage now compares source requirements to the user's skill map; missing skills compare against the full known user skill set. Description mentions remain a separate display signal. Adzuna/Greenhouse may not provide a structured skill list, so the matcher cannot pretend it knows every requirement. Location, work authorization, seniority, and salary need human review; changing the scoring model requires representative examples, not just code that produces higher numbers.
+
+Questions:
+- Why is unknown information different from a zero score?
+- Why compare required skills against the profile rather than only description mentions?
+- Why does an exact title match not prove eligibility?
+- How can adding a new job source change score distributions without changing the algorithm?
+- What examples would I use to evaluate relevance and false positives?
+- Why should AI enrichment not overwrite the deterministic score?
+
+Code: [matcher](internal/matcher/matcher.go), [worker policy](cmd/jobradar/worker_match.go), [regression tests](internal/matcher/matcher_test.go).
+
+### 8. Optional AI, bounded work, backoff, and bulkheads
+
+Slow AI requests used to share two workers with scraping and matching. A separate enrichment queue with one worker isolates this latency. Automatic enrichment is disabled by default through `AI_ENRICHMENT_ENABLED`; manual URL extraction can still use a configured key. Provider calls and overall operations have deadlines, prompt text is bounded, and retries carry provider cooldowns where available.
+
+Permanent errors (invalid credentials or unsupported requests) differ from transient errors (429, 503, timeout). When several providers fail, a permanent error from the last provider must not erase an earlier retryable failure. A failed database write must return an error rather than tell the queue that work succeeded.
+
+Questions:
+- What is a bulkhead, and why does adding workers alone not solve an overloaded provider?
+- What is the difference between concurrency, request rate, and daily quota?
+- Why use exponential backoff with jitter? What is a thundering herd?
+- Why should `Retry-After` override a shorter generic retry delay?
+- Why do we need both per-provider and whole-operation deadlines?
+- What does cancelling a Go context actually do, and what requires explicit cooperation?
+- Why is valid JSON not sufficient validation of an LLM result?
+- How do input limits, secret encryption, and credential redaction address different risks?
+
+Code: [enrichment worker](cmd/jobradar/worker_enrich.go), [Groq errors](internal/llm/groq.go), [worker backoff](internal/queue/worker.go), [import handler](cmd/jobradar/handler_import.go), [encryption](internal/crypto/crypto.go).
+
+### 9. Email outbox and the ambiguous-success problem
+
+A digest is rendered and persisted with its selected jobs before sending. The persisted body is immutable for retries. A unique `(user_id, digest_date)` limits daily preparation, and the delivery ledger reserves a user/job once. Only `DIGEST_RECIPIENT` is eligible; the user must exist and have notifications enabled.
+
+Sending an email and committing “sent” to PostgreSQL cannot be one ordinary database transaction. If the provider accepts a message but the connection or database write fails, we do not know whether the inbox received it. Resend supports a stable idempotency key with a 24-hour retention window. This implementation stops automated retries before that window expires. GoHighLevel does not provide a documented equivalent in the chosen endpoint, so ambiguous sends are marked `uncertain` for manual reconciliation rather than silently sending another copy. “Sent” means accepted by the provider, not proven inbox delivery.
+
+Questions:
+- Why is “check ledger, send email, write ledger” not exactly-once delivery?
+- What happens if the process crashes immediately before or after the provider accepts a message?
+- Why must an idempotency key and request body remain stable across retries?
+- Why does a UNIQUE constraint in PostgreSQL not deduplicate an external email by itself?
+- Why stop retrying when a provider's deduplication window expires?
+- How should a human reconcile `uncertain` delivery? Why not just delete the ledger?
+- How do an opt-out and a fixed personal recipient prevent unintended recipients?
+- Why does changing provider/sender while mail is pending require review?
+- Why are timezone-aware calendar days preferable to “sleep 24 hours” for a morning digest?
+
+Code: [digest service](internal/digest/service.go), [digest queries](sql/queries/digests.sql), [mailer interface/adapters](internal/mailer/mailer.go), [digest integration tests](internal/digest/service_test.go).
+
+References: [Resend idempotency](https://resend.com/docs/dashboard/emails/idempotency-keys), [HighLevel send endpoint](https://marketplace.gohighlevel.com/docs/ghl/conversations/send-a-new-message/). Self-hosting SMTP is possible, but DNS authentication, reputation, abuse prevention, bounce handling, and deliverability become our operational responsibility.
+
+### 10. Frontend state and backend state are separate
+
+Import confirmation returns before asynchronous matching finishes. Updating a Vue array with the confirmation response does not subscribe it to later database writes. The import view briefly polls the imported job, with bounded attempts and cleanup on unmount. Normal feed requests use an AbortController so an older response cannot overwrite a newer search.
+
+The feed uses server-side limits, offsets, search, and filters. Loading every description into the browser is wasteful as the database grows. Empty collections are serialized as `[]`, not `null`. Stable IDs prevent duplicate rows when pagination or imports overlap.
+
+Questions:
+- Why can a background job finish while the UI still shows “not matched”?
+- When would I use polling, server-sent events, or WebSockets?
+- How can two search requests arrive out of order, and how does cancellation help?
+- Why clean up intervals when a component unmounts?
+- What is the tradeoff between offset and cursor pagination under concurrent inserts?
+- Why is a TypeScript interface not runtime validation of an HTTP response?
+- Why must untrusted HTML be sanitized even when it came from an API?
+- What should optimistic UI updates do when the backend rejects a mutation?
+
+Code: [JobsView](frontend/src/views/JobsView.vue), [job handlers](cmd/jobradar/handler_jobs.go), [JobDetail sanitization](frontend/src/components/JobDetail.vue), [dashboard](frontend/src/views/DashboardView.vue).
+
+### 11. Observability, reproducible setup, and deployment
+
+A hardcoded green status indicator is not a health check. The status page reads PostgreSQL/Redis connectivity, durable backlog size, and persisted source health. The public health endpoint is a basic liveness signal. Source health is the result of the last fetch, not a promise that the provider is currently reachable.
+
+A clean setup must declare every required environment variable and dependency. `ENCRYPTION_KEY` must remain stable across restarts to decrypt stored provider keys. The production image builds the Vue app and Go binary separately, then runs as a non-root user. PostgreSQL and Redis use persistent volumes. The Vue history router requires an index.html fallback, while unknown API routes must still return 404.
+
+Questions:
+- What is the difference between liveness, readiness, and a dependency health check?
+- Which log fields help locate a failure without leaking secrets?
+- Why should deployment not depend on a developer's root node_modules directory?
+- What belongs in the image versus an environment variable versus a persistent volume?
+- Why do HTTPS, HttpOnly, Secure, and SameSite each matter for session cookies?
+- What survives a container restart? What disappears if its volume is deleted?
+- How do I restore a PostgreSQL backup and verify it actually works?
+- Why should migration execution happen before switching traffic to the new application?
+- Why must unknown `/api/...` paths not return the SPA HTML page with status 200?
+- Why do we test against dedicated ports and a database whose name ends in `_test`?
+
+Code: [production Dockerfile](Dockerfile), [production Compose](compose.production.yml), [migrations image](Dockerfile.migrations), [SPA/status handlers](cmd/jobradar/handler_system.go), [test database guard](internal/testutil/database.go), [environment example](.env.example).
+
+### 12. Testing behavior rather than implementation details
+
+The review found a frontend starter test that did not provide Pinia and expected old template text. The repaired test creates the required app context and checks the public shell. Integration tests exercise ownership, transactional pending work, stale acknowledgements, duplicate delivery, profile-change rematching, opt-out, provider failures, and stable email retry identity. External-provider unit tests use local HTTP servers; they do not send real email.
+
+Questions:
+- Which bugs can a unit test catch, and which require a real PostgreSQL constraint/transaction?
+- Why does “the build passes” not prove OAuth or actual email delivery works?
+- What makes a mock useful, and what important behavior can it hide?
+- Why should retries and timeouts be tested as normal behavior, not rare exceptions?
+- How would I simulate a crash between two side effects?
+- Why should test setup never flush my development Redis database?
+- What does Go's race detector detect, and what database races does it not detect?
+
+Code: [backend integration tests](cmd/jobradar/reliability_test.go), [digest tests](internal/digest/service_test.go), [mailer tests](internal/mailer/mailer_test.go), [frontend test](frontend/src/__tests__/App.spec.ts).
+
+### 13. The same fundamentals in Go, Laravel, and TypeScript
+
+| Concept | This repository | PHP/Laravel equivalent | TypeScript/Next.js equivalent |
+| --- | --- | --- | --- |
+| HTTP routing | Chi handlers | Routes/controllers | Route handlers/API routes |
+| Validation | Go request decoding and checks | Form requests/validation rules | Runtime schema validation |
+| Authentication | OAuth + Redis session cookie | OAuth integration + session guard | Auth library + server-side sessions |
+| Authorization | User-scoped SQL | Policies + scoped queries | Authorization in service/repository queries |
+| Dependency inversion | Go interfaces | PHP interfaces + service container | Interfaces/functions + dependency injection |
+| Transactions | pgx + SQLC | DB::transaction | Database client transactions |
+| Migrations | Goose SQL files | Laravel migrations | SQL migrations or migration tooling |
+| Durable asynchronous work | PostgreSQL pending records + Redis | Outbox + queue jobs | Outbox + dedicated worker |
+| Background lifecycle | Goroutines/context | Queue worker processes | Long-lived worker processes; not a request callback |
+| Retry/idempotency | Revisions, constraints, email keys | Same guarantees through jobs and constraints | Same guarantees through workers and constraints |
+| Reactive UI | Vue refs/computed/Pinia | Blade/Livewire or separate SPA | React state/query cache |
+| Safe rendering | Vue escaping, DOMPurify, html/template | Blade escaping/sanitization | React escaping/sanitization |
+| Deployment | Binary + static assets + services | PHP runtime + assets + services | Node runtime/serverless + assets + services |
+
+Questions:
+- Which guarantees come from PostgreSQL and HTTP rather than Go?
+- Which Go techniques would change in a PHP worker while keeping the same delivery guarantees?
+- Why is starting background work inside a serverless request unreliable after the response?
+- Why does changing an ORM not remove the need to understand indexes, joins, transactions, and query plans?
+- Explain the entire application using only language-independent terms, then point to each implementation.
+
+### 14. Review workflow and release discipline
+
+Use a feature branch based on `dev`, stage/commit there, verify, then merge into `dev`; promote to `main` only as a release step. Existing job-import commits were brought into the personal-release feature branch without rewriting them. Documentation must describe current behavior rather than preserve contradictory “done” and “not started” claims.
+
+Questions:
+- Why isolate unfinished work on a feature branch?
+- What is the difference between a fast-forward merge and rewriting history?
+- Why can local origin/* references be stale until fetch?
+- What evidence should a release checklist contain besides a green build?
+- How do I explain a design tradeoff, reproduce a failure, and locate its fix during an interview?
+
+Walkthrough checklist for later: trace the request; identify the invariant; locate the code; explain the test; describe one alternative; explain why the chosen tradeoff fits a small personal application.
+
+
+### 15. Connection pools, transaction boundaries, and bounded resources
+
+A connection pool is a limited shared resource. A worker that opens a transaction holds one connection until commit or rollback. If it then runs queries through the pool instead of through the transaction, it needs another connection. Several workers can exhaust a small pool this way: each holds a connection and waits for another. Increasing the pool can hide the design problem while consuming more memory.
+
+The durable matching worker binds SQLC queries to its transaction with `WithTx(tx)`. Reads, score writes and revision acknowledgement use that connection, and score persistence plus acknowledgement commit together. Startup database checks have a five-second deadline and close a failed pool. AI prompts bound each section, including candidate experience, so a long profile cannot create an unexpectedly large provider request. These limits complement request deadlines; neither replaces the other.
+
+Questions for our later walkthrough:
+- Where does this worker acquire a connection, and when does it release it?
+- Why must queries use the transaction object to participate in that transaction?
+- What happens if writing the score succeeds but acknowledging the pending revision fails?
+- How could holding one resource while waiting for another deadlock a system?
+- Why is increasing a connection pool not always the right fix for slow requests?
+- What is the difference between a timeout, a concurrency limit, a queue limit, and an input-size limit?
+- How would these same resource limits appear in Laravel workers or a TypeScript service?
+
+Code: [transactional matching](cmd/jobradar/worker_pending.go), [database startup](internal/database/database.go), [prompt bounds](internal/llm/llm.go). Evidence: [release verification](docs/RELEASE_VERIFICATION.md).

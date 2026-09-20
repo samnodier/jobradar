@@ -36,3 +36,16 @@
 **users:** `CreateUser`, `GetUserByID` (derives `configured_providers text[]` via ARRAY subquery on user_api_keys; never selects ciphertext), `GetUserByProviderIdentity`, `UpdateUser`, `DeleteUserByID`, `GetAllUsers`
 
 **user_api_keys:** `UpsertUserAPIKey` (ON CONFLICT (user_id, provider) replaces the ciphertext), `GetUserAPIKey` (read ciphertext for workers/handlers only), `ListUserAPIKeyProviders`, `DeleteUserAPIKey`
+
+## September 2026 corrections and additions
+
+The original abbreviated list above is historical; migration files and SQLC models are authoritative.
+
+- jobs also includes `created_by_user_id` (nullable owner FK, cascades), `job_status`, `employment_type`, `experience_level`, `posted_at`, `expires_at`, and `last_seen_at`. Public uniqueness is `(external_id,job_source)` WHERE owner IS NULL; private uniqueness is `(created_by_user_id,source_url)` WHERE owner IS NOT NULL.
+- user_skills uses `(user_id,skill_id)` as its primary key; skill names belong in the case-insensitive skills table.
+- applications uses `application_status`; updates use the consolidated `UpdateApplication` query.
+- pending_matches: `(user_id,job_id)` PK with cascading FKs, `revision BIGINT`, nullable `enqueued_at`. Job/profile triggers schedule work transactionally. Dispatcher retries delivery after five minutes; completion matches the revision.
+- email_digests: id, user_id, digest_date, recipient, sender, provider, subject, html, status, attempts, first_attempt_at, next_attempt_at, provider_message_id, last_error, created_at, sent_at. UNIQUE(user_id,digest_date). States: pending, sending, sent, uncertain, failed.
+- email_digest_jobs: digest_id, user_id, job_id; PRIMARY KEY(user_id,job_id), cascading FKs. Reserves jobs in the same transaction as digest preparation.
+- New queries: UpsertPublicJob; ListPendingMatches, MarkMatchEnqueued, CompletePendingMatch, GetPendingMatchRevision, ScheduleUserMatches; digest preparation/delivery/history queries; ListServiceHealth.
+- GetJobs now takes bounded pagination, search, filter, and sort parameters. SaveJob and CreateApplication insert only from a public-or-owned job selection.

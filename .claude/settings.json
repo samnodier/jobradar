@@ -19,5 +19,9 @@
       "Bash(git merge:*)",
       "Bash(rm -rf:*)"
     ]
+  },
+  "attribution": {
+    "commit": "",
+    "pr": ""
   }
 }

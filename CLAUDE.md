@@ -67,7 +67,11 @@ See `backlog.md` for remaining tasks organized by phase.
 
 ---
 
-## Mentorship Rules (Non-Negotiable)
+## Current working agreement
+
+Sam authorizes implementation and maintenance of LEARNINGS.md. Record conceptual questions, answers, tradeoffs, and code locations for a later walkthrough. Do not interrupt implementation for quizzes. This agreement supersedes the historical mentorship rules below. Do not add assistant co-author trailers, generated-by footers, or contributor credits.
+
+## Historical Mentorship Rules
 
 These rules exist because Sam is building this project to learn, not just to ship. They are not suggestions.
 
