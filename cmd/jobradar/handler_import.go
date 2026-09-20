@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/samnodier/jobradar/internal/convert"
@@ -15,7 +17,6 @@ import (
 	"github.com/samnodier/jobradar/internal/htmlx"
 	"github.com/samnodier/jobradar/internal/httpx"
 	"github.com/samnodier/jobradar/internal/llm"
-	"github.com/samnodier/jobradar/internal/queue"
 )
 
 type URLRequest struct {
@@ -38,7 +39,8 @@ type jobConfirmImportRequest struct {
 
 func (cfg *apiConfig) handlerExtractJob(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1MB
-	ctx := r.Context()
+	ctx, cancel := context.WithTimeout(r.Context(), 75*time.Second)
+	defer cancel()
 	// User helper function to get the UserID
 	userID, ok := getUserIDFromRequest(w, r)
 	if !ok {
@@ -107,12 +109,12 @@ func (cfg *apiConfig) handlerExtractJob(w http.ResponseWriter, r *http.Request) 
 			continue
 		}
 		result, extractErr = llmExtractor.Extract(ctx, llm.ExtractionInput{
-			PageText: text,
+			PageText: llm.LimitText(text, 24000),
 		})
 		if extractErr == nil {
 			break
 		}
-		log.Printf("handleExtractJob: %s extract failed for URL %s user %s (trying next provider if any): %v", pk.provider, parsedURL, userID, extractErr)
+		log.Printf("handleExtractJob: %s extract failed for URL %s user %s (trying next provider if any): %v", pk.provider, parsedURL.Hostname(), userID, extractErr)
 	}
 	if extractErr != nil {
 		// The permanent error (bad key -> 401) is the user's problem (422)
@@ -214,25 +216,7 @@ func (cfg *apiConfig) handlerImportConfirm(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	payload := MatchJobPayload{
-		JobID:  createdJob.ID.String(),
-		UserID: userID.String(),
-	}
-	matchJobPayload, err := json.Marshal(payload)
-	if err != nil {
-		log.Printf("Failed to marshal match job payload: %v", err)
-		return
-	}
-	// Push matching task to queue
-	err = cfg.queue.Enqueue(cfg.rootCtx, &queue.Job{
-		ID:       createdJob.ID.String() + "-" + userID.String(),
-		Type:     queue.JobMatchJob,
-		Payload:  matchJobPayload,
-		MaxRetry: 3,
-	})
-	if err != nil {
-		log.Printf("failed to enqueue matching job for %s: %v", createdJob.ID, err)
-	}
+	// The jobs trigger has already recorded durable matching work.
 
 	httpx.RespondJSON(w, http.StatusCreated, createdJob)
 }

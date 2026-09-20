@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -15,6 +16,11 @@ import (
 )
 
 func (cfg *apiConfig) handleEnrichJob(ctx context.Context, qJob *queue.Job) error {
+	if !cfg.aiEnrichmentEnabled {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(ctx, 75*time.Second)
+	defer cancel()
 	var payload EnrichJobPayload
 	if err := json.Unmarshal(qJob.Payload, &payload); err != nil {
 		log.Printf("handleEnrichJob: failed to unmarshal payload: %v", err)
@@ -132,7 +138,7 @@ func (cfg *apiConfig) handleEnrichJob(ctx context.Context, qJob *queue.Job) erro
 
 	input := llm.EnrichmentInput{
 		JobTitle:       job.Title,
-		JobDescription: jobDescription,
+		JobDescription: llm.LimitText(jobDescription, 16000),
 		JobSkills:      job.Skills,
 		JobLocation:    jobLocation,
 
@@ -144,20 +150,32 @@ func (cfg *apiConfig) handleEnrichJob(ctx context.Context, qJob *queue.Job) erro
 	// Try each provider in priority order; fall back to the next on failure
 	var result llm.EnrichmentResult
 	var enrichErr error
+	var transientErr error
 	for _, pk := range keys {
 		var llmEnricher llm.Enricher
 		llmEnricher, enrichErr = cfg.newEnricher(ctx, pk.provider, pk.apiKey)
 		if enrichErr != nil {
+			if !errors.Is(enrichErr, llm.ErrPermanent) {
+				transientErr = enrichErr
+			}
 			log.Printf("handleEnrichJob: failed to create %s enricher for user %s: %v", pk.provider, userID, enrichErr)
 			continue
 		}
-		result, enrichErr = llmEnricher.Enrich(ctx, input)
+		providerCtx, providerCancel := context.WithTimeout(ctx, 30*time.Second)
+		result, enrichErr = llmEnricher.Enrich(providerCtx, input)
+		providerCancel()
 		if enrichErr == nil {
 			break
+		}
+		if !errors.Is(enrichErr, llm.ErrPermanent) {
+			transientErr = enrichErr
 		}
 		log.Printf("handleEnrichJob: %s enrich failed for job %s user %s (trying next provider if any): %v", pk.provider, jobID, userID, enrichErr)
 	}
 	if enrichErr != nil {
+		if transientErr != nil {
+			return transientErr
+		}
 		if errors.Is(enrichErr, llm.ErrPermanent) {
 			log.Printf("handleEnrichJob: permanent failure for job %s user %s, dropping: %v", jobID, userID, enrichErr)
 			return nil // drop it, don't retry
@@ -172,7 +190,7 @@ func (cfg *apiConfig) handleEnrichJob(ctx context.Context, qJob *queue.Job) erro
 	})
 	if err != nil {
 		log.Printf("handleEnrichJob: failed to update match enrichment for job %s for user %s: %v", jobID, userID, err)
-		return nil
+		return err
 	}
 
 	return nil

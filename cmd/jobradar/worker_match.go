@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"strings"
 
@@ -160,20 +159,14 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 	// Compute the missing skills: the job's required skills the user
 	// hasn't demonstrated (case-insensitive). These are the gaps the
 	// user would need to fill to qualify.
-	// NOTE: (design debt) matchedSet is description-derived — it holds the
-	// user's skills found in the job's prose, not the user's full skill
-	// set. So a skill the user genuinely has can be flagged "missing" if
-	// the description never spells it out. Revisit the canonical skill
-	// universe before the LLM prompt consumes matched/missing skills.
 	missingSkills := []string{}
-	matchedSet := make(map[string]bool)
-	for _, ms := range matchedSkills {
-		matchedSet[strings.ToLower(ms)] = true
+	ownedSkills := make(map[string]bool)
+	for skill := range userSkills {
+		ownedSkills[strings.ToLower(skill)] = true
 	}
-	for _, s := range job.Skills {
-		jobSkillLower := strings.ToLower(s)
-		if !matchedSet[jobSkillLower] {
-			missingSkills = append(missingSkills, s)
+	for _, skill := range job.Skills {
+		if !ownedSkills[strings.ToLower(skill)] {
+			missingSkills = append(missingSkills, skill)
 		}
 	}
 
@@ -196,7 +189,7 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 	// If this match scored high enough And the user has an AI provider key
 	// Push an enrich job. Imported jobs skip the threshold: the user asked
 	// for this specific job, so they always get the AI summary if a key exists.
-	if score >= cfg.aiMatchThreshold || isImported {
+	if cfg.aiEnrichmentEnabled && (score >= cfg.aiMatchThreshold || isImported) {
 		providers, err := cfg.db.ListUserAPIKeyProviders(ctx, userID)
 		if err != nil {
 			log.Printf("handlerMatchJob: failed to fetch api key providers for user %s: %v", userID, err)
@@ -211,7 +204,7 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 				log.Printf("handleMatchJob: failed to marshal enrich payload: %v", err)
 				return nil
 			}
-			err = cfg.queue.Enqueue(ctx, &queue.Job{
+			err = cfg.enrichQueue.Enqueue(ctx, &queue.Job{
 				ID:       jobID.String() + "-" + userID.String() + "-enrich",
 				Type:     queue.JobEnrichMatch,
 				Payload:  enrichPayload,
@@ -239,33 +232,7 @@ does the actual fetching and scoring later.
 Best-effort: per-job failures are logged and skipped, not fatal.
 */
 func (cfg *apiConfig) enqueueMatchJobsForUser(ctx context.Context, userID uuid.UUID) error {
-	// Fetch all job IDs
-	jobsIDs, err := cfg.db.GetAllJobIDs(ctx, convert.ToPgUUID(userID))
-	if err != nil {
-		return fmt.Errorf("enqueueMatchJobsForUser: error fetching job IDs for rematching: %w", err)
-	}
-	for _, jobID := range jobsIDs {
-		payloadData := MatchJobPayload{
-			JobID:  jobID.String(),
-			UserID: userID.String(),
-		}
-		matchJobPayload, err := json.Marshal(payloadData)
-		if err != nil {
-			log.Printf("enqueueMatchJobsForUser: Failed to marshal match job payload: %v", err)
-			continue
-		}
-		// Push matching task to queue
-		err = cfg.queue.Enqueue(ctx, &queue.Job{
-			ID:       jobID.String() + "-" + userID.String(),
-			Type:     queue.JobMatchJob,
-			Payload:  matchJobPayload,
-			MaxRetry: 3,
-		})
-		if err != nil {
-			log.Printf("enqueueMatchJobsForUser: failed to enqueue matching job for %s: %v", jobID, err)
-		}
-	}
-	return nil
+	return cfg.db.ScheduleUserMatches(ctx, userID)
 }
 
 func proficiencyToWeight(p *string) float64 {

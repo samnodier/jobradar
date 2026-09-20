@@ -406,12 +406,7 @@ func (cfg *apiConfig) handlerUpdatePreferences(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if req.Skills != nil || req.DesiredRoles != nil {
-		err := cfg.enqueueMatchJobsForUser(cfg.rootCtx, userID)
-		if err != nil {
-			log.Printf("Error matching the jobs for the user %s: %v", userID, err)
-		}
-	}
+	// Database triggers schedule rematching in the same transaction as profile edits.
 
 	cfg.handlerGetPreferences(w, r)
 }

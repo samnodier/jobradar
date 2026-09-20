@@ -3,6 +3,8 @@ package main
 
 import (
 	"context"
+	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,6 +12,7 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -22,33 +25,66 @@ import (
 	"github.com/samnodier/jobradar/internal/auth"
 	"github.com/samnodier/jobradar/internal/crypto"
 	"github.com/samnodier/jobradar/internal/database"
+	"github.com/samnodier/jobradar/internal/digest"
 	"github.com/samnodier/jobradar/internal/llm"
 	"github.com/samnodier/jobradar/internal/queue"
 )
 
 type apiConfig struct {
-	db               *database.Queries
-	rdb              *redis.Client
-	pool             *pgxpool.Pool
-	queue            *queue.RedisQueue
-	rootCtx          context.Context
-	crypto           *crypto.Service
-	aiMatchThreshold int32
-	newEnricher      func(ctx context.Context, provider, apiKey string) (llm.Enricher, error)
-	newExtractor     func(ctx context.Context, provider, apiKey string) (llm.Extractor, error)
-	IsProduction     bool
+	db                  *database.Queries
+	rdb                 *redis.Client
+	pool                *pgxpool.Pool
+	queue               *queue.RedisQueue
+	enrichQueue         *queue.RedisQueue
+	rootCtx             context.Context
+	crypto              *crypto.Service
+	aiMatchThreshold    int32
+	aiEnrichmentEnabled bool
+	newEnricher         func(ctx context.Context, provider, apiKey string) (llm.Enricher, error)
+	newExtractor        func(ctx context.Context, provider, apiKey string) (llm.Extractor, error)
+	IsProduction        bool
+	digest              *digest.Service
 }
 
 func main() {
-	fmt.Println("jobradar starting...")
+	preview := flag.Bool("digest-preview", false, "render a digest preview without sending")
+	sendOnce := flag.Bool("digest-once", false, "send today's personal digest once")
+	flag.Parse()
 	err := godotenv.Load()
-	if err != nil {
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		log.Fatalf("failed to load env variables: %v", err)
 	}
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
 	dbURL := os.Getenv("DB_URL")
 	dbClient, err := database.NewClient(dbURL)
 	if err != nil {
 		log.Fatalf("failed to create a db client: %v", err)
+	}
+
+	defer dbClient.Pool.Close()
+	digestConfig, emailSender, err := digest.FromEnv()
+	if err != nil {
+		log.Fatal(err)
+	}
+	digestService := &digest.Service{Pool: dbClient.Pool, Config: digestConfig, Sender: emailSender}
+	if *preview {
+		html, err := digestService.Preview(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Print(html)
+		return
+	}
+	if *sendOnce {
+		if !digestConfig.Enabled {
+			log.Fatal("DIGEST_ENABLED must be true to send")
+		}
+		if err := digestService.Tick(ctx, time.Now(), true); err != nil {
+			log.Fatal(err)
+		}
+		log.Println("Digest cycle complete; check email_digests or the dashboard for delivery status")
+		return
 	}
 
 	// Get the encryption key
@@ -62,7 +98,9 @@ func main() {
 	rdb := redis.NewClient(&redis.Options{
 		Addr: os.Getenv("REDIS_ADDR"),
 	})
+	defer rdb.Close()
 	q := queue.NewRedisQueue(rdb)
+	enrichQueue := queue.NewNamedRedisQueue(rdb, "jobradar:queue:enrich")
 
 	// Match threshold for AI enqueueing
 	var aiMatchThreshold int32 = 60
@@ -77,46 +115,50 @@ func main() {
 	aiMatchThreshold = max(int32(0), min(int32(100), aiMatchThreshold))
 
 	cfg := &apiConfig{
-		db:               dbClient.Queries,
-		rdb:              rdb,
-		pool:             dbClient.Pool,
-		queue:            q,
-		rootCtx:          context.Background(),
-		crypto:           cryptoService,
-		newEnricher:      llm.NewEnricher,
-		newExtractor:     llm.NewExtractor,
-		aiMatchThreshold: aiMatchThreshold,
-		IsProduction:     os.Getenv("APP_ENV") == "production",
+		db:                  dbClient.Queries,
+		digest:              digestService,
+		rdb:                 rdb,
+		pool:                dbClient.Pool,
+		queue:               q,
+		enrichQueue:         enrichQueue,
+		rootCtx:             ctx,
+		crypto:              cryptoService,
+		newEnricher:         llm.NewEnricher,
+		newExtractor:        llm.NewExtractor,
+		aiMatchThreshold:    aiMatchThreshold,
+		aiEnrichmentEnabled: os.Getenv("AI_ENRICHMENT_ENABLED") == "true",
+		IsProduction:        os.Getenv("APP_ENV") == "production",
 	}
 
 	wp := queue.NewWorkerPool(q, 2)
-	wp.RegisterHandler(queue.JobScrapeRemoteOK, func(ctx context.Context, job *queue.Job) error {
-		return cfg.scrapeRemoteOK(ctx)
-	})
-	wp.RegisterHandler(queue.JobMatchJob, func(ctx context.Context, job *queue.Job) error {
-		return cfg.handleMatchJob(ctx, job)
-	})
-	wp.RegisterHandler(queue.JobEnrichMatch, func(ctx context.Context, job *queue.Job) error {
-		return cfg.handleEnrichJob(ctx, job)
-	})
-
-	ctx, cancel := context.WithCancel(cfg.rootCtx)
-	wp.Start(ctx)
-	defer cancel()
-
-	// Start a Cron Scheduler
-	scrapeInterval := 6 * time.Hour
-	if val := os.Getenv("SCRAPE_INTERVAL"); val != "" {
-		scrapeInterval, err = time.ParseDuration(val)
-		if err != nil {
-			log.Fatalf("Invalid SCRAPE_INTERVAL format: %v", err)
-		}
+	wp.RegisterHandler(queue.JobMatchJob, cfg.handleDurableMatch)
+	enrichPool := queue.NewWorkerPool(enrichQueue, 1)
+	enrichPool.RegisterHandler(queue.JobEnrichMatch, cfg.handleEnrichJob)
+	// Drain legacy enrichment tasks off the main queue without blocking matching.
+	wp.RegisterHandler(queue.JobEnrichMatch, func(ctx context.Context, job *queue.Job) error { return enrichQueue.Enqueue(ctx, job) })
+	sourceList, err := configuredSources()
+	if err != nil {
+		log.Fatal(err)
 	}
 	sched := queue.NewScheduler(q)
-	sched.StartCron(ctx, queue.JobScrapeRemoteOK, scrapeInterval)
+	for _, source := range sourceList {
+		source := source
+		jobType := queue.JobType("scrape:" + source.source.Name())
+		wp.RegisterHandler(jobType, func(ctx context.Context, job *queue.Job) error { return cfg.scrapeSource(ctx, source.source) })
+	}
+	wp.Start(ctx)
+	enrichPool.Start(ctx)
+	for _, source := range sourceList {
+		sched.StartCron(ctx, queue.JobType("scrape:"+source.source.Name()), source.interval)
+	}
+	var background sync.WaitGroup
+	background.Add(1)
+	go func() { defer background.Done(); cfg.runMaintenance(ctx) }()
+	background.Add(1)
+	go func() { defer background.Done(); digestService.Run(ctx) }()
 
 	router := chi.NewRouter()
-	router.Use(middleware.Logger)
+	router.Use(requestLog)
 	router.Use(middleware.Recoverer)
 	originsStr := os.Getenv("ALLOWED_ORIGINS")
 	if originsStr == "" {
@@ -153,6 +195,7 @@ func main() {
 			RedirectURL:  os.Getenv("GITHUB_REDIRECT_URL"),
 		},
 		AppBaseURL:    os.Getenv("APP_BASE_URL"),
+		PersonalEmail: os.Getenv("PERSONAL_EMAIL"),
 		OnboardingTTL: onboardingTTL,
 		SessionTTL:    sessionTTL,
 		IsProduction:  os.Getenv("APP_ENV") == "production",
@@ -165,6 +208,7 @@ func main() {
 
 	// Define routes
 	router.Route("/api", func(r chi.Router) {
+		r.Use(privateNoCache)
 		r.Use(authHandler.TryAuth)
 
 		r.Get("/health", cfg.handlerHealth)
@@ -181,6 +225,9 @@ func main() {
 			r.Post("/jobs/import", cfg.handlerExtractJob)
 			r.Post("/jobs/import/confirm", cfg.handlerImportConfirm)
 
+			r.Get("/digest", cfg.handlerDigestStatus)
+			r.Get("/digest/preview", cfg.handlerDigestPreview)
+			r.Get("/system/status", cfg.handlerSystemStatus)
 			r.Get("/applications", cfg.handlerApplicationsGet)
 			r.Post("/applications", cfg.handlerApplicationCreate)
 			r.Get("/applications/{applicationID}", cfg.handlerApplicationGetByID)
@@ -228,6 +275,7 @@ func main() {
 	})
 
 	router.Mount("/auth", authHandler.Routes())
+	router.NotFound(spaHandler(os.Getenv("FRONTEND_DIST")))
 
 	// Start the server
 	port := os.Getenv("PORT")
@@ -236,8 +284,12 @@ func main() {
 	}
 	addr := ":" + port
 	server := &http.Server{
-		Addr:    addr,
-		Handler: router,
+		Addr:              addr,
+		Handler:           router,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      90 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 
 	// Start HTTP server in a separate background goroutine
@@ -249,15 +301,11 @@ func main() {
 	}()
 
 	// Graceful shutdown wiring
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-	<-quit
-
+	<-ctx.Done()
 	log.Println("Shutting down server gracefully...")
-	// Cancel the context to stop scheduler and workers
-	cancel()
-	// Stop workers (blocks until all workers have finished processing their current job)
 	wp.Stop()
+	enrichPool.Stop()
+	background.Wait()
 
 	// Shutdown HTTP server with a 5-second timeout
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
