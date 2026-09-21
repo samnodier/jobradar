@@ -18,7 +18,7 @@ INSERT INTO users (
 ) VALUES (
     $1, $2, $3, $4
 )
-RETURNING id, email, username, full_name, avatar_url, phone, user_location, website_url, linkedin_url, github_url, headline, user_summary, availability, min_salary, max_salary, salary_currency, years_of_experience, preferred_job_types, preferred_industries, company_stage_preference, notify_jobs, is_admin, created_at, updated_at
+RETURNING id, email, username, full_name, avatar_url, phone, user_location, website_url, linkedin_url, github_url, headline, user_summary, availability, min_salary, max_salary, salary_currency, years_of_experience, preferred_job_types, preferred_industries, company_stage_preference, notify_jobs, is_admin, created_at, updated_at, auth_version
 `
 
 type CreateUserParams struct {
@@ -61,6 +61,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.IsAdmin,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AuthVersion,
 	)
 	return i, err
 }
@@ -327,7 +328,7 @@ SET
     notify_jobs = COALESCE($19, notify_jobs),
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, email, username, full_name, avatar_url, phone, user_location, website_url, linkedin_url, github_url, headline, user_summary, availability, min_salary, max_salary, salary_currency, years_of_experience, preferred_job_types, preferred_industries, company_stage_preference, notify_jobs, is_admin, created_at, updated_at
+RETURNING id, email, username, full_name, avatar_url, phone, user_location, website_url, linkedin_url, github_url, headline, user_summary, availability, min_salary, max_salary, salary_currency, years_of_experience, preferred_job_types, preferred_industries, company_stage_preference, notify_jobs, is_admin, created_at, updated_at, auth_version
 `
 
 type UpdateUserParams struct {
@@ -400,6 +401,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.IsAdmin,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AuthVersion,
 	)
 	return i, err
 }

@@ -94,6 +94,12 @@ type MatchNotification struct {
 	ReadAt    *time.Time         `json:"read_at"`
 }
 
+type PasswordSetupToken struct {
+	TokenHash string             `json:"token_hash"`
+	UserID    uuid.UUID          `json:"user_id"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+}
+
 type PendingMatch struct {
 	UserID     uuid.UUID  `json:"user_id"`
 	JobID      uuid.UUID  `json:"job_id"`
@@ -169,6 +175,7 @@ type User struct {
 	IsAdmin                *bool      `json:"is_admin"`
 	CreatedAt              *time.Time `json:"created_at"`
 	UpdatedAt              *time.Time `json:"updated_at"`
+	AuthVersion            int64      `json:"auth_version"`
 }
 
 type UserAccount struct {
@@ -293,6 +300,12 @@ type UserMatchSetting struct {
 	DigestTimezone       string    `json:"digest_timezone"`
 	DigestHours          []int32   `json:"digest_hours"`
 	DigestMaxJobs        int32     `json:"digest_max_jobs"`
+}
+
+type UserPassword struct {
+	UserID       uuid.UUID          `json:"user_id"`
+	PasswordHash string             `json:"password_hash"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
 type UserProject struct {

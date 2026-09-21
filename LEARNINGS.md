@@ -814,3 +814,13 @@ The current schema has no password hash. A future migration should store local c
 Use salted Argon2id hashes and login throttling; define password change, recovery and session invalidation before treating this as finished. Recovery for a private local owner can use an explicit server-side reset command rather than requiring an email service. Public sign-up/recovery would require a separate verified-email flow. This is a follow-up design, not a claim that password login exists.
 References: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html and https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html
 Questions: Why never store plaintext/reversibly encrypted passwords? How is an allowlist different from login? Why must account linking prove control of both identities? How do password changes revoke existing sessions? How would the same design map to Laravel authentication?
+
+## Email/password credentials — storage foundation
+
+Passwords live in a separate `user_passwords` table, never in profile responses or Copy for AI. Argon2id uses a random 16-byte salt, 19 MiB, two passes, one lane and a 32-byte output. The encoded hash includes its algorithm parameters. Passwords require 15 characters, allow spaces/Unicode and are bounded at 1024 bytes. Verification uses constant-time comparison; a two-operation bound limits simultaneous hashing memory. Unknown accounts can run a dummy verification instead of exposing a cheap early exit.
+
+`users.auth_version` enables invalidation of old sessions after password changes. One-time setup-token hashes expire in 15 minutes; they are separate from passwords and are issued by a server-side owner command. No password is placed in an environment variable or command-line argument.
+
+Code: `internal/password/password.go`, `sql/schema/20260921000300_password_login.sql`, `sql/queries/passwords.sql`.
+Review: Why is password hashing deliberately slow while API-token hashing is fast? What does the salt protect against? Why bound both password input size and concurrent hashes? Why must a public user serializer never include password_hash?
+Reference: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
