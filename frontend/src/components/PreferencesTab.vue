@@ -279,7 +279,7 @@ async function handleSavePreferences() {
         </div>
 
         <div class="flex flex-col gap-2 mb-4">
-          <label class="text-sm font-semibold text-gray-900">Industries of Interest</label>
+          <label class="text-sm font-semibold text-gray-900">Industries / Job Categories of Interest</label>
           <div class="flex flex-wrap gap-2 mb-2">
             <span
               v-for="ind in preferences.preferred_industries"
@@ -298,7 +298,7 @@ async function handleSavePreferences() {
           </div>
           <input
             type="text"
-            placeholder="Type an industry (e.g. SaaS) and press Enter"
+            placeholder="Type an industry/category (e.g. SaaS or IT Jobs) and press Enter"
             class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
             @keydown.enter.prevent="addIndustry($event)"
           />

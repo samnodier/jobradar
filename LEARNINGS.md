@@ -801,3 +801,16 @@ Repeat the same filters with `cursor=next_cursor` until next_cursor is empty. Sc
 
 Code: `cmd/jobradar/handler_export.go`, `sql/queries/export_jobs.sql`, `cmd/jobradar/handler_export_test.go`.
 Questions: Why must filters run before LIMIT? What does a date actually refer to? Why does a 23-hour local day break naive arithmetic? What can change between pages without snapshot isolation? Why is request-scoped filtering different from modifying notification preferences?
+
+### Managing workflow tokens in Settings
+
+Profile → Settings → Personal workflow access creates a 90-day token, shows it once in a selectable field, lists expiry and permits immediate revocation. The interface states that AI context includes saved resume information. The token is held in component memory, not localStorage. Code: `frontend/src/components/AccessTokens.vue`.
+Question: Why does showing a credential once reduce exposure, and what should a user do after losing it?
+
+## Proposed local email/password login — not implemented
+
+The current schema has no password hash. A future migration should store local credentials separately from exported user/profile fields. Email/password can be the default login with optional GitHub OAuth, sharing the existing Redis session system. Startup currently requires GitHub configuration; that validation must become conditional. For a personal installation, create an owner account through a controlled setup path and disable public registration. PERSONAL_EMAIL is an account allowlist, not an authentication method; password login does not replace it. Changing login method must preserve the same user ID and must not silently link an unverified email to an existing account.
+
+Use salted Argon2id hashes and login throttling; define password change, recovery and session invalidation before treating this as finished. Recovery for a private local owner can use an explicit server-side reset command rather than requiring an email service. Public sign-up/recovery would require a separate verified-email flow. This is a follow-up design, not a claim that password login exists.
+References: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html and https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html
+Questions: Why never store plaintext/reversibly encrypted passwords? How is an allowlist different from login? Why must account linking prove control of both identities? How do password changes revoke existing sessions? How would the same design map to Laravel authentication?

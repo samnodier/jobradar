@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AccessTokens from './AccessTokens.vue'
 import MatchingSettings from './MatchingSettings.vue'
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -232,6 +233,7 @@ async function removeApiKey(providerId: string) {
       </section>
 
       <MatchingSettings />
+      <AccessTokens />
 
       <!-- Privacy & Account -->
       <section class="p-6 bg-white border border-gray-200">

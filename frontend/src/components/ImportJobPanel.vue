@@ -36,7 +36,10 @@ interface JobDraft {
 
 function emptyDraft(): JobDraft {
   return {
-    industry: '', category: '', company_stage: '', employment_type: '',
+    industry: '',
+    category: '',
+    company_stage: '',
+    employment_type: '',
     title: '',
     company_name: '',
     description: '',
@@ -276,10 +279,30 @@ async function handleConfirm() {
 
         <div class="flex flex-col gap-1">
           <div class="grid grid-cols-2 gap-3 mb-4">
-            <label>Industry<input v-model="form.industry" class="w-full border rounded p-2" placeholder="Unknown if blank" /></label>
-            <label>Job category<input v-model="form.category" class="w-full border rounded p-2" placeholder="e.g. IT Jobs" /></label>
-            <label>Company stage<input v-model="form.company_stage" class="w-full border rounded p-2" placeholder="e.g. Startup" /></label>
-            <label>Employment type<input v-model="form.employment_type" class="w-full border rounded p-2" placeholder="e.g. full-time" /></label>
+            <label
+              >Industry<input
+                v-model="form.industry"
+                class="w-full border rounded p-2"
+                placeholder="Unknown if blank"
+            /></label>
+            <label
+              >Job category<input
+                v-model="form.category"
+                class="w-full border rounded p-2"
+                placeholder="e.g. IT Jobs"
+            /></label>
+            <label
+              >Company stage<input
+                v-model="form.company_stage"
+                class="w-full border rounded p-2"
+                placeholder="e.g. Startup"
+            /></label>
+            <label
+              >Employment type<input
+                v-model="form.employment_type"
+                class="w-full border rounded p-2"
+                placeholder="e.g. full-time"
+            /></label>
           </div>
           <label for="job-skills" class="text-sm font-semibold text-gray-900">Skills</label>
           <div class="flex flex-wrap gap-1.5 mb-1">
