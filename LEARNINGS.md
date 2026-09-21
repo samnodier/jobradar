@@ -779,3 +779,16 @@ The worker applies `PreferenceScore` before persistence, notifications, email se
 
 Code: `cmd/jobradar/worker_match.go`, `internal/sources/adzuna.go`, `internal/extraction/page.go`, `frontend/src/components/ImportJobPanel.vue`.
 Questions: Why can adding a column without updating ingestion leave a feature ineffective? Why must changing profile preferences invalidate cached scores? Why shouldn't an occupational category automatically establish the employer's industry? Where is source evidence reviewed before persistence?
+
+## Read-only access for personal workflows
+
+A Jobradar account can issue a random, expiring, revocable bearer token for explicitly registered export routes. Browser login remains required to create/list/revoke tokens. Only a SHA-256 hash is stored; the original secret is shown once. These tokens can read public/owned jobs and the owner's AI-context resume export, never mutate jobs or change settings. Revocation and expiry are checked on every request. The personal-instance email restriction still applies. Do not put a token in a URL or commit it; send it in the Authorization header over HTTPS.
+
+Code: `internal/auth/read_token.go`, `cmd/jobradar/handler_read_tokens.go`, `sql/queries/read_tokens.sql`.
+Questions: How do authentication, authorization and scope differ? Why is a fast hash suitable for a random 256-bit token but not a human password? Why must a token never pick another user's ID? How does revocation differ from a self-contained JWT? What private information is included in AI context?
+
+## Ollama versus optional cloud AI
+
+Jobradar does not read OLLAMA_HOST or GROQ_API_KEY from .env. They are obsolete for this app. Removing an environment variable does not stop an independently running Ollama service or delete model files. Groq/Gemini integration remains optional and uses encrypted per-user keys saved in Profile → Settings. AI_ENRICHMENT_ENABLED=false disables automatic enrichment, but URL import can still use a configured cloud key as a fallback. Remove saved provider keys for the no-model path. Matching, digest emails and Copy for AI do not need a model. Jobradar's own read API is independent of any ChatGPT/Claude subscription; importing those results into an external AI workflow is a separate integration.
+
+Questions: Where does computation happen for local versus hosted inference? Why is disabling a worker different from disabling all call sites? Which settings are read from environment variables versus user-owned database records?

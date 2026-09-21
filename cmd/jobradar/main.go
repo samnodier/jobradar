@@ -212,6 +212,10 @@ func main() {
 		r.Use(authHandler.TryAuth)
 
 		r.Get("/health", cfg.handlerHealth)
+		r.Group(func(r chi.Router) {
+			r.Use(authHandler.RequireReadAccess)
+			r.Get("/export/jobs/{jobID}/ai-context", cfg.handlerAIContext)
+		})
 
 		r.Get("/jobs", cfg.handlerJobsGet)
 		r.Get("/jobs/stats", cfg.handlerJobStatsGet)
@@ -226,6 +230,9 @@ func main() {
 			r.Post("/jobs/import", cfg.handlerExtractJob)
 			r.Post("/jobs/import/confirm", cfg.handlerImportConfirm)
 
+			r.Get("/profile/access-tokens", cfg.handlerReadTokens)
+			r.Post("/profile/access-tokens", cfg.handlerReadTokens)
+			r.Delete("/profile/access-tokens/{tokenID}", cfg.handlerReadTokens)
 			r.Get("/notifications", cfg.handlerNotifications)
 			r.Patch("/notifications/{notificationID}/read", cfg.handlerNotificationRead)
 			r.Get("/digest", cfg.handlerDigestStatus)

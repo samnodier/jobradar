@@ -108,6 +108,16 @@ type ProjectSkill struct {
 	UpdatedAt *time.Time `json:"updated_at"`
 }
 
+type ReadApiToken struct {
+	ID        uuid.UUID          `json:"id"`
+	UserID    uuid.UUID          `json:"user_id"`
+	Name      string             `json:"name"`
+	TokenHash string             `json:"token_hash"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+	RevokedAt *time.Time         `json:"revoked_at"`
+}
+
 type SavedJob struct {
 	ID        uuid.UUID          `json:"id"`
 	UserID    uuid.UUID          `json:"user_id"`
