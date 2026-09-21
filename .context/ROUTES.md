@@ -1,6 +1,6 @@
 ## Current routes
 
-All `/api` responses are non-cacheable. Job reads allow anonymous access to public jobs and add the signed-in user's own private jobs and match data. All mutations and profile/digest/system endpoints require a Redis session. PERSONAL_EMAIL can restrict login to the owner.
+All `/api` responses are non-cacheable. Job reads allow anonymous access to public jobs and add the signed-in user's own private jobs and match data. All mutations and profile/digest/system endpoints require a Redis session. Export routes additionally accept revocable read-only bearer tokens. PERSONAL_EMAIL can restrict login to the owner.
 
 | Method | Route | Access / behavior |
 | --- | --- | --- |
@@ -34,3 +34,9 @@ All `/api` responses are non-cacheable. Job reads allow anonymous access to publ
 | GET | Other non-API browser routes | Built Vue SPA history fallback |
 
 See `cmd/jobradar/main.go` and `internal/auth/handler.go` for canonical route registration.
+
+## Read-only workflow API
+
+- GET `/api/export/jobs`: session or read token; score/date/timezone/source/location filters and score/UUID keyset pagination. Defaults to fresh eligible matches at the profile threshold. See `docs/JOB_EXPORT_API.md`.
+- GET `/api/export/jobs/{jobID}/ai-context`: same read authentication, public-or-owned job and own saved resume Markdown.
+- GET/POST `/api/profile/access-tokens`, DELETE `/api/profile/access-tokens/{tokenID}`: browser session only; owner-scoped creation/list/revocation.

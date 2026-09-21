@@ -29,9 +29,9 @@ Keep provider secrets in `.env` on the host. Do not paste keys into chats or fro
 
 The deterministic ranking combines title similarity (45%), proficiency-weighted required-skill coverage (30%), and experience text overlap (25%). Missing signals are removed and remaining weights rescaled. The public-feed title gate skips very weak title matches; explicitly imported jobs bypass that gate. A title-only job can score highly because little evidence is available. This is not a calibrated hiring probability.
 
-Work mode, desired locations, employment type and compatible-currency salary ranges are separate gates. Missing facts follow the Include Unknown setting; details explain exclusions. Salary comparisons assume comparable pay periods. No currency conversion is performed. Location matching uses normalized text phrases rather than a geographic database: spell out alternatives, and verify work authorization, residency, hybrid arrangements and salary period yourself. Remote does not imply worldwide.
+The professional-fit score above has weight 80. Each configured preference with known evidence—work mode, desired location, employment type, complete compatible-currency salary range, industry/category, company stage—has weight 5 and contributes 100 for a match or zero for a mismatch. The result is divided by active weights. These preferences also remain eligibility gates, so a high score cannot override a known mismatch. Missing facts follow the Include Unknown setting; details explain exclusions. Salary comparisons assume comparable pay periods. No currency conversion is performed. Location matching uses normalized text phrases rather than a geographic database: spell out alternatives, and verify work authorization, residency, hybrid arrangements and salary period yourself. Remote does not imply worldwide.
 
-Industry and company-stage preferences are stored but not enforced because the sources do not consistently provide that information. Adzuna may omit explicit skills; Greenhouse may omit pay/remote metadata. Unknown fields must not be represented as confirmed facts.
+Industry/category and company-stage preferences now affect numeric ranking and eligibility when explicit metadata exists. Adzuna supplies categories; imports accept reviewed industry/category/stage fields. Preferred industry/category phrases are literal matches, not a semantic taxonomy. Unknown metadata has no numeric weight and follows Include Unknown for eligibility. Adzuna may omit explicit skills; Greenhouse may omit pay/remote metadata. Unknown fields must not be represented as confirmed facts.
 
 ## Email costs and sender identity
 
@@ -41,11 +41,11 @@ For testing, [Resend's resend.dev sender](https://resend.com/docs/knowledge-base
 
 GoHighLevel remains an alternative when your subaccount already has email delivery configured. This adapter needs a contact ID whose email matches the recipient, plus API permissions to read contacts and send messages. A location/subaccount ID is not a contact ID. Account email charges can still apply; the API token alone does not establish free sending.
 
-## Future external agents
+## External workflow access
 
-The authenticated read-only endpoint `GET /api/jobs/{jobID}/ai-context` returns the same Markdown. `GET /api/jobs?filter=matched` returns ranked results. They currently use the app's session authentication; do not expose an unauthenticated endpoint or share a browser session cookie as a permanent agent credential.
+Profile → Settings → Personal workflow access now creates expiring, revocable read-only tokens. Use `GET /api/export/jobs?min_score=70&date=today&limit=100` and follow `next_cursor` for further pages. Request filters do not change profile notification settings. `GET /api/export/jobs/{jobID}/ai-context` returns the job and your saved profile/resume as Markdown. Tokens authenticate these export routes only. Full arguments and examples: [Job export API](JOB_EXPORT_API.md).
 
-A later integration can add revocable, narrowly scoped read tokens or a supported connector. Manual copy/paste is the no-additional-API-bill v1. A chat subscription is not a generic API allowance; supported subscription clients and API-key billing are different. See [OpenAI authentication](https://learn.chatgpt.com/docs/auth). Verify the chosen client's current plan and automation support before assuming an unattended agent can run for free.
+Jobradar does not make an AI call for exports. Your external workflow can fetch jobs independently of any AI subscription; how that workflow connects to an AI product is a separate choice. Manual Copy for AI remains available.
 
 ## Running on an always-on Linux host
 

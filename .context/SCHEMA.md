@@ -57,3 +57,9 @@ The original abbreviated list above is historical; migration files and SQLC mode
 - email_digests adds digest_slot, changing uniqueness to (user_id,digest_date,digest_slot). User/job reservations still prevent repeat job delivery across slots/days.
 - match_notifications: id, user_id, job_id, created_at, read_at; UNIQUE(user_id,job_id); ownership FKs cascade. List joins current eligible scores/settings.
 - Settings, desired-location and relevant users preference changes schedule rematching.
+
+## Preference ranking and read tokens
+
+- jobs adds nullable industry, category and company_stage. Adzuna category/contract time and reviewed import metadata are persisted. Industry/company-stage profile changes trigger rematching.
+- read_api_tokens: UUID id, user_id FK cascade, name, unique token_hash, created_at, expires_at, revoked_at. Only token hashes are stored.
+- There is no local password hash or email/password login yet.

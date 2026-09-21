@@ -43,3 +43,12 @@ The follow-up implementation on `feature/profile-workflows` was verified with:
 These checks used synthetic sessions and fake providers. Sam's manual browser review, actual OAuth, live Adzuna results, sender setup and inbox delivery remain necessary before production promotion. No changes were applied to the existing development database.
 
 Editor follow-up: `go list ./...` reproduced a pgdata permission/traversal error; package-targeted checks remain green. The repository now includes a syntax-checked LazyVim `.lazy.lua` gopls exclusion. The user's running editor must reload it; existing PostgreSQL ownership was preserved.
+
+## Preference scoring and workflow export follow-up
+
+- Preference scorer unit tests and worker/database integration verify industry changes enqueue work, lower stored score and reject eligibility.
+- Source/import fixtures verify Adzuna category/contract-time and structured industry/employment extraction.
+- Token integration verifies account identity, expiry, revocation, cross-owner rejection and read-only/personal-instance restrictions.
+- Export integration verifies minimum score, private ownership, eligibility override, pending-score exclusion, deterministic pagination and request validation; DST unit test checks a 23-hour local day.
+- Full backend suite passed with race detector against isolated PostgreSQL/Redis; go vet passed. Frontend production build/typecheck and existing shell test passed. New migration down/down/up passed on the isolated database.
+- No live external AI/provider call, real email or browser manual acceptance test performed for this follow-up. Existing development database was not migrated.

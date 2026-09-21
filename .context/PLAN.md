@@ -50,3 +50,9 @@ Sam authorized direct implementation and maintenance of learning notes. Record r
 ## Current delivery agreement
 
 Work is committed in small focused increments. The prior unpushed release commit was regrouped into 12 commits with identical final tree; a local backup branch preserves the old tip. No remote history was rewritten. Sam will manually test dev before main promotion/push and deployment. A home server is the recommended zero-hosting-bill option for this always-running scheduler; no local language model is required.
+
+## September 21 follow-up
+
+Implemented preference-aware numeric ranking and job metadata flow; read-only account tokens; filtered/paginated job exports and AI-context access; Settings token management. Details: docs/JOB_EXPORT_API.md. New migrations require application before local UI/API testing. Existing dev database has not been changed by tests.
+
+Email/password owner setup and optional GitHub login remain a separate requested discussion/follow-up; no password migration or login flow has been implemented.

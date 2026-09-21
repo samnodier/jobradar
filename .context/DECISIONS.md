@@ -42,3 +42,10 @@
 - Structured JobPosting data precedes optional model extraction; plain page text is the no-key/outage fallback. All imports require review.
 - Two local-time digest slots share the cross-day job delivery ledger; downtime catches up only the latest slot.
 - Small focused commits; verify dev locally with Sam before main promotion and deployment.
+
+## Preference scoring and external workflows
+
+- Professional fit (existing role/skill/experience score) has weight 80. Each configured known preference has weight 5 and contributes full or zero credit. Unknown evidence has no numeric weight. Hard eligibility remains separate. Literal industry/category phrases are matched against explicit source/reviewed metadata, without inferring employer industry.
+- Read-only workflow tokens authenticate only export GET routes; credential management requires browser sessions. Expiry/revocation/personal-email restrictions are checked on every request.
+- Export thresholds override the profile default for a request without changing notification settings. Date semantics are explicit; pagination is keyset-based, not a frozen snapshot.
+- Email/password owner login is proposed, not implemented; keep it a separate authentication task.
