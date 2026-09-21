@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -10,18 +11,27 @@ import (
 )
 
 type Session struct {
-	UserID    uuid.UUID `json:"user_id"`
-	Email     string    `json:"email"`
-	CreatedAt int64     `json:"created_at"`
+	UserID      uuid.UUID `json:"user_id"`
+	Email       string    `json:"email"`
+	AuthVersion int64     `json:"auth_version"`
+	CreatedAt   int64     `json:"created_at"`
 }
 
 func (h *Handler) createSession(ctx context.Context, userID uuid.UUID, email string) (string, error) {
+	identity, err := h.db.GetAuthIdentity(ctx, userID)
+	if err != nil {
+		return "", err
+	}
+	return h.createSessionVersion(ctx, userID, identity.Email, identity.AuthVersion)
+}
+func (h *Handler) createSessionVersion(ctx context.Context, userID uuid.UUID, email string, version int64) (string, error) {
 	sessionID := generateRandomToken()
 
 	session := Session{
-		UserID:    userID,
-		Email:     email,
-		CreatedAt: time.Now().Unix(),
+		AuthVersion: version,
+		UserID:      userID,
+		Email:       email,
+		CreatedAt:   time.Now().Unix(),
 	}
 
 	data, err := json.Marshal(session)
@@ -53,6 +63,11 @@ func (h *Handler) getSession(ctx context.Context, sessionID string) (*Session, e
 		return nil, err
 	}
 
+	identity, err := h.db.GetAuthIdentity(ctx, session.UserID)
+	if err != nil || identity.AuthVersion != session.AuthVersion {
+		return nil, errors.New("session revoked")
+	}
+	session.Email = identity.Email
 	return &session, nil
 }
 

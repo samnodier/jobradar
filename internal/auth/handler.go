@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"github.com/samnodier/jobradar/internal/database"
+	"github.com/samnodier/jobradar/internal/httpx"
 	"golang.org/x/oauth2"
 )
 
@@ -52,14 +53,29 @@ func NewHandler(cfg AuthConfig, rdb *redis.Client, db *database.Queries, pool *p
 
 func (h *Handler) Routes() http.Handler {
 	r := chi.NewRouter()
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Cache-Control", "no-store")
+			next.ServeHTTP(w, r)
+		})
+	})
+	r.Get("/methods", func(w http.ResponseWriter, r *http.Request) {
+		httpx.RespondJSON(w, 200, map[string]bool{"password": true, "github": h.cfg.GitHubEnabled()})
+	})
+	r.Post("/password/login", h.handlePasswordLogin)
+	r.Post("/password/setup", h.handlePasswordSetup)
 
 	r.Group(func(r chi.Router) {
 		r.Use(h.RequireAuth)
 		r.Get("/users/me", h.HandlerUserGet)
+		r.Get("/password", h.handlePasswordStatus)
+		r.Put("/password", h.handlePasswordChange)
 	})
 
-	r.Get("/github/login", h.handleGitHubLogin)
-	r.Get("/github/callback", h.handleGitHubCallback)
+	if h.cfg.GitHubEnabled() {
+		r.Get("/github/login", h.handleGitHubLogin)
+		r.Get("/github/callback", h.handleGitHubCallback)
+	}
 	r.Post("/logout", h.handleLogout)
 
 	return r

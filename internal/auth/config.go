@@ -14,23 +14,26 @@ type GitHubOAuthConfig struct {
 	RedirectURL  string
 }
 type AuthConfig struct {
-	GitHub        GitHubOAuthConfig
-	AppBaseURL    string
-	OnboardingTTL time.Duration
-	SessionTTL    time.Duration
-	IsProduction  bool
-	PersonalEmail string
+	GitHub         GitHubOAuthConfig
+	AppBaseURL     string
+	OnboardingTTL  time.Duration
+	SessionTTL     time.Duration
+	IsProduction   bool
+	PersonalEmail  string
+	AllowedOrigins []string
 }
 
 func (cfg *AuthConfig) Validate() error {
-	if cfg.GitHub.ClientID == "" {
-		return fmt.Errorf("missing github client id")
+	if cfg.GitHub.ClientID != "" || cfg.GitHub.ClientSecret != "" {
+		if cfg.GitHub.ClientID == "" || cfg.GitHub.ClientSecret == "" || cfg.GitHub.RedirectURL == "" {
+			return fmt.Errorf("GitHub requires client ID, secret and callback URL when enabled")
+		}
 	}
-	if cfg.GitHub.ClientSecret == "" {
-		return fmt.Errorf("missing github client secret")
+	if cfg.SessionTTL == 0 {
+		cfg.SessionTTL = 7 * 24 * time.Hour
 	}
-	if cfg.GitHub.RedirectURL == "" {
-		return fmt.Errorf("missing github redirect url")
+	if cfg.SessionTTL < 0 {
+		return fmt.Errorf("invalid session ttl")
 	}
 	if cfg.AppBaseURL == "" {
 		return fmt.Errorf("missing app base url")
@@ -55,4 +58,8 @@ func (cfg AuthConfig) GitHubOAuth() *oauth2.Config {
 		},
 		Endpoint: github.Endpoint,
 	}
+}
+
+func (cfg AuthConfig) GitHubEnabled() bool {
+	return cfg.GitHub.ClientID != "" && cfg.GitHub.ClientSecret != ""
 }

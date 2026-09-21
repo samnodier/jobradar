@@ -824,3 +824,14 @@ Passwords live in a separate `user_passwords` table, never in profile responses 
 Code: `internal/password/password.go`, `sql/schema/20260921000300_password_login.sql`, `sql/queries/passwords.sql`.
 Review: Why is password hashing deliberately slow while API-token hashing is fast? What does the salt protect against? Why bound both password input size and concurrent hashes? Why must a public user serializer never include password_hash?
 Reference: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
+
+## Email login and owner recovery
+
+POST `/auth/password/login` verifies the password and creates the same Redis/HttpOnly-cookie session used by GitHub. Login failures use a generic response; account and client-address attempt counters are atomic in Redis (10/account and 50/direct-IP per 15 minutes). Forwarded-IP headers are not trusted. JSON and allowed-origin checks protect credential-changing requests from browser CSRF. Missing Redis fails closed. GET `/auth/methods` lets the UI hide GitHub when it is unconfigured; GitHub credentials are no longer needed for a local-only installation.
+
+An existing GitHub account may add a password after signing in within the last ten minutes. Once a password exists, changes require the current password. User-row locking prevents competing credential updates. Each change increments auth_version, revokes workflow tokens and invalidates all outstanding setup links in the same transaction. Every browser session is checked against auth_version; deleted accounts and older sessions cannot authenticate. A fresh session is issued after a successful change.
+
+For a local installation or lost password, the server owner runs `go run ./cmd/jobradar --password-setup you@example.com`. It creates the local account if absent, preserves existing accounts, and prints a private 15-minute link. The secret is in the URL fragment, so it is not sent in ordinary HTTP requests or access logs. The browser exchanges it once for a chosen password. There is no public registration or email-recovery dependency. Treat server/database access as administrative authority; never expose this command through an unauthenticated endpoint.
+
+Code: `internal/auth/password.go`, `internal/auth/password_setup.go`, `internal/auth/sessions.go`, `cmd/jobradar/main.go`. Integration tests: `internal/auth/password_test.go`.
+Review: Why doesn't a browser session automatically authorize changing an existing password? How do version numbers revoke sessions without scanning Redis? Why must recovery-token consumption and password update commit together? How is operator provisioning different from public email verification? What changes when serving many users behind one reverse proxy?

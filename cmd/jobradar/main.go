@@ -47,6 +47,7 @@ type apiConfig struct {
 }
 
 func main() {
+	passwordSetup := flag.String("password-setup", "", "issue a private 15-minute password setup/reset link for an email (server owner only)")
 	preview := flag.Bool("digest-preview", false, "render a digest preview without sending")
 	sendOnce := flag.Bool("digest-once", false, "send today's personal digest once")
 	flag.Parse()
@@ -63,6 +64,25 @@ func main() {
 	}
 
 	defer dbClient.Pool.Close()
+	if *passwordSetup != "" {
+		email, e := auth.NormalizeEmail(*passwordSetup)
+		if e != nil {
+			log.Fatal(e)
+		}
+		if owner := os.Getenv("PERSONAL_EMAIL"); owner != "" && !strings.EqualFold(email, strings.TrimSpace(owner)) {
+			log.Fatal("email must match PERSONAL_EMAIL")
+		}
+		base := strings.TrimRight(os.Getenv("APP_BASE_URL"), "/")
+		if base == "" {
+			log.Fatal("APP_BASE_URL is required for the setup link")
+		}
+		token, e := auth.IssuePasswordSetup(ctx, dbClient.Pool, email)
+		if e != nil {
+			log.Fatal("could not issue setup link: ", e)
+		}
+		fmt.Printf("Open this private link within 15 minutes. Do not share it:\n%s/login#setup=%s\n", base, token)
+		return
+	}
 	digestConfig, emailSender, err := digest.FromEnv()
 	if err != nil {
 		log.Fatal(err)
@@ -194,11 +214,12 @@ func main() {
 			ClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
 			RedirectURL:  os.Getenv("GITHUB_REDIRECT_URL"),
 		},
-		AppBaseURL:    os.Getenv("APP_BASE_URL"),
-		PersonalEmail: os.Getenv("PERSONAL_EMAIL"),
-		OnboardingTTL: onboardingTTL,
-		SessionTTL:    sessionTTL,
-		IsProduction:  os.Getenv("APP_ENV") == "production",
+		AppBaseURL:     os.Getenv("APP_BASE_URL"),
+		PersonalEmail:  os.Getenv("PERSONAL_EMAIL"),
+		AllowedOrigins: allowedOrigins,
+		OnboardingTTL:  onboardingTTL,
+		SessionTTL:     sessionTTL,
+		IsProduction:   os.Getenv("APP_ENV") == "production",
 	}
 
 	authHandler, err := auth.NewHandler(authCfg, rdb, dbClient.Queries, dbClient.Pool)
