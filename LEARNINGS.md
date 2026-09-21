@@ -763,3 +763,10 @@ Targeted Go tests and gopls checks passed, but `go list ./...` reproduced a work
 Questions: Why does .gitignore not exclude files from every tool? How can a workspace-loading error differ from a Go compilation error? Why should PostgreSQL's restrictive storage permissions remain intact? Why is runtime data outside a source tree preferable in a new deployment?
 
 Code/config: `.lazy.lua`, `Makefile`; source: https://go.dev/gopls/settings#directoryFilters .
+
+## Preference-aware numeric ranking
+
+The core title/skills/experience score has weight 80. Each configured preference with known evidence (location, work mode, employment type, comparable complete salary range, industry/category, company stage) has weight 5 and contributes 100 for a match or 0 for a mismatch. Divide by the sum of active weights. Unknown evidence is omitted from numeric ranking; the existing include-unknown setting still controls eligibility. A mismatch also excludes a job from recommendations, even if its skills score is high. Scores are heuristics, not probabilities. Industry/category matching uses normalized literal phrases, not a semantic taxonomy or company-industry inference.
+
+Implementation: `internal/matcher/preferences.go`, `internal/matcher/preference_score_test.go`.
+Review questions: Why keep eligibility separate from rank? Why does missing metadata differ from a known mismatch? Can two jobs with different available evidence have comparable-looking scores? How would we calibrate weights with real user feedback? How would this pure scoring function translate to Laravel or TypeScript?

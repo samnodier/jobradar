@@ -3,16 +3,18 @@ package matcher
 import "strings"
 
 type Preferences struct {
-	WorkMode             string
-	IncludeUnknown       bool
-	Locations, JobTypes  []string
-	MinSalary, MaxSalary *int32
-	Currency             string
+	WorkMode                  string
+	IncludeUnknown            bool
+	Locations, JobTypes       []string
+	Industries, CompanyStages []string
+	MinSalary, MaxSalary      *int32
+	Currency                  string
 }
 type JobFacts struct {
-	Remote                      *bool
-	Location, JobType, Currency string
-	SalaryMin, SalaryMax        *int32
+	Remote                           *bool
+	Location, JobType, Currency      string
+	Industry, Category, CompanyStage string
+	SalaryMin, SalaryMax             *int32
 }
 
 // Eligibility is a separate gate, never a fabricated AI score or a claim of work authorization.
@@ -87,6 +89,30 @@ func CheckPreferences(p Preferences, j JobFacts) (bool, []string) {
 			}
 		}
 	}
+	for _, field := range []struct {
+		name, value string
+		choices     []string
+	}{
+		{"Industry/category", strings.TrimSpace(j.Industry + " " + j.Category), p.Industries},
+		{"Company stage", j.CompanyStage, p.CompanyStages},
+	} {
+		if len(field.choices) == 0 {
+			continue
+		}
+		if strings.TrimSpace(field.value) == "" {
+			unknown(field.name + " is not specified")
+			continue
+		}
+		matched := false
+		for _, choice := range field.choices {
+			if normalize(choice) != "" && containsPhrase(field.value, choice) {
+				matched = true
+			}
+		}
+		if !matched {
+			reject(field.name + " does not match your preference")
+		}
+	}
 	return eligible, notes
 }
 func normalize(s string) string {
@@ -94,4 +120,40 @@ func normalize(s string) string {
 }
 func containsPhrase(text, phrase string) bool {
 	return strings.Contains(" "+normalize(text)+" ", " "+normalize(phrase)+" ")
+}
+
+// PreferenceScore combines the existing role/skill/experience score (weight 80)
+// with each configured, known preference (weight 5). Missing evidence has no
+// numeric weight; IncludeUnknown independently controls eligibility.
+func PreferenceScore(base int, p Preferences, j JobFacts) (int, bool, []string) {
+	eligible, notes := CheckPreferences(p, j)
+	parts := []Preferences{}
+	if p.WorkMode != "" && p.WorkMode != "any" && j.Remote != nil {
+		parts = append(parts, Preferences{WorkMode: p.WorkMode})
+	}
+	if len(p.Locations) > 0 && strings.TrimSpace(j.Location) != "" {
+		parts = append(parts, Preferences{Locations: p.Locations})
+	}
+	if len(p.JobTypes) > 0 && j.JobType != "" {
+		parts = append(parts, Preferences{JobTypes: p.JobTypes})
+	}
+	if (p.MinSalary != nil || p.MaxSalary != nil) && p.Currency != "" && strings.EqualFold(p.Currency, j.Currency) && j.SalaryMin != nil && j.SalaryMax != nil {
+		parts = append(parts, Preferences{MinSalary: p.MinSalary, MaxSalary: p.MaxSalary, Currency: p.Currency})
+	}
+	if len(p.Industries) > 0 && strings.TrimSpace(j.Industry+j.Category) != "" {
+		parts = append(parts, Preferences{Industries: p.Industries})
+	}
+	if len(p.CompanyStages) > 0 && j.CompanyStage != "" {
+		parts = append(parts, Preferences{CompanyStages: p.CompanyStages})
+	}
+	total, weight := base*80, 80
+	for _, part := range parts {
+		part.IncludeUnknown = true
+		matches, _ := CheckPreferences(part, j)
+		if matches {
+			total += 500
+		}
+		weight += 5
+	}
+	return total / weight, eligible, notes
 }
