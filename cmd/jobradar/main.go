@@ -214,6 +214,7 @@ func main() {
 		r.Get("/health", cfg.handlerHealth)
 		r.Group(func(r chi.Router) {
 			r.Use(authHandler.RequireReadAccess)
+			r.Get("/export/jobs", cfg.handlerExportJobs)
 			r.Get("/export/jobs/{jobID}/ai-context", cfg.handlerAIContext)
 		})
 
