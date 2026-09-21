@@ -48,4 +48,6 @@
 - Professional fit (existing role/skill/experience score) has weight 80. Each configured known preference has weight 5 and contributes full or zero credit. Unknown evidence has no numeric weight. Hard eligibility remains separate. Literal industry/category phrases are matched against explicit source/reviewed metadata, without inferring employer industry.
 - Read-only workflow tokens authenticate only export GET routes; credential management requires browser sessions. Expiry/revocation/personal-email restrictions are checked on every request.
 - Export thresholds override the profile default for a request without changing notification settings. Date semantics are explicit; pagination is keyset-based, not a frozen snapshot.
-- Email/password owner login is proposed, not implemented; keep it a separate authentication task.
+- Email/password is the default UI login; GitHub is optional. Existing accounts keep the same user ID. No public email registration; a server-owner command provisions or recovers local accounts.
+- Password hashes are Argon2id and separate from profile data. Atomic password changes increment a session version and revoke workflow/setup tokens. GitHub linking is explicit and requires a recent session plus the same verified primary email.
+- Authentication rate limits use direct peer addresses, not arbitrary forwarded headers. A reverse proxy shares its IP quota unless trusted-proxy handling is designed later.

@@ -62,4 +62,6 @@ The original abbreviated list above is historical; migration files and SQLC mode
 
 - jobs adds nullable industry, category and company_stage. Adzuna category/contract time and reviewed import metadata are persisted. Industry/company-stage profile changes trigger rematching.
 - read_api_tokens: UUID id, user_id FK cascade, name, unique token_hash, created_at, expires_at, revoked_at. Only token hashes are stored.
-- There is no local password hash or email/password login yet.
+- users adds auth_version BIGINT default 0; session checks compare versions.
+- user_passwords: user_id PK/FK cascade, password_hash (Argon2id encoding), updated_at. Never joined into public/profile queries.
+- password_setup_tokens: token_hash PK, user_id FK cascade, expires_at. Server-issued, 15-minute, single-use links; password changes revoke them.

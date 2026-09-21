@@ -4,7 +4,7 @@ Implementation branch: `feature/profile-workflows`, created from `dev` and fast-
 
 ### Implemented
 
-- GitHub OAuth, Redis sessions, optional PERSONAL_EMAIL login restriction.
+- Email/password login and optional GitHub OAuth share Redis sessions; optional PERSONAL_EMAIL restriction.
 - PostgreSQL migrations and SQLC; profile/resume sections, preferences, saved jobs, application tracking.
 - Public-or-owned job authorization, including save/application insertion and indirect listing.
 - RemoteOK, optional Adzuna (12-hour interval), optional Greenhouse board watchlist.
@@ -55,4 +55,4 @@ Work is committed in small focused increments. The prior unpushed release commit
 
 Implemented preference-aware numeric ranking and job metadata flow; read-only account tokens; filtered/paginated job exports and AI-context access; Settings token management. Details: docs/JOB_EXPORT_API.md. New migrations require application before local UI/API testing. Existing dev database has not been changed by tests.
 
-Email/password owner setup and optional GitHub login remain a separate requested discussion/follow-up; no password migration or login flow has been implemented.
+Email/password login is implemented on feature/email-login: Argon2id credentials, recent-session initial password setup, current-password changes, auth-version session invalidation, workflow-token revocation, throttling, one-time server-owner setup/recovery, optional GitHub and explicit account linking. Development database migrated through 20260921000300 after a private backup on September 21. Sam will test real GitHub consent and email login locally before any push.

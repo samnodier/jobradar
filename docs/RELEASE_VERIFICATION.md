@@ -52,3 +52,11 @@ Editor follow-up: `go list ./...` reproduced a pgdata permission/traversal error
 - Export integration verifies minimum score, private ownership, eligibility override, pending-score exclusion, deterministic pagination and request validation; DST unit test checks a 23-hour local day.
 - Full backend suite passed with race detector against isolated PostgreSQL/Redis; go vet passed. Frontend production build/typecheck and existing shell test passed. New migration down/down/up passed on the isolated database.
 - No live external AI/provider call, real email or browser manual acceptance test performed for this follow-up. Existing development database was not migrated.
+
+## Email-login follow-up
+
+- Full backend suite with race detector passed against isolated PostgreSQL/Redis. Password lifecycle coverage includes single-use/expired setup links, wrong passwords, rate limiting, origin checks and old-session invalidation.
+- Mock GitHub OAuth verifies verified-email enforcement, explicit linking, single-use OAuth state, returning login, and email login on the same user ID after adding a password.
+- Frontend production build/typecheck passed; three frontend tests passed, including email login and setup confirmation behavior. Go vet passed.
+- Password migration down/up passed on the isolated database. Development database then backed up privately to `/tmp/jobradar-before-email-login-20260921.dump` and migrated through `20260921000300`.
+- Real GitHub consent and Sam's chosen password remain manual acceptance steps. No password was chosen for Sam or recorded in source/chat. No real email was sent.

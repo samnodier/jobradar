@@ -26,7 +26,7 @@ All `/api` responses are non-cacheable. Job reads allow anonymous access to publ
 | GET | `/api/digest` | Auth; own digest status/history, no send |
 | GET | `/api/digest/preview` | Auth; configured personal recipient only; HTML preview, no send |
 | GET | `/api/system/status` | Auth; DB/Redis connectivity, backlog and source health |
-| GET | `/auth/github/login` | Public OAuth redirect |
+| GET | `/auth/github/login` | Optional OAuth redirect; link=1 requires a recent session |
 | GET | `/auth/github/callback` | OAuth state-validated callback |
 | GET | `/auth/users/me` | Auth user for frontend boot |
 | POST | `/auth/logout` | Clear session |
@@ -40,3 +40,12 @@ See `cmd/jobradar/main.go` and `internal/auth/handler.go` for canonical route re
 - GET `/api/export/jobs`: session or read token; score/date/timezone/source/location filters and score/UUID keyset pagination. Defaults to fresh eligible matches at the profile threshold. See `docs/JOB_EXPORT_API.md`.
 - GET `/api/export/jobs/{jobID}/ai-context`: same read authentication, public-or-owned job and own saved resume Markdown.
 - GET/POST `/api/profile/access-tokens`, DELETE `/api/profile/access-tokens/{tokenID}`: browser session only; owner-scoped creation/list/revocation.
+
+## Local/password authentication
+
+- GET `/auth/methods`: public enabled login methods, no secrets.
+- POST `/auth/password/login`: email/password, rate-limited, JSON/origin validation, Redis session.
+- POST `/auth/password/setup`: private server-issued token plus chosen password; single-use, no public registration.
+- GET `/auth/password`: session; own email and whether password is configured.
+- PUT `/auth/password`: session; add after recent GitHub login or change with current password; invalidates other sessions, read tokens and setup links.
+- Server CLI `--password-setup EMAIL`: provision/recover a local account and print a private 15-minute setup link. No password argument; preserves an existing user ID.

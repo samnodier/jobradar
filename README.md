@@ -85,3 +85,15 @@ Project state: [.context/PLAN.md](.context/PLAN.md), [.context/SCHEMA.md](.conte
 [LEARNINGS.md](LEARNINGS.md) contains implementation explanations, interview questions, failure scenarios, and a Go/Laravel/TypeScript comparison for a later walkthrough.
 
 Future work includes in-app tailored resume generation (manual Copy for AI is available), more ATS adapters, geographic eligibility beyond text matching, and cross-source deduplication. These do not block a personal daily digest.
+
+## Email and GitHub sign-in
+
+Email/password and GitHub share the same account, profile and saved jobs. After migrations and starting the app:
+
+- Existing GitHub account: sign in with GitHub, then open **Profile → Settings → Sign-in methods** within ten minutes. Add a password, log out, and sign in with your account email and that password.
+- Local-only installation or forgotten password: on your own server run `go run ./cmd/jobradar --password-setup you@example.com`. Open the private link printed in your terminal within 15 minutes and choose a password. This command preserves an existing account or provisions a new local one. Never share the link.
+- GitHub is optional; leave its client ID and secret empty to disable it. A local account can explicitly connect GitHub in Settings after recent login; its verified primary email must match.
+- Password changes sign out other sessions and revoke workflow tokens. Public email registration and email-based password recovery are not enabled. The operator command supplies local recovery without an email provider.
+- `PERSONAL_EMAIL`, when set, restricts access regardless of login method. It is separate from `DIGEST_RECIPIENT`, which controls the personal email digest.
+
+Password storage follows [OWASP Argon2id guidance](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html). See LEARNINGS.md for the implementation and review questions.
