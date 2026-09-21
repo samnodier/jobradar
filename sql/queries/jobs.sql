@@ -19,14 +19,15 @@ INSERT INTO jobs (
     is_remote,
     skills,
     logo_url,
-    created_by_user_id
+    created_by_user_id, industry, category, company_stage, employment_type
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
 )
 ON CONFLICT (created_by_user_id, source_url)
 WHERE created_by_user_id IS NOT NULL
 DO UPDATE
     SET
+        industry=excluded.industry, category=excluded.category, company_stage=excluded.company_stage, employment_type=excluded.employment_type,
         title = excluded.title,
         company_name = excluded.company_name,
         description = excluded.description,
@@ -47,6 +48,7 @@ SELECT
     j.job_source,
     j.title,
     j.employment_type,
+    j.industry, j.category, j.company_stage,
     j.company_name,
     j.description,
     j.source_url,
@@ -100,6 +102,7 @@ SELECT
     j.job_source,
     j.title,
     j.employment_type,
+    j.industry, j.category, j.company_stage,
     j.company_name,
     j.description,
     j.source_url,
@@ -170,17 +173,18 @@ ORDER BY created_at DESC;
 
 -- name: UpsertPublicJob :one
 INSERT INTO jobs (external_id, job_source, title, company_name, description, source_url,
- salary_min, salary_max, currency, job_location, is_remote, skills, logo_url, posted_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+ salary_min, salary_max, currency, job_location, is_remote, skills, logo_url, posted_at, category, employment_type)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
 ON CONFLICT (external_id, job_source) WHERE created_by_user_id IS NULL
 DO UPDATE SET title=excluded.title, company_name=excluded.company_name,
  description=excluded.description, source_url=excluded.source_url,
  salary_min=excluded.salary_min, salary_max=excluded.salary_max, currency=excluded.currency,
  job_location=excluded.job_location, is_remote=excluded.is_remote, skills=excluded.skills,
+ category=excluded.category, employment_type=excluded.employment_type,
  logo_url=excluded.logo_url, posted_at=excluded.posted_at, last_seen_at=now(),
  updated_at=CASE WHEN (jobs.title,jobs.company_name,jobs.description,jobs.source_url,
- jobs.salary_min,jobs.salary_max,jobs.currency,jobs.job_location,jobs.is_remote,jobs.skills)
+ jobs.salary_min,jobs.salary_max,jobs.currency,jobs.job_location,jobs.is_remote,jobs.skills,jobs.category,jobs.employment_type)
  IS DISTINCT FROM (excluded.title,excluded.company_name,excluded.description,excluded.source_url,
- excluded.salary_min,excluded.salary_max,excluded.currency,excluded.job_location,excluded.is_remote,excluded.skills)
+ excluded.salary_min,excluded.salary_max,excluded.currency,excluded.job_location,excluded.is_remote,excluded.skills,excluded.category,excluded.employment_type)
  THEN now() ELSE jobs.updated_at END
 RETURNING *;

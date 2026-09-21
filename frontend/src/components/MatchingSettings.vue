@@ -165,9 +165,11 @@ async function save() {
       <p class="mt-2">
         Title similarity: 45%; required-skill coverage weighted by your proficiency: 30%; experience
         text overlap: 25%. Missing signals are left out and the remaining weights are rescaled. This
-        is deterministic text matching, not an AI judgement or hiring probability. Work mode,
-        location, employment type and salary are separate filters. Industry and company-stage
-        preferences are not yet enforced because source metadata is incomplete.
+        is deterministic text matching, not an AI judgement or hiring probability. The professional-fit score has weight 80; each known, configured preference has weight 5:
+        location, work mode, employment type, salary, industry/category and company stage. Matching
+        preferences add credit; mismatches lower the score and exclude the job from recommendations.
+        Unknown metadata adds no score weight and follows your missing-information setting.
+        Industry/category matching uses literal phrases, not inferred company information.
       </p>
     </details>
   </section>

@@ -770,3 +770,12 @@ The core title/skills/experience score has weight 80. Each configured preference
 
 Implementation: `internal/matcher/preferences.go`, `internal/matcher/preference_score_test.go`.
 Review questions: Why keep eligibility separate from rank? Why does missing metadata differ from a known mismatch? Can two jobs with different available evidence have comparable-looking scores? How would we calibrate weights with real user feedback? How would this pure scoring function translate to Laravel or TypeScript?
+
+### Carrying preference evidence through the application
+
+`20260921000100_preference_ranking.sql` adds nullable job industry/category/company-stage metadata and rematches existing users. Industry and company-stage profile changes now schedule durable rematching. Adzuna category and contract-time metadata flow through the shared ingestion adapter; structured import reads industry, occupational category and employment type. The import review form lets the owner supply explicit missing facts. Unknown facts remain unknown. Preferred industries also accepts source-category phrases (for example IT Jobs); this is literal matching, not equivalence between every provider taxonomy.
+
+The worker applies `PreferenceScore` before persistence, notifications, email selection and AI gating. Existing required-skill scoring still needs explicit job skills; description-only mentions are display evidence, not invented requirements.
+
+Code: `cmd/jobradar/worker_match.go`, `internal/sources/adzuna.go`, `internal/extraction/page.go`, `frontend/src/components/ImportJobPanel.vue`.
+Questions: Why can adding a column without updating ingestion leave a feature ineffective? Why must changing profile preferences invalidate cached scores? Why shouldn't an occupational category automatically establish the employer's industry? Where is source evidence reviewed before persistence?

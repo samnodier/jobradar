@@ -81,6 +81,9 @@ type Job struct {
 	LogoUrl         *string            `json:"logo_url"`
 	CreatedByUserID pgtype.UUID        `json:"created_by_user_id"`
 	LastSeenAt      pgtype.Timestamptz `json:"last_seen_at"`
+	Industry        *string            `json:"industry"`
+	Category        *string            `json:"category"`
+	CompanyStage    *string            `json:"company_stage"`
 }
 
 type MatchNotification struct {

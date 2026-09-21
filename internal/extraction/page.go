@@ -41,6 +41,16 @@ func Page(raw string) (llm.ExtractionResult, bool) {
 	result := llm.ExtractionResult{Title: strings.TrimSpace(title), Skills: []string{}}
 	if found != nil {
 		result.Title = text(found["title"])
+		if industry := text(found["industry"]); industry != "" {
+			result.Industry = &industry
+		}
+		if category := text(found["occupationalCategory"]); category != "" {
+			result.Category = &category
+		}
+		if kind := text(found["employmentType"]); kind != "" {
+			kind = strings.ReplaceAll(strings.ToLower(kind), "_", "-")
+			result.EmploymentType = &kind
+		}
 		result.Description = text(found["description"])
 		if org, ok := found["hiringOrganization"].(map[string]any); ok {
 			result.CompanyName = text(org["name"])

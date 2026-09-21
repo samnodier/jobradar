@@ -33,7 +33,7 @@ func (cfg *apiConfig) scrapeSource(ctx context.Context, source sources.Source) e
 				j.Skills = []string{}
 			}
 			_, saveErr := cfg.db.UpsertPublicJob(ctx, database.UpsertPublicJobParams{
-				ExternalID: j.ID, JobSource: j.Source, Title: stringutils.SanitizeStrict(stringutils.FixMojibake(j.Title)),
+				Category: convert.ToNullString(j.Category), EmploymentType: convert.ToNullString(j.EmploymentType), ExternalID: j.ID, JobSource: j.Source, Title: stringutils.SanitizeStrict(stringutils.FixMojibake(j.Title)),
 				CompanyName: stringutils.SanitizeStrict(stringutils.FixMojibake(j.Company)), Description: convert.ToNullString(stringutils.SanitizeDescription(stringutils.FixMojibake(j.Description))),
 				SourceUrl: j.URL, SalaryMin: j.SalaryMin, SalaryMax: j.SalaryMax, Currency: convert.ToNullString(j.Currency), JobLocation: convert.ToNullString(j.Location), IsRemote: j.Remote, Skills: j.Skills, LogoUrl: convert.ToNullString(j.Logo), PostedAt: j.PostedAt,
 			})

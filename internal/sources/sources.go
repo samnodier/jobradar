@@ -14,6 +14,7 @@ import (
 
 type Job struct {
 	ID, Source, Title, Company, Description, URL, Location, Currency, Logo string
+	Category, EmploymentType                                               string
 	SalaryMin, SalaryMax                                                   *int32
 	Remote                                                                 *bool
 	Skills                                                                 []string

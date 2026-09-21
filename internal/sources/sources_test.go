@@ -13,7 +13,7 @@ func TestAdzunaNormalizesAndDeduplicates(t *testing.T) {
 		if r.URL.Path != "/jobs/us/search/1" || r.URL.Query().Get("app_key") != "secret" || r.URL.Query().Get("what") != "Go Developer" {
 			t.Errorf("unexpected request path or parameters")
 		}
-		w.Write([]byte(`{"results":[{"id":"1","title":"Go Developer","description":"Backend work","redirect_url":"https://example.test/1","created":"2026-09-20T00:00:00Z","company":{"display_name":"Example"},"location":{"display_name":"New York"},"salary_min":100000},{"id":"1","title":"Go Developer","redirect_url":"https://example.test/1","company":{"display_name":"Example"}}]}`))
+		w.Write([]byte(`{"results":[{"id":"1","title":"Go Developer","description":"Backend work","redirect_url":"https://example.test/1","created":"2026-09-20T00:00:00Z","company":{"display_name":"Example"},"location":{"display_name":"New York"},"salary_min":100000,"category":{"label":"IT Jobs"},"contract_time":"full_time"},{"id":"1","title":"Go Developer","redirect_url":"https://example.test/1","company":{"display_name":"Example"}}]}`))
 	}))
 	defer server.Close()
 	source := &Adzuna{AppID: "id", AppKey: "secret", Country: "us", Queries: []string{"Go Developer"}, Pages: 1, BaseURL: server.URL}
@@ -21,7 +21,7 @@ func TestAdzunaNormalizesAndDeduplicates(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(jobs) != 1 || jobs[0].Currency != "USD" || jobs[0].Remote != nil || jobs[0].PostedAt == nil || *jobs[0].SalaryMin != 100000 {
+	if len(jobs) != 1 || jobs[0].Category != "IT Jobs" || jobs[0].EmploymentType != "full-time" || jobs[0].Currency != "USD" || jobs[0].Remote != nil || jobs[0].PostedAt == nil || *jobs[0].SalaryMin != 100000 {
 		t.Fatalf("bad normalization: %+v", jobs)
 	}
 }

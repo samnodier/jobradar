@@ -147,7 +147,30 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 		return nil
 	}
 
-	score := int32(result.Score)
+	settings, err := cfg.db.GetMatchSettings(ctx, userID)
+	if err != nil {
+		return err
+	}
+	user, err := cfg.db.GetUserByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	locations, err := cfg.db.GetUserDesiredLocations(ctx, userID)
+	if err != nil {
+		return err
+	}
+	locationNames := []string{}
+	for _, l := range locations {
+		locationNames = append(locationNames, l.LocationName)
+	}
+	value := func(v *string) string {
+		if v == nil {
+			return ""
+		}
+		return *v
+	}
+	rankedScore, eligible, notes := matcher.PreferenceScore(result.Score, matcher.Preferences{WorkMode: settings.WorkMode, IncludeUnknown: settings.IncludeUnknown, Industries: user.PreferredIndustries, CompanyStages: user.CompanyStagePreference, Locations: locationNames, JobTypes: user.PreferredJobTypes, MinSalary: user.MinSalary, MaxSalary: user.MaxSalary, Currency: value(user.SalaryCurrency)}, matcher.JobFacts{Industry: value(job.Industry), Category: value(job.Category), CompanyStage: value(job.CompanyStage), Remote: job.IsRemote, Location: value(job.JobLocation), JobType: value(job.EmploymentType), Currency: value(job.Currency), SalaryMin: job.SalaryMin, SalaryMax: job.SalaryMax})
+	score := int32(rankedScore)
 	titleScore := convert.ToFloat8(result.TitleScore)
 	skillScore := convert.ToFloat8(result.SkillScore)
 	expScore := convert.ToFloat8(result.ExpScore)
@@ -186,29 +209,6 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 	if err != nil {
 		return err
 	}
-	settings, err := cfg.db.GetMatchSettings(ctx, userID)
-	if err != nil {
-		return err
-	}
-	user, err := cfg.db.GetUserByID(ctx, userID)
-	if err != nil {
-		return err
-	}
-	locations, err := cfg.db.GetUserDesiredLocations(ctx, userID)
-	if err != nil {
-		return err
-	}
-	locationNames := []string{}
-	for _, l := range locations {
-		locationNames = append(locationNames, l.LocationName)
-	}
-	value := func(v *string) string {
-		if v == nil {
-			return ""
-		}
-		return *v
-	}
-	eligible, notes := matcher.CheckPreferences(matcher.Preferences{WorkMode: settings.WorkMode, IncludeUnknown: settings.IncludeUnknown, Locations: locationNames, JobTypes: user.PreferredJobTypes, MinSalary: user.MinSalary, MaxSalary: user.MaxSalary, Currency: value(user.SalaryCurrency)}, matcher.JobFacts{Remote: job.IsRemote, Location: value(job.JobLocation), JobType: value(job.EmploymentType), Currency: value(job.Currency), SalaryMin: job.SalaryMin, SalaryMax: job.SalaryMax})
 	if err = cfg.db.UpdateMatchEligibility(ctx, database.UpdateMatchEligibilityParams{UserID: userID, JobID: jobID, PreferenceEligible: eligible, PreferenceNotes: notes}); err != nil {
 		return err
 	}

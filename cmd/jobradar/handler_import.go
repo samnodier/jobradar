@@ -25,17 +25,21 @@ type URLRequest struct {
 }
 
 type jobConfirmImportRequest struct {
-	SourceURL   string   `json:"source_url"`
-	Title       string   `json:"title"`
-	CompanyName string   `json:"company_name"`
-	Description string   `json:"description"`
-	SalaryMin   *int32   `json:"salary_min"`
-	SalaryMax   *int32   `json:"salary_max"`
-	Currency    *string  `json:"currency"`
-	JobLocation *string  `json:"job_location"`
-	IsRemote    *bool    `json:"is_remote"`
-	Skills      []string `json:"skills"`
-	LogoURL     *string  `json:"logo_url"`
+	Industry       *string  `json:"industry"`
+	Category       *string  `json:"category"`
+	CompanyStage   *string  `json:"company_stage"`
+	EmploymentType *string  `json:"employment_type"`
+	SourceURL      string   `json:"source_url"`
+	Title          string   `json:"title"`
+	CompanyName    string   `json:"company_name"`
+	Description    string   `json:"description"`
+	SalaryMin      *int32   `json:"salary_min"`
+	SalaryMax      *int32   `json:"salary_max"`
+	Currency       *string  `json:"currency"`
+	JobLocation    *string  `json:"job_location"`
+	IsRemote       *bool    `json:"is_remote"`
+	Skills         []string `json:"skills"`
+	LogoURL        *string  `json:"logo_url"`
 }
 
 func (cfg *apiConfig) handlerExtractJob(w http.ResponseWriter, r *http.Request) {
@@ -185,6 +189,7 @@ func (cfg *apiConfig) handlerImportConfirm(w http.ResponseWriter, r *http.Reques
 	externalID := parsedURL.String()
 
 	params := database.CreateImportedJobParams{
+		Industry: req.Industry, Category: req.Category, CompanyStage: req.CompanyStage, EmploymentType: req.EmploymentType,
 		ExternalID:      externalID,
 		JobSource:       jobSource,
 		Title:           jobTitle,

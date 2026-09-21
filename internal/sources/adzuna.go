@@ -52,12 +52,16 @@ func (a *Adzuna) Fetch(ctx context.Context) ([]Job, error) {
 			endpoint := fmt.Sprintf("%s/jobs/%s/search/%d?%s", base, url.PathEscape(a.Country), page, params.Encode())
 			var result struct {
 				Results []struct {
-					ID          string `json:"id"`
-					Title       string `json:"title"`
-					Description string `json:"description"`
-					URL         string `json:"redirect_url"`
-					Created     string `json:"created"`
-					Company     struct {
+					Category struct {
+						Label string `json:"label"`
+					} `json:"category"`
+					ContractTime string `json:"contract_time"`
+					ID           string `json:"id"`
+					Title        string `json:"title"`
+					Description  string `json:"description"`
+					URL          string `json:"redirect_url"`
+					Created      string `json:"created"`
+					Company      struct {
 						Name string `json:"display_name"`
 					} `json:"company"`
 					Location struct {
@@ -76,7 +80,7 @@ func (a *Adzuna) Fetch(ctx context.Context) ([]Job, error) {
 				}
 				seen[r.ID] = true
 				currency := map[string]string{"us": "USD", "gb": "GBP", "ca": "CAD", "au": "AUD", "nz": "NZD", "de": "EUR", "fr": "EUR", "nl": "EUR", "at": "EUR", "it": "EUR", "es": "EUR", "be": "EUR", "ch": "CHF", "in": "INR", "pl": "PLN", "br": "BRL", "za": "ZAR", "sg": "SGD"}[strings.ToLower(a.Country)]
-				j := Job{ID: r.ID, Source: a.Name(), Title: r.Title, Company: r.Company.Name, Description: r.Description, URL: r.URL, Location: r.Location.Name, Currency: currency, PostedAt: parseDate(r.Created), Skills: []string{}}
+				j := Job{Category: r.Category.Label, EmploymentType: strings.ReplaceAll(r.ContractTime, "_", "-"), ID: r.ID, Source: a.Name(), Title: r.Title, Company: r.Company.Name, Description: r.Description, URL: r.URL, Location: r.Location.Name, Currency: currency, PostedAt: parseDate(r.Created), Skills: []string{}}
 				if r.Min != nil && *r.Min >= 0 && *r.Min < 2147483647 {
 					v := int32(*r.Min)
 					j.SalaryMin = &v
