@@ -9,10 +9,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/redis/go-redis/v9"
 	"github.com/samnodier/jobradar/internal/database"
 	"github.com/samnodier/jobradar/internal/httpx"
+	"golang.org/x/oauth2"
 )
 
 type GitHubUser struct {
@@ -32,6 +34,15 @@ type GitHubEmail struct {
 func (h *Handler) handleGitHubLogin(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
+	stateValue := "login"
+	if r.URL.Query().Get("link") == "1" {
+		session, ok := h.recentGitHubLinkSession(r)
+		if !ok {
+			httpx.RespondError(w, 401, "sign in again before connecting GitHub")
+			return
+		}
+		stateValue = "link:" + session.UserID.String()
+	}
 	// Generate the CSRF state
 	state := generateRandomToken()
 
@@ -39,7 +50,7 @@ func (h *Handler) handleGitHubLogin(w http.ResponseWriter, r *http.Request) {
 	err := h.rdb.Set(
 		ctx,
 		"oauth:github:state:"+state,
-		"valid",
+		stateValue,
 		h.cfg.OnboardingTTL,
 	).Err()
 	if err != nil {
@@ -87,19 +98,12 @@ func (h *Handler) handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 
 	// check redis
 	key := "oauth:github:state:" + state
-	_, err = h.rdb.Get(ctx, key).Result()
+	stateValue, err := h.rdb.GetDel(ctx, key).Result()
 	if errors.Is(err, redis.Nil) {
 		httpx.RespondError(w, http.StatusBadRequest, "invalid or expired state")
 		return
 	} else if err != nil {
 		httpx.RespondError(w, http.StatusInternalServerError, "invalid state")
-		return
-	}
-
-	// Delete redis one (one-time use)
-	err = h.rdb.Del(ctx, key).Err()
-	if err != nil {
-		httpx.RespondError(w, http.StatusInternalServerError, "failed to delete state")
 		return
 	}
 
@@ -118,7 +122,7 @@ func (h *Handler) handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.oauthCfg.Exchange(ctx, code)
+	token, err := h.oauthCfg.Exchange(context.WithValue(ctx, oauth2.HTTPClient, h.httpClient), code)
 	if err != nil {
 		httpx.RespondError(w, http.StatusInternalServerError, "failed to exchange code")
 		return
@@ -135,6 +139,37 @@ func (h *Handler) handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	providerID := strconv.FormatInt(user.ID, 10)
+	if strings.HasPrefix(stateValue, "link:") {
+		session, ok := h.recentGitHubLinkSession(r)
+		target, e := uuid.Parse(strings.TrimPrefix(stateValue, "link:"))
+		if !ok || e != nil || session.UserID != target {
+			httpx.RespondError(w, 401, "linking session expired; sign in again")
+			return
+		}
+		if !strings.EqualFold(session.Email, user.Email) {
+			httpx.RespondError(w, 409, "GitHub's verified primary email must match your Jobradar email")
+			return
+		}
+		linked, e := h.db.GetUserByProviderIdentity(ctx, database.GetUserByProviderIdentityParams{AuthProvider: "github", AuthProviderID: providerID})
+		if e == nil && linked.ID != target {
+			httpx.RespondError(w, 409, "GitHub is already connected to another account")
+			return
+		}
+		if e != nil && !errors.Is(e, pgx.ErrNoRows) {
+			httpx.RespondError(w, 500, "could not connect GitHub")
+			return
+		}
+		if errors.Is(e, pgx.ErrNoRows) {
+			_, e = h.db.CreateUserAccount(ctx, database.CreateUserAccountParams{UserID: target, AuthProvider: "github", AuthProviderID: providerID})
+			if e != nil {
+				httpx.RespondError(w, 409, "this account already has a GitHub connection")
+				return
+			}
+		}
+		http.Redirect(w, r, h.cfg.AppBaseURL+"/profile", http.StatusFound)
+		return
+	}
+
 	dbUser, err := h.db.GetUserByProviderIdentity(ctx, database.GetUserByProviderIdentityParams{
 		AuthProvider:   "github",
 		AuthProviderID: providerID,
@@ -160,6 +195,14 @@ func (h *Handler) handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Never attach GitHub to an existing local account based on email alone.
+	if _, e := h.db.GetAuthIdentityByEmail(ctx, user.Email); e == nil {
+		http.Redirect(w, r, h.cfg.AppBaseURL+"/login?error=account_exists", http.StatusFound)
+		return
+	} else if !errors.Is(e, pgx.ErrNoRows) {
+		httpx.RespondError(w, 500, "database error")
+		return
+	}
 	// New user - store pending sign up
 	pendingToken := generateRandomToken()
 	signup := PendingSignup{
@@ -208,13 +251,13 @@ func (h *Handler) fetchGitHubUser(ctx context.Context, accessToken string) (*Git
 		return nil, err
 	}
 
-	if user.Email == "" {
-		userEmail, err := h.fetchGitHubPrimaryEmail(ctx, accessToken)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch user email: %w", err)
-		}
-		user.Email = userEmail
+	// The public profile email is not proof of verification. Always use the
+	// verified primary email from GitHub's authenticated email endpoint.
+	userEmail, err := h.fetchGitHubPrimaryEmail(ctx, accessToken)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch verified email: %w", err)
 	}
+	user.Email = userEmail
 
 	return &user, nil
 }
@@ -260,4 +303,19 @@ func (h *Handler) fetchGitHubPrimaryEmail(ctx context.Context, accessToken strin
 	}
 
 	return "", errors.New("failed to get user email")
+}
+
+func (h *Handler) recentGitHubLinkSession(r *http.Request) (*Session, bool) {
+	cookie, err := r.Cookie("session_id")
+	if err != nil {
+		return nil, false
+	}
+	session, err := h.getSession(r.Context(), cookie.Value)
+	if err != nil || !recentSession(session) {
+		return nil, false
+	}
+	if h.cfg.PersonalEmail != "" && !strings.EqualFold(session.Email, h.cfg.PersonalEmail) {
+		return nil, false
+	}
+	return session, true
 }

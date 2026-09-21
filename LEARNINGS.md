@@ -835,3 +835,10 @@ For a local installation or lost password, the server owner runs `go run ./cmd/j
 
 Code: `internal/auth/password.go`, `internal/auth/password_setup.go`, `internal/auth/sessions.go`, `cmd/jobradar/main.go`. Integration tests: `internal/auth/password_test.go`.
 Review: Why doesn't a browser session automatically authorize changing an existing password? How do version numbers revoke sessions without scanning Redis? Why must recovery-token consumption and password update commit together? How is operator provisioning different from public email verification? What changes when serving many users behind one reverse proxy?
+
+## Keeping GitHub and password login on the same account
+
+Existing GitHub users add a password to their existing user ID. A locally provisioned account connects GitHub explicitly from Settings after recent sign-in. OAuth state records the intended user and is consumed atomically with Redis GETDEL. The callback checks the same live recent session and GitHub's verified primary email; a public profile email is not trusted as verification. An unrelated GitHub identity is never silently attached because its email matches. Returning GitHub users retain the same profile, scores and saved jobs.
+
+Code: `internal/auth/github.go`, `internal/auth/github_test.go`. Tests use a mock OAuth provider to verify explicit linking, verified-email enforcement, returning sessions and single-use state. Real GitHub consent remains a manual acceptance test.
+Questions: Why is automatic account linking dangerous? What prevents login CSRF? Why must checking and consuming OAuth state be atomic? Why does authentication identity differ from a mutable display email?
