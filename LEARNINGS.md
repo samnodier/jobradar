@@ -849,3 +849,9 @@ The login page defaults to email/password and asks `/auth/methods` whether GitHu
 
 Code: `frontend/src/views/LoginView.vue`, `frontend/src/components/PasswordSettings.vue`, `frontend/src/__tests__/LoginView.spec.ts`, `frontend/vite.config.ts`.
 Review: Why must frontend validation be repeated on the server? Why do new auth routes need Vite proxy entries? Why is a password confirmation field a UX check, not an authentication factor? How do we keep two login methods attached to one user ID?
+
+### Local rollout and acceptance evidence
+
+After isolated migration rollback/reapply and automated checks, backed up the existing development database and applied all eight outstanding migrations. Then started PostgreSQL/Redis and the Go/Vite servers. A successful HTTP health check alone does not prove a login works: also checked auth-method discovery, Vite proxy routing, OAuth redirect destination and invalid-password rejection. Automated tests exercise successful email sessions and mock GitHub callbacks; Sam must perform real GitHub consent and choose their own password. Live RemoteOK/Adzuna polling succeeded; source save counts are not unique-new-job or matching-job counts. Email sending remains disabled until separately tested.
+
+Review: How do unit tests, integration tests, smoke checks and user acceptance differ? Why back up before migrating an existing database even after testing a clean schema? Why use localhost consistently when OAuth cookies and redirects are configured for that hostname?

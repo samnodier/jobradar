@@ -60,3 +60,7 @@ Editor follow-up: `go list ./...` reproduced a pgdata permission/traversal error
 - Frontend production build/typecheck passed; three frontend tests passed, including email login and setup confirmation behavior. Go vet passed.
 - Password migration down/up passed on the isolated database. Development database then backed up privately to `/tmp/jobradar-before-email-login-20260921.dump` and migrated through `20260921000300`.
 - Real GitHub consent and Sam's chosen password remain manual acceptance steps. No password was chosen for Sam or recorded in source/chat. No real email was sent.
+
+### Local acceptance servers
+
+Started the Go server on 8080 and Vite on 5173 against the migrated development database. Through the Vite proxy: login page, auth methods, health and job feed returned 200; GitHub returned a 302 to github.com with the configured localhost callback; invalid email credentials returned 401. Both login methods are advertised. First live source polls saved 99 RemoteOK and 232 Adzuna records successfully. These are source save counts, not counts of unique new jobs or recommended matches. Email sending and automatic AI enrichment remain off.

@@ -30,11 +30,11 @@ Implementation branch: `feature/profile-workflows`, created from `dev` and fast-
 - Frontend production build, type checks and shell test passed with updated dependencies.
 - Compatible npm security updates applied; audit reported zero vulnerabilities.
 - Production application and migration images built. Running-image HTTP checks passed for SPA routing, empty feeds, validation, authentication guards, manual import, private visibility, save, search, pagination and status endpoints. See docs/RELEASE_VERIFICATION.md.
-- Live Adzuna and live email require Sam's account configuration. No real email has been sent during implementation.
+- Live Adzuna startup polling succeeded on September 21 (232 records saved); RemoteOK saved 99. No real email has been sent; provider delivery remains to be tested.
 
 ### Remaining configuration for personal use
 
-- Sam fills roles, locations and matching settings in the profile; set Adzuna application credentials in the environment.
+- Review roles, locations and matching settings in the profile; Adzuna credentials are configured and live polling succeeded.
 - Confirm recipient, sender and provider; set timezone/hour in Profile → Settings; configure either Resend or GoHighLevel.
 - Sign in, fill matching preferences, preview a digest, then exercise actual provider delivery.
 - Deploy behind HTTPS, configure OAuth callback, run migrations, verify backups and one week of scheduled operation.
@@ -56,3 +56,5 @@ Work is committed in small focused increments. The prior unpushed release commit
 Implemented preference-aware numeric ranking and job metadata flow; read-only account tokens; filtered/paginated job exports and AI-context access; Settings token management. Details: docs/JOB_EXPORT_API.md. New migrations require application before local UI/API testing. Existing dev database has not been changed by tests.
 
 Email/password login is implemented on feature/email-login: Argon2id credentials, recent-session initial password setup, current-password changes, auth-version session invalidation, workflow-token revocation, throttling, one-time server-owner setup/recovery, optional GitHub and explicit account linking. Development database migrated through 20260921000300 after a private backup on September 21. Sam will test real GitHub consent and email login locally before any push.
+
+Local review servers started on September 21: frontend http://localhost:5173, backend http://localhost:8080, development PostgreSQL/Redis on 5432/6379. HTTP checks passed for the login page, auth methods (both enabled), health, job feed, GitHub authorization redirect and invalid email-login rejection. Automatic AI enrichment and email sending remain disabled. Sam sets their own password after GitHub sign-in; no owner password has been generated or recorded by the implementation.
