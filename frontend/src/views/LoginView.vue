@@ -1,12 +1,74 @@
 <script setup lang="ts">
-const githubLoginUrl = '/auth/github/login'
+import { onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+const router = useRouter()
+const route = useRoute()
+const auth = useAuthStore()
+const email = ref('')
+const password = ref('')
+const confirmation = ref('')
+const setupToken = ref('')
+const githubEnabled = ref(false)
+const busy = ref(false)
+const error = ref(
+  route.query.error === 'account_exists'
+    ? 'This email already has a Jobradar account. Sign in with your password, then connect GitHub in Settings.'
+    : '',
+)
+onMounted(async () => {
+  setupToken.value = new URLSearchParams(window.location.hash.slice(1)).get('setup') || ''
+  if (setupToken.value) await router.replace({ hash: '' })
+  try {
+    const response = await fetch('/auth/methods', { credentials: 'include' })
+    if (!response.ok) throw new Error('Could not load sign-in methods. Please refresh.')
+    githubEnabled.value = (await response.json()).github
+  } catch (e) {
+    error.value = String(e)
+  }
+})
+async function submit() {
+  error.value = ''
+  if (setupToken.value && password.value !== confirmation.value) {
+    error.value = 'Passwords do not match'
+    return
+  }
+  busy.value = true
+  try {
+    const endpoint = setupToken.value ? '/auth/password/setup' : '/auth/password/login'
+    const body = setupToken.value
+      ? { token: setupToken.value, password: password.value }
+      : { email: email.value, password: password.value }
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    if (!response.ok) {
+      const data = await response.json().catch(() => null)
+      throw new Error(data?.error || 'Sign-in failed')
+    }
+    setupToken.value = ''
+    await auth.fetchMe()
+    if (!auth.user)
+      throw new Error(
+        'Your password was accepted, but the session could not load. Please sign in again.',
+      )
+    await router.replace('/jobs')
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    busy.value = false
+    password.value = ''
+    confirmation.value = ''
+  }
+}
 </script>
 
 <template>
   <div class="flex flex-col items-center justify-center flex-1 gap-8 py-8">
-    <div
-      class="w-full max-w-95 bg-white border border-[#e8e8e4] p-8 flex flex-col justify-center"
-    >
+    <div class="w-full max-w-95 bg-white border border-[#e8e8e4] p-8 flex flex-col justify-center">
       <!-- Head -->
       <div class="text-center mb-4">
         <div class="w-10 h-10 bg-[#5e6ad2] flex items-center justify-center mx-auto mb-4">
@@ -28,20 +90,61 @@ const githubLoginUrl = '/auth/github/login'
         </p>
       </div>
 
-      <!--
-        <button class="w-full inline-flex items-center justify-center gap-2 px-6 py-2 bg-white text-[#1a1a1a] border border-[#e8e8e4] font-medium transition-colors hover:bg-gray-50" @click="loginWith('google')">
-          <svg width="18" height="18" viewBox="0 0 18 18">
-            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4" />
-            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853" />
-            <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05" />
-            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335" />
-          </svg>
-          Continue with Google
+      <form class="space-y-4 mb-5" @submit.prevent="submit">
+        <h2 v-if="setupToken" class="font-medium">Choose your password</h2>
+        <p v-if="error" role="alert" class="text-sm text-red-600">{{ error }}</p>
+        <label v-if="!setupToken" class="block text-sm"
+          >Email
+          <input
+            v-model="email"
+            type="email"
+            autocomplete="username"
+            required
+            maxlength="254"
+            class="mt-1 w-full border border-gray-300 rounded p-2"
+          />
+        </label>
+        <label class="block text-sm"
+          >Password
+          <input
+            v-model="password"
+            type="password"
+            :autocomplete="setupToken ? 'new-password' : 'current-password'"
+            :minlength="setupToken ? 15 : undefined"
+            required
+            maxlength="1024"
+            class="mt-1 w-full border border-gray-300 rounded p-2"
+          />
+        </label>
+        <label v-if="setupToken" class="block text-sm"
+          >Confirm password
+          <input
+            v-model="confirmation"
+            type="password"
+            autocomplete="new-password"
+            required
+            maxlength="1024"
+            class="mt-1 w-full border border-gray-300 rounded p-2"
+          />
+        </label>
+        <p v-if="setupToken" class="text-xs text-gray-600">
+          Use a passphrase of at least 15 characters. Saving it signs out older sessions and revokes
+          workflow tokens.
+        </p>
+        <button
+          type="submit"
+          :disabled="busy"
+          class="w-full bg-[#5e6ad2] text-white p-2 disabled:opacity-50"
+        >
+          {{
+            busy ? 'Please wait…' : setupToken ? 'Save password and sign in' : 'Sign in with email'
+          }}
         </button>
-      -->
+      </form>
 
       <a
-        :href="githubLoginUrl"
+        v-if="githubEnabled && !setupToken"
+        href="/auth/github/login"
         class="w-full inline-flex items-center justify-center gap-2 px-6 py-2 bg-[#24292e] text-white no-underline font-medium transition-colors hover:bg-[#2c3e50]"
       >
         <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
@@ -51,6 +154,18 @@ const githubLoginUrl = '/auth/github/login'
         </svg>
         Continue with GitHub
       </a>
+
+      <p v-if="!setupToken" class="text-xs text-gray-600 mt-4">
+        Already use GitHub? Sign in with GitHub and add a password under Profile → Settings →
+        Sign-in methods.
+      </p>
+      <details v-if="!setupToken" class="text-xs text-gray-600 mt-3">
+        <summary class="cursor-pointer">First-time setup or forgotten password</summary>
+        <p class="mt-2">
+          Ask the installation owner for a private password setup link. For your own server, follow
+          the owner setup instructions in the README. Public email registration is disabled.
+        </p>
+      </details>
 
       <p class="text-center text-[12px] text-[#aaa] leading-[1.7] mt-5">
         By continuing, you agree to our

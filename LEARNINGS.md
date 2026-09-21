@@ -842,3 +842,10 @@ Existing GitHub users add a password to their existing user ID. A locally provis
 
 Code: `internal/auth/github.go`, `internal/auth/github_test.go`. Tests use a mock OAuth provider to verify explicit linking, verified-email enforcement, returning sessions and single-use state. Real GitHub consent remains a manual acceptance test.
 Questions: Why is automatic account linking dangerous? What prevents login CSRF? Why must checking and consuming OAuth state be atomic? Why does authentication identity differ from a mutable display email?
+
+## Email-login forms and credential lifecycle
+
+The login page defaults to email/password and asks `/auth/methods` whether GitHub is available. A setup fragment opens a password-confirmation form; its secret is removed from the address bar and retained only in component memory. Password fields use browser password-manager autocomplete hints, clear after submission, and do not enter Pinia/localStorage. Profile Settings lets a freshly signed-in GitHub user add a password or a password user change it. Saving remounts the token list because existing workflow credentials were revoked.
+
+Code: `frontend/src/views/LoginView.vue`, `frontend/src/components/PasswordSettings.vue`, `frontend/src/__tests__/LoginView.spec.ts`, `frontend/vite.config.ts`.
+Review: Why must frontend validation be repeated on the server? Why do new auth routes need Vite proxy entries? Why is a password confirmation field a UX check, not an authentication factor? How do we keep two login methods attached to one user ID?

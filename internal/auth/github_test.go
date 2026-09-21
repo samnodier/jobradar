@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/samnodier/jobradar/internal/database"
@@ -136,6 +137,7 @@ func TestGitHubVerifiedEmailExplicitLinkAndReturningLogin(t *testing.T) {
 	if w.Code != 302 {
 		t.Fatal("returning login failed", w.Code, w.Body.String())
 	}
+	var returningCookie *http.Cookie
 	found := false
 	for _, c := range w.Result().Cookies() {
 		if c.Name == "session_id" {
@@ -143,10 +145,36 @@ func TestGitHubVerifiedEmailExplicitLinkAndReturningLogin(t *testing.T) {
 			if e != nil || s.UserID != owner.ID {
 				t.Fatal("wrong returning account", e)
 			}
+			returningCookie = c
 			found = true
 		}
 	}
 	if !found {
 		t.Fatal("no returning session")
 	}
+	// The same account can add a password after GitHub sign-in, then use email.
+	body, _ := json.Marshal(map[string]string{"password": "a second way to sign in"})
+	req := httptest.NewRequest("PUT", "/password", strings.NewReader(string(body)))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(returningCookie)
+	req.RemoteAddr = uuid.NewString() + ":1"
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, req)
+	if response.Code != 200 {
+		t.Fatal("adding password to GitHub account failed", response.Code, response.Body.String())
+	}
+	body, _ = json.Marshal(map[string]string{"email": email, "password": "a second way to sign in"})
+	req = httptest.NewRequest("POST", "/password/login", strings.NewReader(string(body)))
+	req.Header.Set("Content-Type", "application/json")
+	req.RemoteAddr = uuid.NewString() + ":1"
+	response = httptest.NewRecorder()
+	router.ServeHTTP(response, req)
+	if response.Code != 200 {
+		t.Fatal("email login after GitHub failed", response.Code)
+	}
+	session, e := h.getSession(ctx, response.Result().Cookies()[0].Value)
+	if e != nil || session.UserID != owner.ID {
+		t.Fatal("login methods split the account", e)
+	}
+
 }

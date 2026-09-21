@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PasswordSettings from './PasswordSettings.vue'
 import AccessTokens from './AccessTokens.vue'
 import MatchingSettings from './MatchingSettings.vue'
 import { reactive, ref } from 'vue'
@@ -16,6 +17,7 @@ const authStore = useAuthStore()
 const router = useRouter()
 const toast = useToast()
 
+const credentialVersion = ref(0)
 const isDeleteConfirmVisible = ref(false)
 const typedEmail = ref('')
 const deleteError = ref('')
@@ -233,7 +235,8 @@ async function removeApiKey(providerId: string) {
       </section>
 
       <MatchingSettings />
-      <AccessTokens />
+      <PasswordSettings @changed="credentialVersion++" />
+      <AccessTokens :key="credentialVersion" />
 
       <!-- Privacy & Account -->
       <section class="p-6 bg-white border border-gray-200">
