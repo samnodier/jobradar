@@ -1,14 +1,23 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import StatusView from '@/views/StatusView.vue'
-
-const health = {
+const snapshot = {
   database: true,
-  redis: false,
+  redis: true,
   pending_matches: 3,
-  sources: [{ name: 'remoteok', status: 'ok', last_success: null }],
+  sources: [
+    {
+      name: 'adzuna',
+      status: 'success',
+      last_success: '2026-09-22T10:00:00Z',
+      last_checked: '2026-09-22T12:00:00Z',
+      history: [
+        { day: '2026-09-22', successes: 3, failures: 1 },
+        { day: '2026-09-21', successes: 1, failures: 0 },
+      ],
+    },
+  ],
 }
-const response = (ok = true) => ({ ok, json: async () => health })
 function render() {
   return mount(StatusView, { global: { stubs: { AppSidebar: true } } })
 }
@@ -16,77 +25,78 @@ afterEach(() => {
   vi.useRealTimers()
   vi.unstubAllGlobals()
 })
-
 describe('system health', () => {
-  it('renders dependency state and stored source history, with manual refresh and last checked time', async () => {
-    const fetch = vi.fn().mockResolvedValue(response())
-    vi.stubGlobal('fetch', fetch)
-    const view = render()
-    await view.vm.$nextTick()
-    expect(view.get('button').attributes('disabled')).toBeDefined()
-    await flushPromises()
-    expect(view.text()).toContain('Connected')
-    expect(view.text()).toContain('Unavailable')
-    expect(view.text()).toContain('Pending matches')
-    expect(view.text()).toContain('remoteok')
-    expect(view.text()).toContain('not a live uptime check')
-    expect(view.get('[role="status"]').text()).toContain('Last checked:')
-    await view.get('button').trigger('click')
-    await flushPromises()
-    expect(fetch).toHaveBeenCalledTimes(2)
-    view.unmount()
-  })
-
-  it('polls every 30 seconds without overlapping requests and aborts on unmount', async () => {
+  it('shows observed rates and 30 accessible day cells without inventing history', async () => {
     vi.useFakeTimers()
-    let finish!: (value: unknown) => void
-    const fetch = vi
-      .fn()
-      .mockImplementationOnce(
-        () =>
-          new Promise((resolve) => {
-            finish = resolve
-          }),
-      )
-      .mockResolvedValue(response())
-    vi.stubGlobal('fetch', fetch)
+    vi.setSystemTime(new Date('2026-09-22T14:00:00Z'))
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => snapshot }))
     const view = render()
-    const initialSignal = fetch.mock.calls[0]![1].signal as AbortSignal
-    await vi.advanceTimersByTimeAsync(60000)
-    expect(fetch).toHaveBeenCalledTimes(1)
-    finish(response())
     await flushPromises()
-    await vi.advanceTimersByTimeAsync(30000)
-    expect(fetch).toHaveBeenCalledTimes(2)
-    const latestSignal = fetch.mock.calls[1]![1].signal as AbortSignal
+    expect(view.text()).toContain('80.0% fetch success · 5 recorded attempts')
+    expect(view.findAll('.history-cell')).toHaveLength(30)
+    expect(view.findAll('.history-unknown')).toHaveLength(29) // 28 days plus legend
+    expect(view.get('.history-mixed[role="img"]').attributes('aria-label')).toBe(
+      '2026-09-22 UTC: 3 successful, 1 failed fetches',
+    )
+    expect(view.get('details').text()).toContain('Last attempt:')
+    expect(view.text()).toContain('latest fetches successful')
     view.unmount()
-    expect(initialSignal.aborted).toBe(false)
-    expect(latestSignal.aborted).toBe(true)
-    await vi.advanceTimersByTimeAsync(60000)
-    expect(fetch).toHaveBeenCalledTimes(2)
   })
-
-  it('keeps the last successful result clearly marked stale when a refresh fails and allows retry', async () => {
+  it('reports source failures and unknown collection history separately', async () => {
     vi.stubGlobal(
       'fetch',
-      vi
-        .fn()
-        .mockResolvedValueOnce(response())
-        .mockResolvedValueOnce(response(false))
-        .mockResolvedValueOnce(response()),
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          ...snapshot,
+          sources: [{ ...snapshot.sources[0], status: 'failing', history: [] }],
+        }),
+      }),
     )
     const view = render()
     await flushPromises()
-    const checked = view.get('[role="status"]').text()
+    expect(view.get('[role="status"]').text()).toContain('need attention')
+    expect(view.text()).toContain('No recorded attempts in this period')
+    expect(view.text()).not.toContain('100.0%')
+    view.unmount()
+  })
+  it('preserves but labels the old snapshot after refresh failure and retries', async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => snapshot })
+      .mockResolvedValueOnce({ ok: false })
+      .mockResolvedValue({ ok: true, json: async () => snapshot })
+    vi.stubGlobal('fetch', fetcher)
+    const view = render()
+    await flushPromises()
     await view.get('button').trigger('click')
     await flushPromises()
-    expect(view.get('[role="alert"]').text()).toContain('Showing the last successful check')
-    expect(view.text()).toContain('remoteok')
-    expect(view.get('[role="status"]').text()).toBe(checked)
-    expect(view.get('button').attributes('disabled')).toBeUndefined()
+    expect(view.get('[role="alert"]').text()).toContain('last successful snapshot')
+    expect(view.get('[role="status"]').text()).toContain('out of date')
     await view.get('button').trigger('click')
     await flushPromises()
     expect(view.find('[role="alert"]').exists()).toBe(false)
     view.unmount()
+  })
+  it('polls, avoids overlapping requests, and aborts on unmount', async () => {
+    vi.useFakeTimers()
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ...snapshot, sources: [] }) })
+      .mockImplementation(() => new Promise(() => {}))
+    vi.stubGlobal('fetch', fetcher)
+    const view = render()
+    await flushPromises()
+    expect(view.get('[role="status"]').text()).toContain('incomplete')
+    await vi.advanceTimersByTimeAsync(30000)
+    expect(fetcher).toHaveBeenCalledTimes(2)
+    await vi.advanceTimersByTimeAsync(90000)
+    expect(fetcher).toHaveBeenCalledTimes(2)
+    expect(view.get('[role="status"]').text()).toContain('out of date')
+    const signal = fetcher.mock.calls[1]![1].signal as AbortSignal
+    view.unmount()
+    expect(signal.aborted).toBe(true)
+    await vi.advanceTimersByTimeAsync(30000)
+    expect(fetcher).toHaveBeenCalledTimes(2)
   })
 })

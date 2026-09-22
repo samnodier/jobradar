@@ -1,19 +1,93 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { RefreshCw } from '@lucide/vue'
 import AppSidebar from '@/components/AppSidebar.vue'
+interface Day {
+  day: string
+  successes: number
+  failures: number
+}
+interface Source {
+  name: string
+  status: string
+  last_success: string | null
+  last_checked?: string | null
+  history?: Day[]
+}
 interface SystemStatus {
   database: boolean
   redis: boolean
   pending_matches: number
-  sources: { name: string; status: string; last_success: string | null }[]
+  sources: Source[]
 }
 const status = ref<SystemStatus | null>(null)
 const error = ref('')
 const loading = ref(false)
 const lastChecked = ref<Date | null>(null)
+const now = ref(Date.now())
 let timer: ReturnType<typeof setInterval> | undefined
 let request: AbortController | undefined
+const stale = computed(() => !!lastChecked.value && now.value - lastChecked.value.getTime() > 90000)
+function sourceState(source: Source) {
+  const value = source.status.toLowerCase()
+  if (['ok', 'healthy', 'success', 'operational'].includes(value)) return 'success'
+  if (['error', 'failed', 'failing', 'failure', 'unhealthy', 'degraded', 'down'].includes(value))
+    return 'failure'
+  return 'unknown'
+}
+const banner = computed(() => {
+  if (!status.value) return { text: 'Waiting for a health check', tone: 'unknown' }
+  if (error.value || stale.value) return { text: 'Status may be out of date', tone: 'unknown' }
+  if (
+    !status.value.database ||
+    !status.value.redis ||
+    status.value.sources.some((source) => sourceState(source) === 'failure')
+  )
+    return { text: 'Some services need attention', tone: 'failure' }
+  if (
+    !status.value.sources.length ||
+    status.value.sources.some((source) => sourceState(source) === 'unknown')
+  )
+    return { text: 'Core services connected · source status incomplete', tone: 'unknown' }
+  return { text: 'Core services connected · latest fetches successful', tone: 'success' }
+})
+const days = computed(() => {
+  const today = new Date(lastChecked.value ?? now.value)
+  return Array.from({ length: 30 }, (_, index) => {
+    const day = new Date(today)
+    day.setUTCDate(day.getUTCDate() - 29 + index)
+    return day.toISOString().slice(0, 10)
+  })
+})
+function history(source: Source) {
+  return days.value.map((day) => {
+    const entry = source.history?.find((row) => row.day === day)
+    const successes = entry?.successes ?? 0
+    const failures = entry?.failures ?? 0
+    return {
+      day,
+      successes,
+      failures,
+      tone: failures ? (successes ? 'mixed' : 'failure') : successes ? 'success' : 'unknown',
+      label: `${day} UTC: ${successes + failures ? `${successes} successful, ${failures} failed fetches` : 'No recorded fetches'}`,
+    }
+  })
+}
+function rate(source: Source) {
+  const counts = history(source).reduce(
+    (sum, day) => ({
+      successes: sum.successes + day.successes,
+      total: sum.total + day.successes + day.failures,
+    }),
+    { successes: 0, total: 0 },
+  )
+  return counts.total
+    ? `${((counts.successes / counts.total) * 100).toFixed(1)}% fetch success · ${counts.total} recorded attempts`
+    : 'No recorded attempts in this period'
+}
+function time(value?: string | null) {
+  return value ? new Date(value).toLocaleString() : 'Not recorded'
+}
 async function refresh() {
   if (loading.value) return
   const controller = new AbortController()
@@ -29,6 +103,7 @@ async function refresh() {
     if (controller.signal.aborted) return
     status.value = result
     lastChecked.value = new Date()
+    now.value = Date.now()
     error.value = ''
   } catch {
     if (!controller.signal.aborted) error.value = 'Could not refresh system status. Try again.'
@@ -38,7 +113,10 @@ async function refresh() {
 }
 onMounted(() => {
   void refresh()
-  timer = setInterval(refresh, 30000)
+  timer = setInterval(() => {
+    now.value = Date.now()
+    void refresh()
+  }, 30000)
 })
 onUnmounted(() => {
   clearInterval(timer)
@@ -48,88 +126,195 @@ onUnmounted(() => {
 <template>
   <div class="flex h-full">
     <AppSidebar />
-    <main class="flex-1 min-w-0 p-8 overflow-y-auto space-y-6" :aria-busy="loading">
-      <header class="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 class="text-2xl font-bold">System health</h1>
-          <p class="mt-1 text-sm text-gray-500">
-            Check job collection and matching. Updates every 30 seconds.
-          </p>
-        </div>
-        <button type="button" class="button button-secondary" :disabled="loading" @click="refresh">
-          <RefreshCw :size="16" aria-hidden="true" />
-          {{ loading ? 'Refreshing…' : 'Refresh' }}
-        </button>
-      </header>
-      <p v-if="error" role="alert" class="border border-red-200 bg-red-50 p-4 text-red-700">
-        {{ error }} <span v-if="status">Showing the last successful check below.</span>
-      </p>
-      <p role="status" aria-live="polite" class="text-sm text-gray-500">
-        <template v-if="lastChecked">Last checked: {{ lastChecked.toLocaleString() }}</template>
-        <template v-else-if="loading">Checking system health…</template>
-        <template v-else>No successful check yet.</template>
-      </p>
-      <template v-if="status">
-        <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          <section class="settings-card">
-            <h2 class="font-semibold">Database</h2>
-            <p
-              class="text-lg font-semibold"
-              :class="status.database ? 'text-green-700' : 'text-red-700'"
-            >
-              {{ status.database ? 'Connected' : 'Unavailable' }}
-            </p>
-            <p class="text-sm text-gray-500">
-              PostgreSQL stores jobs, profiles, applications and source history.
-            </p>
-          </section>
-          <section class="settings-card">
-            <h2 class="font-semibold">Queue and sessions</h2>
-            <p
-              class="text-lg font-semibold"
-              :class="status.redis ? 'text-green-700' : 'text-red-700'"
-            >
-              {{ status.redis ? 'Connected' : 'Unavailable' }}
-            </p>
-            <p class="text-sm text-gray-500">
-              Redis supports sign-in sessions and background work delivery.
-            </p>
-          </section>
-          <section class="settings-card">
-            <h2 class="font-semibold">Pending matches</h2>
-            <p class="text-2xl font-semibold">{{ status.pending_matches }}</p>
-            <p class="text-sm text-gray-500">
-              Jobs waiting for matching to complete. Profile changes can increase this count.
-            </p>
-          </section>
-        </div>
-        <section class="space-y-4">
+    <main class="flex-1 min-w-0 overflow-y-auto p-5 md:p-8" :aria-busy="loading">
+      <div class="mx-auto max-w-5xl space-y-7">
+        <header class="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 class="text-lg font-semibold">Job sources</h2>
-            <p class="text-sm text-gray-500">
-              Each row shows the last recorded fetch result, not a live uptime check of the
-              provider. Refresh checks this stored history; it does not fetch new jobs.
+            <h1 class="text-2xl font-bold">System health</h1>
+            <p class="mt-1 text-sm text-gray-500">
+              Job collection and matching · refreshes every 30 seconds
             </p>
           </div>
-          <p v-if="!status.sources.length" class="settings-card">
-            No source has recorded a fetch yet.
+          <button
+            type="button"
+            class="button button-secondary gap-2"
+            :disabled="loading"
+            @click="refresh"
+          >
+            <RefreshCw :size="16" aria-hidden="true" />{{ loading ? 'Refreshing…' : 'Refresh' }}
+          </button>
+        </header>
+        <section
+          class="border p-5 md:p-7"
+          :class="
+            banner.tone === 'success'
+              ? 'border-green-200 bg-green-50'
+              : banner.tone === 'failure'
+                ? 'border-red-200 bg-red-50'
+                : 'border-gray-200 bg-gray-50'
+          "
+          aria-label="Health overview"
+        >
+          <h2 role="status" class="text-lg font-semibold">{{ banner.text }}</h2>
+          <p class="mt-2 text-sm text-gray-600">
+            {{
+              lastChecked
+                ? `Snapshot checked ${lastChecked.toLocaleString()}`
+                : 'No successful check yet.'
+            }}
           </p>
-          <div v-else class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            <article v-for="source in status.sources" :key="source.name" class="settings-card">
-              <h3 class="font-semibold break-words">{{ source.name }}</h3>
-              <p class="text-sm">
-                Last recorded result: <strong>{{ source.status }}</strong>
-              </p>
-              <p class="text-sm text-gray-500">
-                Last successful fetch:
-                {{
-                  source.last_success ? new Date(source.last_success).toLocaleString() : 'Not yet'
-                }}
-              </p>
-            </article>
-          </div>
+          <p v-if="error" role="alert" class="mt-2 text-sm text-red-700">
+            {{ error }} <span v-if="status">Showing the last successful snapshot.</span>
+          </p>
         </section>
-      </template>
+        <template v-if="status">
+          <section
+            class="border border-gray-200 divide-y divide-gray-200"
+            aria-label="Core services"
+          >
+            <div class="service-row">
+              <div>
+                <h2 class="font-semibold">Database</h2>
+                <p class="text-sm text-gray-500">Jobs, profiles and applications</p>
+              </div>
+              <span :class="status.database ? 'text-green-700' : 'text-red-700'">{{
+                status.database ? 'Connected' : 'Unavailable'
+              }}</span>
+            </div>
+            <div class="service-row">
+              <div>
+                <h2 class="font-semibold">Queue and sessions</h2>
+                <p class="text-sm text-gray-500">Redis sessions and background work</p>
+              </div>
+              <span :class="status.redis ? 'text-green-700' : 'text-red-700'">{{
+                status.redis ? 'Connected' : 'Unavailable'
+              }}</span>
+            </div>
+            <div class="service-row">
+              <div>
+                <h2 class="font-semibold">Matching backlog</h2>
+                <p class="text-sm text-gray-500">Profile changes can add work to this queue</p>
+              </div>
+              <span>{{ status.pending_matches }} pending</span>
+            </div>
+          </section>
+          <section class="space-y-4" aria-label="Job source history">
+            <div>
+              <h2 class="text-lg font-semibold">Job sources</h2>
+              <p class="text-sm text-gray-500">
+                30 days of recorded fetch attempts, grouped by UTC day. This measures fetch results,
+                not provider uptime. Refresh does not fetch new jobs.
+              </p>
+            </div>
+            <div
+              class="flex flex-wrap gap-x-5 gap-y-2 text-xs text-gray-600"
+              aria-label="History legend"
+            >
+              <span
+                v-for="item in [
+                  { tone: 'success', label: 'Successful' },
+                  { tone: 'mixed', label: 'Mixed results' },
+                  { tone: 'failure', label: 'Failed' },
+                  { tone: 'unknown', label: 'No data' },
+                ]"
+                :key="item.tone"
+                class="inline-flex items-center gap-2"
+                ><span class="history-key" :class="`history-${item.tone}`" aria-hidden="true" />{{
+                  item.label
+                }}</span
+              >
+            </div>
+            <p v-if="!status.sources.length" class="border border-gray-200 p-5 text-gray-500">
+              No source has recorded a fetch yet.
+            </p>
+            <div v-else class="border border-gray-200 divide-y divide-gray-200">
+              <article v-for="source in status.sources" :key="source.name" class="p-5 space-y-3">
+                <div class="flex flex-wrap justify-between items-baseline gap-2">
+                  <h3 class="font-semibold break-words">{{ source.name }}</h3>
+                  <span
+                    class="text-sm"
+                    :class="
+                      sourceState(source) === 'success'
+                        ? 'text-green-700'
+                        : sourceState(source) === 'failure'
+                          ? 'text-red-700'
+                          : 'text-gray-500'
+                    "
+                    >Latest result: {{ source.status || 'Unknown' }}</span
+                  >
+                </div>
+                <div class="history-bars" :aria-label="`${source.name} daily fetch results`">
+                  <span
+                    v-for="day in history(source)"
+                    :key="day.day"
+                    tabindex="0"
+                    role="img"
+                    class="history-cell"
+                    :class="`history-${day.tone}`"
+                    :aria-label="day.label"
+                    :title="day.label"
+                  />
+                </div>
+                <div class="flex flex-wrap justify-between gap-2 text-xs text-gray-500">
+                  <span>{{ days[0] }} → today (UTC)</span><span>{{ rate(source) }}</span>
+                </div>
+                <details class="text-sm text-gray-600">
+                  <summary class="cursor-pointer text-accent">Fetch details</summary>
+                  <div class="mt-2 space-y-1">
+                    <p>Last attempt: {{ time(source.last_checked) }}</p>
+                    <p>Last success: {{ time(source.last_success) }}</p>
+                    <p>
+                      Gray days have no recorded attempts. Historical results begin when collection
+                      history was enabled.
+                    </p>
+                  </div>
+                </details>
+              </article>
+            </div>
+          </section>
+        </template>
+      </div>
     </main>
   </div>
 </template>
+<style scoped>
+.service-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem;
+  font-size: 0.875rem;
+}
+.history-bars {
+  display: grid;
+  grid-template-columns: repeat(30, minmax(0, 1fr));
+  gap: 3px;
+}
+.history-cell {
+  display: block;
+  height: 28px;
+}
+.history-cell:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.history-key {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+}
+.history-success {
+  background: #16a34a;
+}
+.history-mixed {
+  background: #d97706;
+}
+.history-failure {
+  background: #dc2626;
+}
+.history-unknown {
+  background: #d1d5db;
+}
+</style>

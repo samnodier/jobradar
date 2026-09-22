@@ -956,3 +956,9 @@ The previous service_health row retained only the latest attempt. A new source_h
 
 Code: `sql/schema/20260922000100_source_daily_health.sql`, `sql/queries/health.sql`, `cmd/jobradar/handler_system.go`, generated SQLC code. The status endpoint returns daily counts and last attempt, never raw provider errors. `cmd/jobradar/source_history_test.go` verifies counters, non-observation updates, retention and safe API output. Migration up/down/up and full backend race/integration suite plus go vet passed on isolated services.
 Questions: Why can a single latest-status row not generate historical bars? Why aggregate in UTC? Why do database triggers make related updates atomic? What is the denominator of fetch success rate, and why is it not uptime? What data is lost by daily aggregation? (Individual attempt timing/details.)
+
+### Status-page presentation
+
+Health now follows the supplied status-page reference: summary banner, compact component rows, daily colored bars and expandable fetch details. Green means successful attempts, amber mixed outcomes, red failures and gray no observations. Each day has a keyboard-focusable descriptive label and tooltip; text and counts supplement color. The percentage is explicitly fetch success, not uptime. Refresh failures retain the old snapshot with a stale warning; an incomplete source state does not claim everything is operational. Four component tests cover history/rates, missing data, failures and polling cancellation.
+
+Code: `frontend/src/views/StatusView.vue`, `frontend/src/__tests__/StatusView.spec.ts`. Question: How can a polished status dashboard mislead people if missing measurements are rendered as green? Why expose sample counts next to a percentage?
