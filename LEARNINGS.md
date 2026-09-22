@@ -962,3 +962,12 @@ Questions: Why can a single latest-status row not generate historical bars? Why 
 Health now follows the supplied status-page reference: summary banner, compact component rows, daily colored bars and expandable fetch details. Green means successful attempts, amber mixed outcomes, red failures and gray no observations. Each day has a keyboard-focusable descriptive label and tooltip; text and counts supplement color. The percentage is explicitly fetch success, not uptime. Refresh failures retain the old snapshot with a stale warning; an incomplete source state does not claim everything is operational. Four component tests cover history/rates, missing data, failures and polling cancellation.
 
 Code: `frontend/src/views/StatusView.vue`, `frontend/src/__tests__/StatusView.spec.ts`. Question: How can a polished status dashboard mislead people if missing measurements are rendered as green? Why expose sample counts next to a percentage?
+
+
+## Feed sorting, optional bounds and partial health (September 22)
+
+- Filtering determines membership; sorting determines order. `sql/queries/jobs.sql` applies score order before LIMIT/OFFSET, with unscored jobs last in both directions and stable date/ID tie breakers. Best matches still applies the profile threshold and eligibility; All + Highest score allows browsing lower scores too.
+- A missing personal maximum salary is an open bound, not zero. `internal/matcher/preferences.go` checks the minimum independently. A job range overlapping the minimum can qualify; incomplete salary evidence follows Include unknown. Regression cases live in `preferences_test.go`.
+- Supplemental history should not erase a successful current health snapshot. `cmd/jobradar/handler_system.go` reports history availability separately; `StatusView.vue` displays the limitation. The missing development migration was applied.
+- Grid columns keep badges/actions aligned; the job title/company share one cell. Icon buttons retain accessible names and tooltips.
+- Review later: Why must score sorting precede pagination? Why do NULL scores belong last in both directions? How does an open salary bound differ from unknown job salary data? Why distinguish unavailable history from failed dependencies?

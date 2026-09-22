@@ -80,3 +80,14 @@ Developed on `feature/feed-pagination-status` from dev. API limit now 500 with e
 Health now has a summary banner and 30 UTC-day source bars backed by a new daily observation table/trigger. Percentages measure collection success, not uptime; gray means no data. Migration 20260922000100 passed isolated up/down/up but **is not yet applied to Sam's development database**. Sam runs `make migrate-up` before restarting `make run`.
 
 Final verification: 37 frontend tests, production build/typecheck, focused ESLint, backend race/integration suite and go vet passed. No push, production deployment, real email send or server restart in this follow-up.
+
+
+## Feed review and sorting follow-up — September 22
+
+Implemented on `feature/feed-ui-health` from dev, for local dev integration without pushing:
+- Bottom-only pagination with icon arrows; compact responsive rows, medium-weight titles, company beneath title and platform source column.
+- Sort menu: newest, oldest, highest score, lowest score. SQL ordering happens before pagination; unmatched scores remain last. Best matches retains threshold, eligibility and pending-work exclusions, now explained in the UI.
+- Notification bell with unread count and icon logout.
+- Confirmed the local health failure was the missing source-history table. Applied migration 20260922000100 to development; API now preserves current checks when history is unavailable.
+- Minimum-only salary already supported; explicit boundary/open-upper-bound regression coverage added.
+- Frontend tests/build/typecheck and focused lint passed; backend race/integration suite and vet passed against isolated services. Sam retains control of server restart and push.

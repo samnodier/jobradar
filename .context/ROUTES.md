@@ -5,7 +5,7 @@ All `/api` responses are non-cacheable. Job reads allow anonymous access to publ
 | Method | Route | Access / behavior |
 | --- | --- | --- |
 | GET | `/api/health` | Public liveness |
-| GET | `/api/jobs` | Public-or-owned; limit 1–500 (default 50), offset, q, source (case-normalized exact match before pagination), filter=all/saved/applied/remote/today/matched (matched uses profile threshold and highest-score-first ordering), order=newest/oldest; array response with X-Has-More header |
+| GET | `/api/jobs` | Public-or-owned; limit 1–500 (default 50), offset, q, source (case-normalized exact match before pagination), filter=all/saved/applied/remote/today/matched (matched uses profile threshold and eligibility, excludes pending matches), order=newest/oldest/score_desc/score_asc (default score_desc for matched, newest otherwise); array response with X-Has-More header |
 | GET | `/api/jobs/stats` | Public-job totals |
 | GET | `/api/jobs/{jobID}` | Public-or-owned details and per-user match |
 | POST | `/api/jobs/import` | Auth; extract draft from URL; no database write |
@@ -25,7 +25,7 @@ All `/api` responses are non-cacheable. Job reads allow anonymous access to publ
 | PATCH | `/api/notifications/{notificationID}/read` | Auth; mark own notification read |
 | GET | `/api/digest` | Auth; own digest status/history, no send |
 | GET | `/api/digest/preview` | Auth; configured personal recipient only; HTML preview, no send |
-| GET | `/api/system/status` | Auth; DB/Redis connectivity, backlog and source health with last_checked and 30 UTC-day success/failure counts |
+| GET | `/api/system/status` | Auth; DB/Redis connectivity, backlog and source health with last_checked and 30 UTC-day success/failure counts; history_available flags partial history failure |
 | GET | `/auth/github/login` | Optional OAuth redirect; link=1 requires a recent session |
 | GET | `/auth/github/callback` | OAuth state-validated callback |
 | GET | `/auth/users/me` | Auth user for frontend boot |

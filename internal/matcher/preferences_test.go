@@ -6,6 +6,7 @@ func TestPreferenceGates(t *testing.T) {
 	remote := true
 	min := int32(50000)
 	low := int32(40000)
+	high := int32(200000)
 	cases := []struct {
 		name string
 		p    Preferences
@@ -19,6 +20,9 @@ func TestPreferenceGates(t *testing.T) {
 		{"remote restricted geography", Preferences{WorkMode: "remote", Locations: []string{"Kenya"}}, JobFacts{Remote: &remote, Location: "United States only"}, false},
 		{"partial salary strict", Preferences{MinSalary: &min, Currency: "USD"}, JobFacts{Currency: "USD", SalaryMin: &low}, false},
 		{"partial salary allowed", Preferences{MinSalary: &min, Currency: "USD", IncludeUnknown: true}, JobFacts{Currency: "USD", SalaryMin: &low}, true},
+		{"minimum only at boundary", Preferences{MinSalary: &min, Currency: "USD"}, JobFacts{Currency: "USD", SalaryMin: &min}, true},
+		{"minimum only no upper cap", Preferences{MinSalary: &min, Currency: "USD"}, JobFacts{Currency: "USD", SalaryMin: &high, SalaryMax: &high}, true},
+		{"minimum only overlapping range", Preferences{MinSalary: &min, Currency: "USD"}, JobFacts{Currency: "USD", SalaryMin: &low, SalaryMax: &min}, true},
 		{"below salary", Preferences{MinSalary: &min, Currency: "USD"}, JobFacts{Currency: "USD", SalaryMax: &low}, false},
 		{"currency unknown", Preferences{MinSalary: &min, Currency: "USD", IncludeUnknown: true}, JobFacts{Currency: "KES", SalaryMax: &low}, true},
 		{"employment punctuation", Preferences{JobTypes: []string{"full_time"}}, JobFacts{JobType: "Full-time"}, true},
