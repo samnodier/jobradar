@@ -904,3 +904,10 @@ RemoteOK and Adzuna were decorative sidebar labels. They now set a source query 
 
 Code: `cmd/jobradar/handler_jobs.go`, `sql/queries/jobs.sql`, `frontend/src/views/JobsView.vue`, `AppSidebar.vue`, `router/index.ts`. Database tests in `cmd/jobradar/job_source_filter_test.go` verify combined filters/pagination; `frontend/src/__tests__/JobSourceNavigation.spec.ts` tests links and route preservation.
 Questions: Why is filtering after LIMIT incorrect? Why parameterize source strings? What belongs in route query state rather than only component memory? Why must UI links have a functioning data path behind them?
+
+## Health reporting: observations have timestamps
+
+Health now shows database, Redis, pending matches and source fetch history in shared square cards. Refresh and 30-second polling share a request guard; leaving the page cancels the request and timer. Failed refreshes keep previous data with a stale-data warning. PostgreSQL stores source health; Redis handles sessions and queue delivery. A successful recorded fetch is not proof that a third-party API is reachable right now, and refreshing this screen does not trigger scraping.
+
+Code: `frontend/src/views/StatusView.vue`, `cmd/jobradar/handler_system.go`; three tests in `frontend/src/__tests__/StatusView.spec.ts` cover polling, overlap prevention, cancellation and failure/retry.
+Questions: Why distinguish liveness from historical observations? Why label stale results? How do intervals leak after component unmount? Why does Redis connectivity not prove source collection is healthy?
