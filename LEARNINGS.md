@@ -971,3 +971,9 @@ Code: `frontend/src/views/StatusView.vue`, `frontend/src/__tests__/StatusView.sp
 - Supplemental history should not erase a successful current health snapshot. `cmd/jobradar/handler_system.go` reports history availability separately; `StatusView.vue` displays the limitation. The missing development migration was applied.
 - Grid columns keep badges/actions aligned; the job title/company share one cell. Icon buttons retain accessible names and tooltips.
 - Review later: Why must score sorting precede pagination? Why do NULL scores belong last in both directions? How does an open salary bound differ from unknown job salary data? Why distinguish unavailable history from failed dependencies?
+
+## Profile print export and score-only browsing
+
+`frontend/src/utils/profilePdf.ts` opens a preview during the click (popup permission), fetches every saved resume section, escapes text, and uses print CSS with browser Save as PDF. The explicit field list excludes account settings. A failed section request aborts rather than silently exporting an incomplete resume. Review later: Why escape text before HTML insertion? Why open the window before awaiting network calls?
+
+Sam clarified that Best matches should depend only on the saved score threshold. Feed eligibility/pending gates were removed; notification/digest policy remains independent. Tests cover ineligible/pending rows that still meet the threshold.

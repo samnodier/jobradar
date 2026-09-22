@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { printProfile } from '@/utils/profilePdf'
 import { storeToRefs } from 'pinia'
 import { usePreferencesStore } from '@/stores/preferences'
 import { useToast } from '@/composables/useToast'
@@ -38,6 +39,18 @@ const { experiences, educations, projects, certifications, languages } = storeTo
 const toast = useToast()
 
 const activeTab = ref<ProfileTab>('overview')
+const exportingPdf = ref(false)
+async function exportPdf() {
+  if (exportingPdf.value) return
+  exportingPdf.value = true
+  try {
+    await printProfile()
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : 'Could not export profile')
+  } finally {
+    exportingPdf.value = false
+  }
+}
 const savedJobsCount = ref(0)
 const applicationsCount = ref(0)
 const isEditExperienceOpen = ref(false)
@@ -384,7 +397,14 @@ onMounted(async () => {
                 <SquarePen :size="16" />
                 Edit Profile
               </button>
-              <button class="button button-secondary">Export To PDF</button>
+              <button
+                class="button button-secondary"
+                :disabled="exportingPdf"
+                @click="exportPdf"
+                title="Open print preview, then choose Save as PDF"
+              >
+                {{ exportingPdf ? 'Preparing…' : 'Export to PDF' }}
+              </button>
             </div>
           </div>
 

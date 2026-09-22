@@ -91,3 +91,9 @@ Implemented on `feature/feed-ui-health` from dev, for local dev integration with
 - Confirmed the local health failure was the missing source-history table. Applied migration 20260922000100 to development; API now preserves current checks when history is unavailable.
 - Minimum-only salary already supported; explicit boundary/open-upper-bound regression coverage added.
 - Frontend tests/build/typecheck and focused lint passed; backend race/integration suite and vet passed against isolated services. Sam retains control of server restart and push.
+
+## Profile PDF and threshold clarification
+
+- Best matches now uses only the stored score threshold, per Sam's clarification; pending/eligibility gates remain for notifications/digests. Backend integration coverage verifies this distinction.
+- Export to PDF loads all saved resume sections and opens a clean browser print document; choose Save as PDF. Popup/request failures are surfaced; no partial export on request failure. This exports the saved profile, without job tailoring.
+- 43 frontend tests, production build/typecheck and focused lint passed; backend handler race/integration tests passed. Native print dialog still requires manual browser verification.
