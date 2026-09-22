@@ -994,3 +994,7 @@ Application moves use a visually hidden live region (`ApplicationsView.vue`) rat
 - `--digest-worker` provides an independent process for scheduled delivery. The systemd user unit restarts on failure; lingering keeps it running after logout. It cannot send while the computer is powered off/asleep, offline, or its database is unavailable.
 - Resend accepted the preview from jobs@mail.example.com; Sam confirmed inbox receipt and rendering. A separate provider status read returned 401, so delivery confirmation came from Sam's actual inbox rather than that API.
 - Review later: Why shouldn't a preview reserve tomorrow's jobs? Why does the scheduler need both a slot ledger and a user/job ledger? Why are receipt and provider acceptance different facts?
+
+## Sender identity, logos and local-time schedules
+
+The email From header supports a display name independently of the verified domain: `Jobradar <jobs@mail.example.com>`. Logo URLs come from source data (currently RemoteOK); HTTPS images are used in the digest, initials remain the fallback and alt text. IANA timezone names encode daylight-saving rules; fixed UTC offsets do not. Settings lists tzdata 2026c zones/aliases and keeps a saved value even if absent from the list. The scheduler reads saved settings each tick. Review later: Why does moving a database require preserving the email ledger and encryption key?

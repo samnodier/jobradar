@@ -3,7 +3,7 @@ SELECT id FROM users WHERE email = $1 AND notify_jobs = true;
 
 -- name: GetDigestCandidates :many
 SELECT j.id, j.title, j.company_name, j.source_url, j.job_source, j.job_location,
-       j.currency, j.salary_min, j.salary_max, j.is_remote, m.match_score
+       j.logo_url, j.currency, j.salary_min, j.salary_max, j.is_remote, m.match_score
 FROM jobs j JOIN user_job_matches m ON m.job_id=j.id AND m.user_id=$1
 WHERE (j.created_by_user_id IS NULL OR j.created_by_user_id=$1)
  AND m.match_score >= $2

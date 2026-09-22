@@ -23,3 +23,19 @@ func TestEmailUsesTablesAndEscapesData(t *testing.T) {
 		}
 	}
 }
+
+func TestEmailCompanyLogoAndFallback(t *testing.T) {
+	for _, value := range []string{"https://cdn.example.test/logo.png", "javascript:alert(1)", "http://cdn.example.test/logo.png", ""} {
+		_, html, err := Render([]database.GetDigestCandidatesRow{{CompanyName: "Mind Detect", LogoUrl: &value}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		hasLogo := strings.Contains(html, `src="https://cdn.example.test/logo.png"`)
+		if hasLogo != (strings.HasPrefix(value, "https://")) {
+			t.Fatalf("incorrect logo for %q", value)
+		}
+		if !strings.Contains(html, "MD") {
+			t.Fatal("missing initials fallback/alt")
+		}
+	}
+}

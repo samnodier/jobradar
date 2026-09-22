@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"html/template"
+	"net/url"
 	"strings"
 	"unicode"
 
@@ -14,6 +15,16 @@ import (
 //go:embed email.html
 var emailHTML string
 var emailTemplate = template.Must(template.New("digest").Funcs(template.FuncMap{
+	"logo": func(value *string) string {
+		if value == nil {
+			return ""
+		}
+		u, err := url.Parse(*value)
+		if err != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil {
+			return ""
+		}
+		return u.String()
+	},
 	"initials": func(name string) string {
 		words := strings.Fields(name)
 		var letters []rune

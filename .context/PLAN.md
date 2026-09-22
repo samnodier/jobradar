@@ -112,3 +112,7 @@ Local configuration: sender jobs@mail.example.com; recipient hello@samnodier.com
 Real preview accepted by Resend (message (message id omitted)) and Sam confirmed inbox delivery/rendering. Provider receipt lookup separately returned 401. No need to resend this test.
 
 Installed and enabled ~/.config/systemd/user/jobradar-digest.service; `bin/jobradar --digest-worker` is active, loginctl Linger=yes. Service reads repository .env and runs independently of Go/Vite terminals. Computer must remain awake/online with PostgreSQL available. `DIGEST_START_DATE` prevents today's catch-up send. Rebuild bin/jobradar and restart the service after future digest code changes. Source ingestion still runs in the main application.
+
+## Sender branding, logos and timezone chooser
+
+Sender now uses Jobradar as the display name. Digest includes source-supplied HTTPS company logos with initials fallback; Adzuna does not supply these in the current integration. Settings lists 597 IANA timezone names/aliases (2026c), supports one or two local delivery hours, and preserves the existing schedule until saved. Hosting choices expanded in docs/HOSTING_OPTIONS.md; no hosting purchase/deployment authorized or performed.

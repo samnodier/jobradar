@@ -17,6 +17,39 @@ const render = () =>
   mount(MatchingSettings, { global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } } })
 afterEach(() => vi.unstubAllGlobals())
 describe('Matching settings', () => {
+  it('offers all timezone regions and saves two local delivery hours', async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(response(initial()))
+      .mockImplementationOnce((_url, options) =>
+        Promise.resolve(response(JSON.parse(options.body))),
+      )
+    vi.stubGlobal('fetch', fetcher)
+    const wrapper = render()
+    await flushPromises()
+    const select = wrapper.get('[aria-label="Digest timezone"]')
+    expect(select.findAll('option').length).toBeGreaterThan(500)
+    for (const zone of [
+      'Africa/Nairobi',
+      'America/New_York',
+      'Asia/Kolkata',
+      'Australia/Lord_Howe',
+      'Pacific/Auckland',
+      'UTC',
+    ]) {
+      expect(select.find(`option[value="${zone}"]`).exists()).toBe(true)
+    }
+    await select.setValue('Pacific/Auckland')
+    await wrapper.get('input[placeholder="8, 18"]').setValue('7, 18')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(JSON.parse(fetcher.mock.calls[1]![1].body)).toMatchObject({
+      digest_timezone: 'Pacific/Auckland',
+      digest_hours: [7, 18],
+    })
+    wrapper.unmount()
+  })
+
   it('preserves edits made during a save for the next explicit save', async () => {
     let resolve!: (v: unknown) => void
     const fetch = vi

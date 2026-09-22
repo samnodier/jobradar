@@ -130,7 +130,7 @@ func (q *Queries) GetDailyDigest(ctx context.Context, arg GetDailyDigestParams) 
 
 const getDigestCandidates = `-- name: GetDigestCandidates :many
 SELECT j.id, j.title, j.company_name, j.source_url, j.job_source, j.job_location,
-       j.currency, j.salary_min, j.salary_max, j.is_remote, m.match_score
+       j.logo_url, j.currency, j.salary_min, j.salary_max, j.is_remote, m.match_score
 FROM jobs j JOIN user_job_matches m ON m.job_id=j.id AND m.user_id=$1
 WHERE (j.created_by_user_id IS NULL OR j.created_by_user_id=$1)
  AND m.match_score >= $2
@@ -155,6 +155,7 @@ type GetDigestCandidatesRow struct {
 	SourceUrl   string    `json:"source_url"`
 	JobSource   string    `json:"job_source"`
 	JobLocation *string   `json:"job_location"`
+	LogoUrl     *string   `json:"logo_url"`
 	Currency    *string   `json:"currency"`
 	SalaryMin   *int32    `json:"salary_min"`
 	SalaryMax   *int32    `json:"salary_max"`
@@ -178,6 +179,7 @@ func (q *Queries) GetDigestCandidates(ctx context.Context, arg GetDigestCandidat
 			&i.SourceUrl,
 			&i.JobSource,
 			&i.JobLocation,
+			&i.LogoUrl,
 			&i.Currency,
 			&i.SalaryMin,
 			&i.SalaryMax,

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { timezones } from '@/constants/timezones'
 import { useToast } from '@/composables/useToast'
 interface Settings {
   min_score: number
@@ -14,6 +15,9 @@ interface Settings {
 }
 const settings = ref<Settings | null>(null)
 const hours = ref('')
+const timezoneOptions = computed(() =>
+  [...new Set([...timezones, settings.value?.digest_timezone ?? 'UTC'])].sort(),
+)
 const saving = ref(false)
 const error = ref('')
 const toast = useToast()
@@ -207,12 +211,21 @@ async function save() {
       <section class="settings-card">
         <h3 class="font-semibold">Email schedule</h3>
         <label class="block text-sm"
-          >Timezone<input
+          >Timezone<select
             v-model="settings.digest_timezone"
             required
-            placeholder="Africa/Nairobi"
+            aria-label="Digest timezone"
             class="form-input mt-1"
-        /></label>
+          >
+            <option v-for="zone in timezoneOptions" :key="zone" :value="zone">
+              {{ zone.replace(/_/g, ' ') }}
+            </option>
+          </select>
+        </label>
+        <p class="text-xs text-gray-600">
+          Delivery hours use this timezone, including daylight-saving changes. For morning and
+          evening, enter two hours such as 7, 18.
+        </p>
         <label class="block text-sm"
           >Delivery hours (24-hour clock)<input
             v-model="hours"

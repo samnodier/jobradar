@@ -15,7 +15,7 @@
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
 {{range .Jobs}}<tr><td style="padding:0 0 22px;">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
-<td width="44" valign="top"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="44"><tr><td width="44" height="44" align="center" valign="middle" bgcolor="#2e5bff" style="border-radius:8px;font-family:Helvetica,Arial,sans-serif;font-size:15px;font-weight:bold;color:#ffffff;">{{initials .CompanyName}}</td></tr></table></td>
+<td width="44" valign="top"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="44"><tr><td width="44" height="44" align="center" valign="middle" bgcolor="#2e5bff" style="border-radius:8px;font-family:Helvetica,Arial,sans-serif;font-size:15px;font-weight:bold;color:#ffffff;">{{if logo .LogoUrl}}<img src="{{logo .LogoUrl}}" alt="{{initials .CompanyName}}" width="44" height="44" style="display:block;border:0;border-radius:8px;background:#ffffff;color:#1c1c1a;">{{else}}{{initials .CompanyName}}{{end}}</td></tr></table></td>
 <td width="14" style="font-size:0;">&nbsp;</td>
 <td valign="top" style="font-family:Helvetica,Arial,sans-serif;">
 <a href="{{.SourceUrl}}" style="font-size:15px;font-weight:bold;color:#1f5fd1;text-decoration:none;line-height:21px;">{{.Title}}</a><br>
