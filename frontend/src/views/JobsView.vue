@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Search, X, PlusIcon, RefreshCw } from '@lucide/vue'
+import { Search, X, Download, RefreshCw } from '@lucide/vue'
 import { useToast } from '@/composables/useToast'
 import JobRow from '@/components/JobRow.vue'
 import JobDetail from '@/components/JobDetail.vue'
@@ -357,7 +357,7 @@ onUnmounted(() => {
             aria-label="Import job"
             title="Import job"
           >
-            <PlusIcon :size="20" aria-hidden="true" />
+            <Download :size="20" aria-hidden="true" />
           </button>
         </div>
       </header>
