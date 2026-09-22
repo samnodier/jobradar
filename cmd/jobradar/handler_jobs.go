@@ -54,7 +54,20 @@ func (cfg *apiConfig) handlerJobsGet(w http.ResponseWriter, r *http.Request) {
 		httpx.RespondError(w, http.StatusBadRequest, "source must be at most 255 characters")
 		return
 	}
-	jobs, err := cfg.db.GetJobs(r.Context(), database.GetJobsParams{UserID: userID, Limit: int32(limit + 1), Offset: int32(offset), Search: r.URL.Query().Get("q"), Filter: filter, Source: source, Oldest: r.URL.Query().Get("order") == "oldest"})
+	order := r.URL.Query().Get("order")
+	if order == "" {
+		order = "newest"
+		if filter == "matched" {
+			order = "score_desc"
+		}
+	}
+	switch order {
+	case "newest", "oldest", "score_desc", "score_asc":
+	default:
+		httpx.RespondError(w, 400, "invalid order")
+		return
+	}
+	jobs, err := cfg.db.GetJobs(r.Context(), database.GetJobsParams{UserID: userID, Limit: int32(limit + 1), Offset: int32(offset), Search: r.URL.Query().Get("q"), Filter: filter, Source: source, SortOrder: order})
 	if err != nil {
 		log.Printf("Error fetching jobs: %v", err)
 		httpx.RespondError(w, http.StatusInternalServerError, "Couldn't fetch jobs")

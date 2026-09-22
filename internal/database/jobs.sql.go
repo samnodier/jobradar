@@ -422,19 +422,21 @@ AND ($4::text = '' OR lower(j.job_source) = $4)
 AND ($5::text = '' OR j.title ILIKE '%' || $5 || '%' OR j.company_name ILIKE '%' || $5 || '%' OR array_to_string(j.skills, ' ') ILIKE '%' || $5 || '%')
 AND ($6::text = 'all' OR ($6='saved' AND s.id IS NOT NULL) OR ($6='applied' AND a.id IS NOT NULL)
  OR ($6='remote' AND j.is_remote=true) OR ($6='matched' AND m.preference_eligible=true AND m.match_score >= COALESCE((SELECT min_score FROM user_match_settings WHERE user_id=$1),60) AND NOT EXISTS(SELECT 1 FROM pending_matches p WHERE p.user_id=$1 AND p.job_id=j.id)) OR ($6='today' AND j.created_at >= date_trunc('day',now())))
-ORDER BY CASE WHEN $6='matched' THEN m.match_score END DESC NULLS LAST, CASE WHEN $7::boolean THEN j.created_at END ASC,
- CASE WHEN NOT $7::boolean THEN j.created_at END DESC, j.id DESC
+ORDER BY CASE WHEN $7::text='score_desc' THEN m.match_score END DESC NULLS LAST,
+ CASE WHEN $7::text='score_asc' THEN m.match_score END ASC NULLS LAST,
+ CASE WHEN $7::text='oldest' THEN j.created_at END ASC,
+ j.created_at DESC, j.id DESC
 LIMIT $2 OFFSET $3
 `
 
 type GetJobsParams struct {
-	UserID uuid.UUID `json:"user_id"`
-	Limit  int32     `json:"limit"`
-	Offset int32     `json:"offset"`
-	Source string    `json:"source"`
-	Search string    `json:"search"`
-	Filter string    `json:"filter"`
-	Oldest bool      `json:"oldest"`
+	UserID    uuid.UUID `json:"user_id"`
+	Limit     int32     `json:"limit"`
+	Offset    int32     `json:"offset"`
+	Source    string    `json:"source"`
+	Search    string    `json:"search"`
+	Filter    string    `json:"filter"`
+	SortOrder string    `json:"sort_order"`
 }
 
 type GetJobsRow struct {
@@ -486,7 +488,7 @@ func (q *Queries) GetJobs(ctx context.Context, arg GetJobsParams) ([]GetJobsRow,
 		arg.Source,
 		arg.Search,
 		arg.Filter,
-		arg.Oldest,
+		arg.SortOrder,
 	)
 	if err != nil {
 		return nil, err

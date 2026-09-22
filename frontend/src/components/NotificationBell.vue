@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { Bell } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 interface Notice {
   id: string
@@ -63,17 +64,25 @@ onUnmounted(() => {
 <template>
   <div class="relative">
     <button
-      class="button button-secondary"
+      class="button button-ghost relative !p-2"
+      :aria-label="unread ? `Notifications, ${unread} unread` : 'Notifications'"
+      title="Notifications"
       :aria-expanded="open"
       aria-controls="match-notifications"
       @click="toggle"
     >
-      Notifications <span v-if="unread">({{ unread }})</span>
+      <Bell :size="21" aria-hidden="true" />
+      <span
+        v-if="unread"
+        class="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-accent text-white text-[10px] flex items-center justify-center"
+        aria-hidden="true"
+        >{{ unread }}</span
+      >
     </button>
     <div
       v-if="open"
       id="match-notifications"
-      class="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-y-auto whitespace-normal bg-white border shadow-lg p-4 space-y-3"
+      class="absolute z-50 right-0 top-full mt-2 w-80 max-h-96 overflow-y-auto whitespace-normal bg-white border shadow-lg p-4 space-y-3"
     >
       <h2 class="font-semibold">Recent matching jobs</h2>
       <p class="text-xs text-gray-500">Latest 50 matches above your profile threshold.</p>

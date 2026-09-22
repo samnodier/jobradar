@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Search, ListFilter, X, PlusIcon } from '@lucide/vue'
+import { Search, X, PlusIcon } from '@lucide/vue'
 import { useToast } from '@/composables/useToast'
 import JobRow from '@/components/JobRow.vue'
 import JobDetail from '@/components/JobDetail.vue'
@@ -47,7 +47,14 @@ function changePageSize(size: number) {
 const isJobImportOpen = ref(false)
 const error = ref('')
 const selectedJobId = ref<string | null>(null)
-const sortDirection = computed(() => (route.query.order === 'oldest' ? 'oldest' : 'newest'))
+const sortDirection = computed(() => {
+  const value = String(route.query.order ?? '')
+  return ['newest', 'oldest', 'score_desc', 'score_asc'].includes(value)
+    ? value
+    : activeFilter.value === 'matched'
+      ? 'score_desc'
+      : 'newest'
+})
 const searchTerm = ref<string>(typeof route.query.q === 'string' ? route.query.q : '')
 const activeSource = computed(() =>
   typeof route.query.source === 'string' ? route.query.source : '',
@@ -90,15 +97,16 @@ function submitSearch() {
 
 const groupedJobs = computed(() => {
   return jobs.value.reduce<Record<string, Job[]>>((groups, job) => {
-    const label =
-      activeFilter.value === 'matched'
-        ? 'Best matches — highest score first'
-        : job.created_at
-          ? new Date(job.created_at).toLocaleDateString(undefined, {
-              month: 'short',
-              day: 'numeric',
-            })
-          : 'Unknown'
+    const label = sortDirection.value.startsWith('score_')
+      ? sortDirection.value === 'score_desc'
+        ? 'Highest score first'
+        : 'Lowest score first'
+      : job.created_at
+        ? new Date(job.created_at).toLocaleDateString(undefined, {
+            month: 'short',
+            day: 'numeric',
+          })
+        : 'Unknown'
     groups[label] = groups[label] || []
     groups[label].push(job)
     return groups
@@ -244,13 +252,6 @@ function formatCount(count: number) {
   return count === 1 ? '1 role' : `${count} roles`
 }
 
-function toggleSort() {
-  void updateQuery({
-    order: sortDirection.value === 'newest' ? 'oldest' : undefined,
-    page: undefined,
-  })
-}
-
 async function openLinkedJob() {
   const id = route.query.job
   if (typeof id !== 'string') return
@@ -279,9 +280,9 @@ onUnmounted(() => {
   <div class="grid h-full overflow-hidden" style="grid-template-columns: 220px minmax(0, 1fr)">
     <AppSidebar />
 
-    <main class="flex flex-col gap-6 p-6 min-h-0" style="padding: 24px 28px">
+    <main class="flex flex-col gap-4 p-4 lg:p-6 min-h-0 min-w-0">
       <!-- Topbar -->
-      <header class="flex flex-col gap-2 min-w-0 shrink-0 p-3">
+      <header class="flex flex-col gap-2 min-w-0 shrink-0">
         <!-- Search bar -->
         <div class="flex items-center gap-2 border border-gray-200 bg-white pl-3 h-9">
           <Search class="w-4 h-4 text-gray-400 shrink-0" />
@@ -292,7 +293,7 @@ onUnmounted(() => {
             @keydown.enter="submitSearch"
             type="text"
             placeholder="Search by title, company, or skill"
-            class="flex-1 border-none outline-none text-sm bg-transparent text-gray-900 placeholder:text-gray-400"
+            class="flex-1 min-w-0 border-none outline-none text-sm bg-transparent text-gray-900 placeholder:text-gray-400"
           />
           <span
             v-if="searchTerm"
@@ -311,8 +312,8 @@ onUnmounted(() => {
         </div>
 
         <!-- Filters + sort -->
-        <div class="flex items-center gap-2">
-          <div class="flex gap-2 flex-wrap flex-1">
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="flex gap-2 flex-wrap basis-full xl:basis-auto flex-1">
             <button
               v-for="f in filters"
               :key="f.value"
@@ -328,13 +329,19 @@ onUnmounted(() => {
               {{ f.label }}
             </button>
           </div>
-          <button
-            class="button flex items-center gap-1.5 border border-gray-200 bg-white text-sm text-gray-700 cursor-pointer hover:bg-gray-50 transition-all shrink-0"
-            @click="toggleSort"
+          <select
+            aria-label="Sort jobs"
+            class="border border-gray-200 bg-white px-3 py-2 text-sm"
+            :value="sortDirection"
+            @change="
+              updateQuery({ order: ($event.target as HTMLSelectElement).value, page: undefined })
+            "
           >
-            <ListFilter class="w-4 h-4" />
-            {{ sortDirection === 'newest' ? 'Newest' : 'Oldest' }}
-          </button>
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="score_desc">Highest score</option>
+            <option value="score_asc">Lowest score</option>
+          </select>
           <button class="button button-secondary" @click="fetchJobs()" :disabled="loading">
             Refresh
           </button>
@@ -344,15 +351,6 @@ onUnmounted(() => {
         </div>
       </header>
 
-      <JobPagination
-        position="top"
-        :page="page"
-        :page-size="pageSize"
-        :has-next="canGoNext"
-        :loading="loading"
-        @page="changePage"
-        @page-size="changePageSize"
-      />
       <div v-if="activeSource" class="flex items-center gap-3 text-sm">
         <span
           >Source: <strong>{{ activeSource }}</strong></span
@@ -363,6 +361,11 @@ onUnmounted(() => {
           >All sources</RouterLink
         >
       </div>
+      <p v-if="activeFilter === 'matched'" class="text-sm text-gray-600">
+        Jobs at or above your minimum score in Settings. Your work and location preferences also
+        apply; jobs being rescored appear when matching finishes.
+        <RouterLink to="/profile" class="text-accent underline">Review profile settings</RouterLink>
+      </p>
       <!-- Count row -->
       <div class="flex items-center gap-1 text-sm shrink-0">
         <span class="font-semibold text-gray-900">{{
@@ -378,7 +381,13 @@ onUnmounted(() => {
           {{ error }}
         </div>
         <div v-else-if="jobs.length === 0" class="m-4.5 bg-white p-6 border border-gray-200">
-          No jobs on this page. Try the previous page or adjust your filters.
+          <template v-if="activeFilter === 'matched' && page === 1">
+            No jobs meet your matching settings and current filters yet. Review your minimum score
+            and preferences, or browse All to see jobs with lower scores.
+          </template>
+          <template v-else
+            >No jobs on this page. Try the previous page or adjust your filters.</template
+          >
         </div>
         <div v-else class="flex-1 overflow-y-auto min-h-0">
           <div v-for="(group, label) in groupedJobs" :key="label" class="px-5 py-4">
@@ -398,7 +407,6 @@ onUnmounted(() => {
         </div>
       </section>
       <JobPagination
-        position="bottom"
         :page="page"
         :page-size="pageSize"
         :has-next="canGoNext"

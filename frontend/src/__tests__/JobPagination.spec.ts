@@ -35,9 +35,26 @@ afterEach(() => {
 })
 
 describe('job pagination', () => {
+  it('sorts by score through the API and resets pagination without clearing filters', async () => {
+    const fetcher = vi.fn().mockResolvedValue(response(true))
+    vi.stubGlobal('fetch', fetcher)
+    const { view, router } = await render('/jobs?source=remoteok&filter=saved&page=3')
+    expect(view.get('[aria-label="Sort jobs"]').findAll('option')).toHaveLength(4)
+    await view.get('[aria-label="Sort jobs"]').setValue('score_asc')
+    await flushPromises()
+    expect(router.currentRoute.value.query).toMatchObject({
+      source: 'remoteok',
+      filter: 'saved',
+      order: 'score_asc',
+    })
+    expect(router.currentRoute.value.query.page).toBeUndefined()
+    expect(fetcher.mock.lastCall![0]).toContain('order=score_asc')
+    view.unmount()
+  })
+
   it('exposes page boundaries and disables controls while loading', async () => {
     const view = mount(JobPagination, {
-      props: { page: 1, pageSize: 50, hasNext: false, loading: false, position: 'top' },
+      props: { page: 1, pageSize: 50, hasNext: false, loading: false },
     })
     expect(
       view.findAll('button').every((button) => button.attributes('disabled') !== undefined),
@@ -46,7 +63,7 @@ describe('job pagination', () => {
     await view.findAll('button')[0]!.trigger('click')
     await view.findAll('button')[1]!.trigger('click')
     expect(view.emitted('page')).toEqual([[1], [3]])
-    await view.get('select').setValue('500')
+    await view.get('[aria-label="Jobs per page"]').setValue('500')
     expect(view.emitted('pageSize')).toEqual([[500]])
     await view.setProps({ loading: true })
     expect(view.get('select').attributes('disabled')).toBeDefined()
@@ -56,16 +73,16 @@ describe('job pagination', () => {
     view.unmount()
   })
 
-  it('uses matching top/bottom controls and requests exact offsets without invented totals', async () => {
+  it('uses only bottom controls and requests exact offsets without invented totals', async () => {
     const fetch = vi
       .fn()
       .mockResolvedValueOnce(response(true))
       .mockResolvedValueOnce(response(false))
     vi.stubGlobal('fetch', fetch)
     const { view, router } = await render('/jobs?source=remoteok&size=100')
-    expect(view.findAll('nav[aria-label^="Job pages"]')).toHaveLength(2)
+    expect(view.findAll('nav[aria-label^="Job pages"]')).toHaveLength(1)
     expect(fetch.mock.calls[0]![0]).toContain('limit=100&offset=0')
-    await view.get('nav[aria-label="Job pages (bottom)"]').findAll('button')[1]!.trigger('click')
+    await view.get('nav[aria-label="Job pages"]').findAll('button')[1]!.trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.query).toMatchObject({
       source: 'remoteok',
@@ -104,7 +121,7 @@ describe('job pagination', () => {
     expect(router.currentRoute.value.query.page).toBeUndefined()
     await router.push('/jobs?source=adzuna&page=4&size=200')
     await flushPromises()
-    await view.get('select').setValue('500')
+    await view.get('[aria-label="Jobs per page"]').setValue('500')
     await flushPromises()
     expect(router.currentRoute.value.query).toMatchObject({ source: 'adzuna', size: '500' })
     expect(router.currentRoute.value.query.page).toBeUndefined()

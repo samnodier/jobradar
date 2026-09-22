@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { LogOut } from '@lucide/vue'
 import { onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
@@ -65,7 +66,14 @@ async function logout() {
               {{ authStore.user.full_name }}
             </span>
           </RouterLink>
-          <button class="button button-secondary" @click="logout">Logout</button>
+          <button
+            class="button button-ghost !p-2"
+            aria-label="Logout"
+            title="Logout"
+            @click="logout"
+          >
+            <LogOut :size="21" aria-hidden="true" />
+          </button>
         </div>
         <div v-else>
           <RouterLink class="button button-primary" to="/login">Login</RouterLink>
