@@ -84,6 +84,7 @@ LEFT JOIN saved_jobs AS s ON j.id = s.job_id AND s.user_id = $1
 LEFT JOIN applications AS a ON j.id = a.job_id AND a.user_id = $1
 LEFT JOIN user_job_matches AS m ON j.id = m.job_id AND m.user_id = $1
 WHERE (j.created_by_user_id IS NULL OR j.created_by_user_id = $1)
+AND (sqlc.arg(source)::text = '' OR lower(j.job_source) = sqlc.arg(source))
 AND (sqlc.arg(search)::text = '' OR j.title ILIKE '%' || sqlc.arg(search) || '%' OR j.company_name ILIKE '%' || sqlc.arg(search) || '%' OR array_to_string(j.skills, ' ') ILIKE '%' || sqlc.arg(search) || '%')
 AND (sqlc.arg(filter)::text = 'all' OR (sqlc.arg(filter)='saved' AND s.id IS NOT NULL) OR (sqlc.arg(filter)='applied' AND a.id IS NOT NULL)
  OR (sqlc.arg(filter)='remote' AND j.is_remote=true) OR (sqlc.arg(filter)='matched' AND m.preference_eligible=true AND m.match_score >= COALESCE((SELECT min_score FROM user_match_settings WHERE user_id=$1),60) AND NOT EXISTS(SELECT 1 FROM pending_matches p WHERE p.user_id=$1 AND p.job_id=j.id)) OR (sqlc.arg(filter)='today' AND j.created_at >= date_trunc('day',now())))

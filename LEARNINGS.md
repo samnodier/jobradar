@@ -897,3 +897,10 @@ A save captures the submitted draft, then only reconciles a response if the user
 Code: `frontend/src/components/MatchingSettings.vue`, `SettingsTab.vue`, `PasswordSettings.vue`, `AccessTokens.vue`, `frontend/src/styles/globals.css`. Regression tests in `MatchingSettings.spec.ts` and `AccountSettings.spec.ts` cover delayed saves, retries, hours, password confirmation/secret clearing and token create/revoke. The preferences test uses indexed array access to match the configured TypeScript library target.
 Questions: Why share design tokens instead of hardcoded colors? Why separate delivery channels from matching eligibility? What is the difference between a dirty draft and a request in flight? Why does client validation not replace server validation? Why does a successful build not prove visual layout or touch interaction?
 References: https://linear.app/docs/account-preferences and https://linear.app/docs/notifications (research September 22, 2026).
+
+## Source filters must run before pagination
+
+RemoteOK and Adzuna were decorative sidebar labels. They now set a source query argument, which is normalized and bound as a SQL parameter before LIMIT/OFFSET. Search, source and saved/matched filters compose; changing one retains the others in the URL. Filtering only the current page in the browser would hide matching records on later pages. Best Matches has active navigation styling. The empty Console page is no longer advertised; its old URL redirects to the real Health page.
+
+Code: `cmd/jobradar/handler_jobs.go`, `sql/queries/jobs.sql`, `frontend/src/views/JobsView.vue`, `AppSidebar.vue`, `router/index.ts`. Database tests in `cmd/jobradar/job_source_filter_test.go` verify combined filters/pagination; `frontend/src/__tests__/JobSourceNavigation.spec.ts` tests links and route preservation.
+Questions: Why is filtering after LIMIT incorrect? Why parameterize source strings? What belongs in route query state rather than only component memory? Why must UI links have a functioning data path behind them?

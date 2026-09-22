@@ -3,7 +3,8 @@ import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import {
   AlertCircle,
-  BarChart3,
+  Target,
+  Globe,
   Bookmark,
   CheckCircle,
   LayoutDashboard,
@@ -29,7 +30,7 @@ const authStore = useAuthStore()
           class="flex items-center gap-3 px-4 py-2 text-sm text-gray-500 hover:bg-gray-100/50 hover:text-gray-900 transition-all group"
           :class="{
             'bg-accent-lighter text-accent font-semibold':
-              $route.path === '/jobs' && !$route.query.filter,
+              $route.path === '/jobs' && !$route.query.filter && !$route.query.source,
           }"
         >
           <Zap
@@ -39,14 +40,22 @@ const authStore = useAuthStore()
           Browse Roles
         </RouterLink>
 
-        <div class="flex items-center gap-3 px-4 py-2 text-sm text-gray-400 opacity-70">
-          <span class="w-7px h-7px rounded-full bg-[#5e6ad2] shrink-0" />
-          RemoteOK
-        </div>
-        <div class="flex items-center gap-3 px-4 py-2 text-sm text-gray-400 opacity-70">
-          <span class="w-7px h-7px rounded-full bg-[#26c6a6] shrink-0" />
-          Adzuna
-        </div>
+        <RouterLink
+          v-for="source in [
+            { key: 'remoteok', label: 'RemoteOK' },
+            { key: 'adzuna', label: 'Adzuna' },
+          ]"
+          :key="source.key"
+          :to="{ path: '/jobs', query: { source: source.key } }"
+          class="flex items-center gap-3 px-4 py-2 text-sm text-gray-500 hover:bg-gray-100/50 hover:text-gray-900 transition-all group"
+          :class="{
+            'bg-accent-lighter text-accent font-semibold':
+              $route.path === '/jobs' && $route.query.source === source.key,
+          }"
+        >
+          <Globe class="w-4 h-4 opacity-60 group-hover:opacity-100 shrink-0" />
+          {{ source.label }}
+        </RouterLink>
       </div>
 
       <!-- Workspace Section -->
@@ -84,9 +93,15 @@ const authStore = useAuthStore()
         </RouterLink>
         <RouterLink
           to="/jobs?filter=matched"
-          class="flex items-center gap-3 px-4 py-2 text-sm text-gray-500 hover:bg-gray-100"
-          >Best Matches</RouterLink
+          class="flex items-center gap-3 px-4 py-2 text-sm text-gray-500 hover:bg-gray-100/50 hover:text-gray-900 transition-all group"
+          :class="{
+            'bg-accent-lighter text-accent font-semibold':
+              $route.path === '/jobs' && $route.query.filter === 'matched',
+          }"
         >
+          <Target class="w-4 h-4 opacity-60 group-hover:opacity-100 shrink-0" />
+          Best Matches
+        </RouterLink>
         <RouterLink
           to="/applications"
           class="flex items-center gap-3 px-4 py-2 text-sm text-gray-500 hover:bg-gray-100/50 hover:text-gray-900 transition-all group"
@@ -123,18 +138,6 @@ const authStore = useAuthStore()
         <h2 class="text-[0.7rem] font-medium text-gray-400 px-4 mb-2 tracking-widest uppercase">
           System
         </h2>
-        <RouterLink
-          to="/admin"
-          class="flex items-center gap-3 px-4 py-2 text-sm text-gray-500 hover:bg-gray-100/50 hover:text-gray-900 transition-all group"
-          active-class="bg-accent-lighter text-accent font-semibold"
-        >
-          <BarChart3
-            class="w-4 h-4 opacity-60 group-hover:opacity-100 shrink-0"
-            :class="{ 'opacity-100': $route.path === '/admin' }"
-          />
-          Console
-        </RouterLink>
-
         <RouterLink
           to="/status"
           class="flex items-center gap-3 px-4 py-2 text-sm text-gray-500 hover:bg-gray-100/50 hover:text-gray-900 transition-all group"

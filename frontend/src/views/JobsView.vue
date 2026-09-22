@@ -24,7 +24,10 @@ const isJobImportOpen = ref(false)
 const error = ref('')
 const selectedJobId = ref<string | null>(null)
 const sortDirection = ref<'newest' | 'oldest'>('newest')
-const searchTerm = ref<string>('')
+const searchTerm = ref<string>(typeof route.query.q === 'string' ? route.query.q : '')
+const activeSource = computed(() =>
+  typeof route.query.source === 'string' ? route.query.source : '',
+)
 const activeFilter = ref<string>((route.query.filter as string) || 'all')
 
 const filters = [
@@ -43,24 +46,32 @@ watch(
   },
 )
 
-watch(activeFilter, (value) => {
-  if (value === 'all') {
-    router.replace({ query: { job: route.query.job } }).catch(() => {})
-  } else {
-    router
-      .replace({
-        query: {
-          filter: value === 'all' ? undefined : value,
-          q: route.query.q,
-          job: route.query.job,
-        },
-      })
-      .catch(() => {})
-  }
+watch(
+  () => route.query.q,
+  (value) => {
+    searchTerm.value = typeof value === 'string' ? value : ''
+  },
+)
+
+watch([activeFilter, searchTerm], ([filter, query]) => {
+  router
+    .replace({
+      query: {
+        ...route.query,
+        filter: filter === 'all' ? undefined : filter,
+        q: query || undefined,
+      },
+    })
+    .catch(() => {})
 })
 
 const filteredJobs = computed(() => {
   let result = [...jobs.value]
+  // Imported jobs and the previous request may be in memory while a new feed loads.
+  if (activeSource.value)
+    result = result.filter(
+      (job) => job.job_source.toLowerCase() === activeSource.value.toLowerCase(),
+    )
   const q = searchTerm.value.trim().toLowerCase()
   if (q) {
     result = result.filter(
@@ -158,6 +169,7 @@ async function fetchJobs(append = false) {
     offset: String(append ? jobs.value.length : 0),
     q: searchTerm.value.trim(),
     filter: activeFilter.value,
+    source: activeSource.value,
     order: sortDirection.value,
   })
   try {
@@ -178,7 +190,7 @@ async function fetchJobs(append = false) {
     if (!controller.signal.aborted) loading.value = false
   }
 }
-watch([searchTerm, activeFilter, sortDirection], () => {
+watch([searchTerm, activeFilter, sortDirection, activeSource], () => {
   if (searchTimer) clearTimeout(searchTimer)
   searchTimer = setTimeout(() => fetchJobs(), 300)
 })
@@ -290,6 +302,7 @@ onUnmounted(() => {
             <X />
           </span>
           <button
+            @click="fetchJobs()"
             class="button h-full px-5 text-sm text-white"
             :style="{ background: 'var(--color-accent)' }"
           >
@@ -339,6 +352,16 @@ onUnmounted(() => {
       >
         Load more jobs
       </button>
+      <div v-if="activeSource" class="flex items-center gap-3 text-sm">
+        <span
+          >Source: <strong>{{ activeSource }}</strong></span
+        >
+        <RouterLink
+          :to="{ query: { ...route.query, source: undefined } }"
+          class="button button-secondary"
+          >All sources</RouterLink
+        >
+      </div>
       <!-- Count row -->
       <div class="flex items-center gap-1 text-sm shrink-0">
         <span class="font-semibold text-gray-900">{{ formatCount(filteredJobs.length) }}</span>

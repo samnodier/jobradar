@@ -418,11 +418,12 @@ LEFT JOIN saved_jobs AS s ON j.id = s.job_id AND s.user_id = $1
 LEFT JOIN applications AS a ON j.id = a.job_id AND a.user_id = $1
 LEFT JOIN user_job_matches AS m ON j.id = m.job_id AND m.user_id = $1
 WHERE (j.created_by_user_id IS NULL OR j.created_by_user_id = $1)
-AND ($4::text = '' OR j.title ILIKE '%' || $4 || '%' OR j.company_name ILIKE '%' || $4 || '%' OR array_to_string(j.skills, ' ') ILIKE '%' || $4 || '%')
-AND ($5::text = 'all' OR ($5='saved' AND s.id IS NOT NULL) OR ($5='applied' AND a.id IS NOT NULL)
- OR ($5='remote' AND j.is_remote=true) OR ($5='matched' AND m.preference_eligible=true AND m.match_score >= COALESCE((SELECT min_score FROM user_match_settings WHERE user_id=$1),60) AND NOT EXISTS(SELECT 1 FROM pending_matches p WHERE p.user_id=$1 AND p.job_id=j.id)) OR ($5='today' AND j.created_at >= date_trunc('day',now())))
-ORDER BY CASE WHEN $5='matched' THEN m.match_score END DESC NULLS LAST, CASE WHEN $6::boolean THEN j.created_at END ASC,
- CASE WHEN NOT $6::boolean THEN j.created_at END DESC, j.id DESC
+AND ($4::text = '' OR lower(j.job_source) = $4)
+AND ($5::text = '' OR j.title ILIKE '%' || $5 || '%' OR j.company_name ILIKE '%' || $5 || '%' OR array_to_string(j.skills, ' ') ILIKE '%' || $5 || '%')
+AND ($6::text = 'all' OR ($6='saved' AND s.id IS NOT NULL) OR ($6='applied' AND a.id IS NOT NULL)
+ OR ($6='remote' AND j.is_remote=true) OR ($6='matched' AND m.preference_eligible=true AND m.match_score >= COALESCE((SELECT min_score FROM user_match_settings WHERE user_id=$1),60) AND NOT EXISTS(SELECT 1 FROM pending_matches p WHERE p.user_id=$1 AND p.job_id=j.id)) OR ($6='today' AND j.created_at >= date_trunc('day',now())))
+ORDER BY CASE WHEN $6='matched' THEN m.match_score END DESC NULLS LAST, CASE WHEN $7::boolean THEN j.created_at END ASC,
+ CASE WHEN NOT $7::boolean THEN j.created_at END DESC, j.id DESC
 LIMIT $2 OFFSET $3
 `
 
@@ -430,6 +431,7 @@ type GetJobsParams struct {
 	UserID uuid.UUID `json:"user_id"`
 	Limit  int32     `json:"limit"`
 	Offset int32     `json:"offset"`
+	Source string    `json:"source"`
 	Search string    `json:"search"`
 	Filter string    `json:"filter"`
 	Oldest bool      `json:"oldest"`
@@ -481,6 +483,7 @@ func (q *Queries) GetJobs(ctx context.Context, arg GetJobsParams) ([]GetJobsRow,
 		arg.UserID,
 		arg.Limit,
 		arg.Offset,
+		arg.Source,
 		arg.Search,
 		arg.Filter,
 		arg.Oldest,

@@ -8,7 +8,6 @@ import Onboarding from '@/views/OnboardingView.vue'
 import Profile from '@/views/ProfileView.vue'
 import Applications from '@/views/ApplicationsView.vue'
 import Dashboard from '@/views/DashboardView.vue'
-import Admin from '@/views/AdminView.vue'
 import Status from '@/views/StatusView.vue'
 
 const router = createRouter({
@@ -66,7 +65,7 @@ const router = createRouter({
     {
       path: '/admin',
       name: 'admin',
-      component: Admin,
+      redirect: '/status',
       meta: { requiresAuth: true },
     },
     {

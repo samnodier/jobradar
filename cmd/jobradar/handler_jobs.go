@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -48,7 +49,12 @@ func (cfg *apiConfig) handlerJobsGet(w http.ResponseWriter, r *http.Request) {
 		httpx.RespondError(w, 400, "invalid filter")
 		return
 	}
-	jobs, err := cfg.db.GetJobs(r.Context(), database.GetJobsParams{UserID: userID, Limit: int32(limit), Offset: int32(offset), Search: r.URL.Query().Get("q"), Filter: filter, Oldest: r.URL.Query().Get("order") == "oldest"})
+	source := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("source")))
+	if len(source) > 255 {
+		httpx.RespondError(w, http.StatusBadRequest, "source must be at most 255 characters")
+		return
+	}
+	jobs, err := cfg.db.GetJobs(r.Context(), database.GetJobsParams{UserID: userID, Limit: int32(limit), Offset: int32(offset), Search: r.URL.Query().Get("q"), Filter: filter, Source: source, Oldest: r.URL.Query().Get("order") == "oldest"})
 	if err != nil {
 		log.Printf("Error fetching jobs: %v", err)
 		httpx.RespondError(w, http.StatusInternalServerError, "Couldn't fetch jobs")
