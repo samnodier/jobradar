@@ -293,7 +293,7 @@ onMounted(async () => {
     })(),
     (async () => {
       try {
-        const response = await fetch('/api/jobs?filter=recent&order=newest&limit=5', {
+        const response = await fetch('/api/jobs?order=newest&limit=5', {
           credentials: 'omit',
         })
         if (!response.ok) throw new Error('Could not load recent jobs.')

@@ -5,7 +5,7 @@ All `/api` responses are non-cacheable. Job reads allow anonymous access to publ
 | Method | Route | Access / behavior |
 | --- | --- | --- |
 | GET | `/api/health` | Public liveness |
-| GET | `/api/jobs` | Public-or-owned; limit 1–500 (default 50), offset, q, source (case-normalized exact match before pagination), filter=all/recent/saved/applied/remote/today/matched (matched uses only the saved score threshold; source/search still apply), order=newest/oldest/score_desc/score_asc (default score_desc for matched, newest otherwise); array response with X-Has-More header |
+| GET | `/api/jobs` | Public-or-owned; limit 1–500 (default 50), offset, q, source (case-normalized exact match before pagination), filter=all/saved/applied/remote/today/matched (matched uses only the saved score threshold; source/search still apply), order=newest/oldest/score_desc/score_asc (default score_desc for matched, newest otherwise); array response with X-Has-More header |
 | GET | `/api/jobs/stats` | Public-job totals, added-today count, latest addition and actual source list |
 | GET | `/api/jobs/{jobID}` | Public-or-owned details and per-user match |
 | POST | `/api/jobs/import` | Auth; extract draft from URL; no database write |
@@ -50,4 +50,4 @@ See `cmd/jobradar/main.go` and `internal/auth/handler.go` for canonical route re
 - PUT `/auth/password`: session; add after recent GitHub login or change with current password; invalidates other sessions, read tokens and setup links.
 - Server CLI `--password-setup EMAIL`: provision/recover a local account and print a private 15-minute setup link. No password argument; preserves an existing user ID.
 
-`filter=recent` selects jobs posted within 30 days (creation date fallback), excluding known expiry. It does not delete stored history. Public homepage uses this filter and omits session credentials for its public list.
+The public homepage requests the newest public jobs (order=newest) and omits session credentials for that list.

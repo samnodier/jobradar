@@ -428,7 +428,7 @@ WHERE (j.created_by_user_id IS NULL OR j.created_by_user_id = $1)
 AND ($4::text = '' OR lower(j.job_source) = $4)
 AND ($5::text = '' OR j.title ILIKE '%' || $5 || '%' OR j.company_name ILIKE '%' || $5 || '%' OR array_to_string(j.skills, ' ') ILIKE '%' || $5 || '%')
 AND ($6::text = 'all' OR ($6='saved' AND s.id IS NOT NULL) OR ($6='applied' AND a.id IS NOT NULL)
- OR ($6='recent' AND COALESCE(j.posted_at,j.created_at) >= now()-interval '30 days' AND (j.expires_at IS NULL OR j.expires_at>now())) OR ($6='remote' AND j.is_remote=true) OR ($6='matched' AND m.match_score >= COALESCE((SELECT min_score FROM user_match_settings WHERE user_id=$1),60)) OR ($6='today' AND j.created_at >= date_trunc('day',now())))
+ OR ($6='remote' AND j.is_remote=true) OR ($6='matched' AND m.match_score >= COALESCE((SELECT min_score FROM user_match_settings WHERE user_id=$1),60)) OR ($6='today' AND j.created_at >= date_trunc('day',now())))
 ORDER BY CASE WHEN $7::text='score_desc' THEN m.match_score END DESC NULLS LAST,
  CASE WHEN $7::text='score_asc' THEN m.match_score END ASC NULLS LAST,
  CASE WHEN $7::text='oldest' THEN j.created_at END ASC,

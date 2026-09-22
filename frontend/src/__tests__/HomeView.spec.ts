@@ -39,7 +39,7 @@ describe('public homepage', () => {
     expect(view.text()).not.toContain('12,483')
     expect(view.text()).not.toContain('92%')
     expect(view.text()).not.toContain('Recommended for you')
-    expect(fetcher).toHaveBeenCalledWith(expect.stringContaining('filter=recent'), {
+    expect(fetcher).toHaveBeenCalledWith(expect.stringContaining('order=newest'), {
       credentials: 'omit',
     })
     view.unmount()

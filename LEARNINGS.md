@@ -1001,6 +1001,6 @@ The email From header supports a display name independently of the verified doma
 
 ## Honest public homepage and retained history
 
-`HomeView.vue` now treats loading/error/empty states as real states, instead of fabricated counters and scores. Recommendations use the authenticated matched query; public jobs use a credential-free request. `filter=recent` filters by source posting date (creation fallback) and expiry before pagination without deleting records needed by saves/applications. `TestRecentFeedPreservesStoredHistory` verifies old jobs are still in All.
+`HomeView.vue` now treats loading/error/empty states as real states, instead of fabricated counters and scores. Recommendations use the authenticated matched query; public jobs use a credential-free request. A past-month `filter=recent` was added and then removed: Sam's actual question was whether RemoteOK can return more than one page, not a request for a new feed filter. Clarify the question before adding a feature.
 
 RemoteOK documents a public JSON feed and tag filters, not historical page navigation. Repeated upserts accumulate jobs over time; do not interpret absence from a limited feed as proof of expiry. Database migration to a deployment preserves collected history using pg_dump/pg_restore and persistent volumes. Review later: How are source pagination and local feed pagination different? Why isn't missing from a source response equivalent to deleted?
