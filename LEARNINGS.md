@@ -871,3 +871,12 @@ A nullable Go pointer alone treated a missing salary field and explicit JSON nul
 
 Code: `cmd/jobradar/handler_preferences.go`, `sql/queries/users.sql`, `cmd/jobradar/preferences_test.go`.
 Questions: Why is PATCH not the same as replacing a resource? Why does SQL COALESCE prevent clearing a nullable field? Why lock before reading rather than after? What would happen if list deletion committed before input validation?
+
+## Application-board drag and drop and delayed edits
+
+The board now moves cards optimistically and PATCHes their status. A failed request restores the previous column and displays an error. Only the pending card is disabled; other cards remain usable. A native status select supplies the same action for keyboard and touch users. External drag IDs are ignored. Other is a display fallback, not a valid persisted database state. Ordering within a column is not implemented.
+
+The earlier notes debounce read the currently selected application when its timer fired, so text could be saved to a different job after switching selection. It now captures application ID and text before waiting, flushes on selection change/close, and serializes writes. PATCH responses merge only changed fields so an older notes response cannot overwrite a newer status.
+
+Code: `frontend/src/views/ApplicationsView.vue`, `frontend/src/components/ApplicationDetail.vue`. Eight regression tests cover moving, rollback, overlapping actions, load failure, note identity and timing in `ApplicationsView.spec.ts` and `ApplicationDetail.spec.ts`.
+Questions: Why doesn't debounce prevent concurrent requests? Why capture identity before awaiting? Why roll back optimistic state? Why must drag actions have a non-drag alternative? Why can merging an entire PATCH response lose unrelated edits?

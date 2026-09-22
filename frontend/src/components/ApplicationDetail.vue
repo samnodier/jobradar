@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { Application } from '@/types/application'
 import { VueDatePicker } from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
@@ -14,13 +14,16 @@ const formatDateTime = new Intl.DateTimeFormat('en-US', {
   timeStyle: 'short',
 })
 
-const props = defineProps<{ app: Application }>()
-const emit = defineEmits(['close', 'updated'])
+const props = defineProps<{ app: Application; statusSaving?: boolean }>()
+const emit = defineEmits(['close', 'updated', 'status-change'])
 
 const currentText = ref(props.app.notes || '')
 const isSaving = ref(false)
 const lastSaved = ref<string | null>(null)
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
+let pendingNotes: { id: string; notes: string } | null = null
+let saveQueue: Promise<void> = Promise.resolve()
+const editableStatuses = statusOrder.filter((status) => status !== 'other')
 
 const companyInitials = computed(() => {
   const words = props.app.company_name?.split(/\s+/) ?? []
@@ -29,11 +32,12 @@ const companyInitials = computed(() => {
   return (words[0]![0]! + words[1]![0]!).toUpperCase()
 })
 
-async function updateApplication(
+async function persistApplication(
   payload: Partial<Application> & {
     clear_applied_at?: boolean
     clear_follow_up_at?: boolean
   },
+  applicationID: string,
 ) {
   isSaving.value = true
   const body = {
@@ -45,7 +49,7 @@ async function updateApplication(
     clear_follow_up_at: payload.clear_follow_up_at ?? false,
   }
   try {
-    const response = await fetch(`/api/applications/${props.app.id}`, {
+    const response = await fetch(`/api/applications/${applicationID}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -56,8 +60,16 @@ async function updateApplication(
       throw new Error(data?.error ?? 'Update failed')
     }
     const data = await response.json()
-    emit('updated', data)
-    lastSaved.value = formatDateTime.format(new Date(data.updated_at))
+    // PATCH returns the full row, but unrelated fields may already have newer edits.
+    const updated: Record<string, unknown> = { id: applicationID, updated_at: data.updated_at }
+    if (payload.notes !== undefined) updated.notes = data.notes
+    if (payload.applied_at !== undefined || payload.clear_applied_at)
+      updated.applied_at = data.applied_at
+    if (payload.follow_up_at !== undefined || payload.clear_follow_up_at)
+      updated.follow_up_at = data.follow_up_at
+    emit('updated', updated)
+    if (props.app.id === applicationID)
+      lastSaved.value = formatDateTime.format(new Date(data.updated_at))
   } catch (err) {
     toast.error(err instanceof Error ? err.message : 'Failed to save changes')
   } finally {
@@ -65,9 +77,25 @@ async function updateApplication(
   }
 }
 
+function updateApplication(payload: Parameters<typeof persistApplication>[0], id = props.app.id) {
+  saveQueue = saveQueue.then(() => persistApplication(payload, id))
+  return saveQueue
+}
+
+function flushNotes() {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  debounceTimer = null
+  const pending = pendingNotes
+  pendingNotes = null
+  if (pending) void updateApplication({ notes: pending.notes }, pending.id)
+}
+
+onBeforeUnmount(flushNotes)
+
 watch(
   () => props.app.id,
   () => {
+    flushNotes()
     currentText.value = props.app.notes ?? ''
     if (props.app.updated_at) {
       lastSaved.value = formatDateTime.format(new Date(props.app.updated_at))
@@ -80,14 +108,13 @@ watch(
 
 function handleNotesInput() {
   if (debounceTimer) clearTimeout(debounceTimer)
-  debounceTimer = setTimeout(() => {
-    updateApplication({ notes: currentText.value })
-  }, 2000)
+  pendingNotes = { id: props.app.id, notes: currentText.value }
+  debounceTimer = setTimeout(flushNotes, 2000)
 }
 
 function handleStatusChange(event: Event) {
   const val = (event.target as HTMLSelectElement).value
-  updateApplication({ application_status: val })
+  emit('status-change', val)
 }
 
 function handleDateChange(field: 'applied_at' | 'follow_up_at', date: Date | null) {
@@ -203,9 +230,11 @@ function formatDateShort(date: string | null | undefined): string {
             ].includes(app.application_status),
           }"
           :value="app.application_status"
+          :disabled="statusSaving"
+          aria-label="Application status"
           @change="handleStatusChange"
         >
-          <option v-for="status in statusOrder" :key="status" :value="status">
+          <option v-for="status in editableStatuses" :key="status" :value="status">
             {{ statusLabels[status] }}
           </option>
         </select>

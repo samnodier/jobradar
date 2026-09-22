@@ -11,6 +11,12 @@ const applications = ref<Application[]>([])
 const selectedApplicationID = ref<string | null>(null)
 const loading = ref(false)
 const error = ref('')
+const moveError = ref('')
+const announcement = ref('')
+const movingIDs = ref(new Set<string>())
+const draggedID = ref<string | null>(null)
+const dropStatus = ref<string | null>(null)
+const editableStatuses = statusOrder.filter((status) => status !== 'other')
 
 type StatusGroups = Record<string, Application[]>
 
@@ -32,7 +38,7 @@ onMounted(async () => {
   error.value = ''
   try {
     const res = await fetch('/api/applications', { credentials: 'include' })
-    if (!res.ok) error.value = 'Failed to fetch applications'
+    if (!res.ok) throw new Error('Failed to fetch applications')
     applications.value = (await res.json()) ?? []
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Something went wrong.'
@@ -43,11 +49,79 @@ onMounted(async () => {
 
 const hasApplications = computed(() => applications.value.length > 0)
 
-function handleApplicationUpdate(updatedApp: Application) {
-  const index = applications.value.findIndex((a) => a.id === updatedApp.id)
-  if (index !== -1) {
-    applications.value[index] = { ...applications.value[index], ...updatedApp }
+function handleApplicationUpdate(updatedApp: Partial<Application> & { id: string }) {
+  const existing = applications.value.find((a) => a.id === updatedApp.id)
+  if (existing) Object.assign(existing, updatedApp)
+}
+
+async function moveApplication(id: string, status: string) {
+  const app = applications.value.find((item) => item.id === id)
+  if (
+    !app ||
+    movingIDs.value.has(id) ||
+    !editableStatuses.includes(status) ||
+    app.application_status === status
+  )
+    return
+  const previousStatus = app.application_status
+  movingIDs.value.add(id)
+  moveError.value = ''
+  app.application_status = status
+  announcement.value = `Moving ${app.job_title} to ${statusLabels[status]}…`
+  try {
+    const response = await fetch(`/api/applications/${id}`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ application_status: status }),
+    })
+    if (!response.ok) throw new Error('Could not move application. Please try again.')
+    const saved = await response.json()
+    handleApplicationUpdate({
+      id,
+      application_status: saved.application_status,
+      last_status_changed_at: saved.last_status_changed_at,
+      updated_at: saved.updated_at,
+    })
+    announcement.value = `${app.job_title} moved to ${statusLabels[status]}.`
+  } catch (err) {
+    app.application_status = previousStatus
+    announcement.value = ''
+    moveError.value = err instanceof Error ? err.message : 'Could not move application.'
+  } finally {
+    movingIDs.value.delete(id)
   }
+}
+
+function startDrag(event: DragEvent, id: string) {
+  if (movingIDs.value.has(id)) {
+    event.preventDefault()
+    return
+  }
+  draggedID.value = id
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', id)
+  }
+}
+
+function endDrag() {
+  draggedID.value = null
+  dropStatus.value = null
+}
+
+function allowDrop(event: DragEvent, status: string) {
+  if (!draggedID.value || !editableStatuses.includes(status)) return
+  event.preventDefault()
+  dropStatus.value = status
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
+}
+
+function dropApplication(event: DragEvent, status: string) {
+  event.preventDefault()
+  const id = draggedID.value
+  endDrag()
+  if (id) void moveApplication(id, status)
 }
 
 const applicationByStatus = computed(() => {
@@ -72,7 +146,9 @@ const applicationByStatus = computed(() => {
       <header class="flex items-start justify-between gap-4 pb-6 border-b border-gray-200 shrink-0">
         <div>
           <h1 class="text-2xl font-bold text-gray-900 leading-tight">Applications</h1>
-          <p class="text-sm text-gray-500 mt-1">Track every job you've applied to</p>
+          <p class="text-sm text-gray-500 mt-1">
+            Drag applications between stages, or use each card’s status selector.
+          </p>
         </div>
         <RouterLink to="/jobs" class="button button-primary">
           <Plus />
@@ -108,14 +184,25 @@ const applicationByStatus = computed(() => {
         <p class="text-sm text-gray-500 max-w-95">
           Start tracking jobs you've applied to and follow up at the right time.
         </p>
-        <button class="button button-primary">Track your first application</button>
+        <RouterLink to="/jobs" class="button button-primary"
+          >Track your first application</RouterLink
+        >
       </div>
 
+      <p v-if="moveError" role="alert" class="text-sm text-red-600">{{ moveError }}</p>
+      <p role="status" aria-live="polite" class="text-sm text-gray-500">{{ announcement }}</p>
       <!-- Kanban board -->
-      <div class="flex gap-4 overflow-x-auto overflow-y-hidden items-start flex-1 min-h-0">
+      <div
+        v-if="!loading && !error && hasApplications"
+        class="flex gap-4 overflow-x-auto overflow-y-hidden items-start flex-1 min-h-0"
+      >
         <div
           v-for="status in statusOrder"
           :key="status"
+          :data-status="status"
+          :class="{ 'outline outline-2 outline-accent': dropStatus === status }"
+          @dragover="allowDrop($event, status)"
+          @drop="dropApplication($event, status)"
           class="shrink-0 w-75 bg-black/4 flex flex-col gap-2 p-2 h-full min-h-0"
         >
           <!-- Column header -->
@@ -131,11 +218,36 @@ const applicationByStatus = computed(() => {
             <div
               v-for="app in applicationByStatus[status]"
               :key="app.id"
+              :data-application-id="app.id"
+              :draggable="!movingIDs.has(app.id)"
+              :aria-busy="movingIDs.has(app.id)"
+              @dragstart="startDrag($event, app.id)"
+              @dragend="endDrag"
               class="bg-white border border-gray-200 p-3 shadow-[0_1px_3px_rgba(0,0,0,0.08)] cursor-pointer shrink-0 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-px"
-              @click="selectedApplicationID = app.id"
             >
-              <h3 class="text-sm font-semibold text-gray-900 mb-1">{{ app.job_title }}</h3>
+              <button
+                type="button"
+                class="text-sm font-semibold text-gray-900 mb-1 text-left hover:underline"
+                @click="selectedApplicationID = app.id"
+              >
+                {{ app.job_title }}
+              </button>
               <p class="text-xs text-gray-400 m-0">{{ app.company_name }}</p>
+              <label class="block text-xs mt-3">
+                Move to
+                <select
+                  :aria-label="`Status for ${app.job_title}`"
+                  :value="app.application_status"
+                  :disabled="movingIDs.has(app.id)"
+                  class="block w-full border border-gray-200 p-1 mt-1 bg-white"
+                  @change="moveApplication(app.id, ($event.target as HTMLSelectElement).value)"
+                >
+                  <option v-for="target in editableStatuses" :key="target" :value="target">
+                    {{ statusLabels[target] }}
+                  </option>
+                </select>
+              </label>
+              <span v-if="movingIDs.has(app.id)" class="text-xs text-gray-500">Saving…</span>
             </div>
           </div>
         </div>
@@ -153,6 +265,8 @@ const applicationByStatus = computed(() => {
           <ApplicationDetail
             v-if="selectedApplication"
             :app="selectedApplication"
+            :status-saving="movingIDs.has(selectedApplication.id)"
+            @status-change="moveApplication(selectedApplication.id, $event)"
             @close="closeDetail"
             @updated="handleApplicationUpdate"
           />
