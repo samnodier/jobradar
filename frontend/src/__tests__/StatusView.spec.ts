@@ -26,6 +26,24 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 describe('system health', () => {
+  it('keeps core checks visible when history is unavailable', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue({
+          ok: true,
+          json: async () => ({ ...snapshot, history_available: false }),
+        }),
+    )
+    const view = render()
+    await flushPromises()
+    expect(view.get('[role="alert"]').text()).toContain('history is temporarily unavailable')
+    expect(view.text()).toContain('Connected')
+    expect(view.get('[role="status"]').text()).toContain('incomplete')
+    view.unmount()
+  })
+
   it('shows observed rates and 30 accessible day cells without inventing history', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-09-22T14:00:00Z'))

@@ -15,6 +15,7 @@ interface Source {
   history?: Day[]
 }
 interface SystemStatus {
+  history_available?: boolean
   database: boolean
   redis: boolean
   pending_matches: number
@@ -45,6 +46,7 @@ const banner = computed(() => {
   )
     return { text: 'Some services need attention', tone: 'failure' }
   if (
+    status.value.history_available === false ||
     !status.value.sources.length ||
     status.value.sources.some((source) => sourceState(source) === 'unknown')
   )
@@ -199,6 +201,13 @@ onUnmounted(() => {
             </div>
           </section>
           <section class="space-y-4" aria-label="Job source history">
+            <p
+              v-if="status.history_available === false"
+              role="alert"
+              class="text-sm text-amber-700"
+            >
+              Source history is temporarily unavailable. Current service checks are shown below.
+            </p>
             <div>
               <h2 class="text-lg font-semibold">Job sources</h2>
               <p class="text-sm text-gray-500">

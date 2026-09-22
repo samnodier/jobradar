@@ -70,10 +70,10 @@ func (cfg *apiConfig) handlerSystemStatus(w http.ResponseWriter, r *http.Request
 	if rows == nil {
 		rows = []database.ServiceHealth{}
 	}
-	history, err := cfg.db.ListSourceHealthDaily(ctx)
-	if err != nil {
-		httpx.RespondError(w, 503, "source history unavailable; check database migrations")
-		return
+	history, historyErr := cfg.db.ListSourceHealthDaily(ctx)
+	// History is supplemental: preserve the current dependency and source snapshot.
+	if historyErr != nil {
+		history = nil
 	}
 	var pending int
 	_ = cfg.pool.QueryRow(ctx, "SELECT count(*) FROM pending_matches").Scan(&pending)
@@ -102,7 +102,7 @@ func (cfg *apiConfig) handlerSystemStatus(w http.ResponseWriter, r *http.Request
 		}
 		sources = append(sources, sourceStatus{row.ServiceName, row.ServiceStatus, row.LastSuccessAt, row.LastRunAt.Time, days})
 	}
-	httpx.RespondJSON(w, 200, map[string]any{"database": dbOK, "redis": redisOK, "pending_matches": pending, "sources": sources})
+	httpx.RespondJSON(w, 200, map[string]any{"database": dbOK, "redis": redisOK, "pending_matches": pending, "sources": sources, "history_available": historyErr == nil})
 }
 func spaHandler(directory string) http.HandlerFunc {
 	if directory == "" {
