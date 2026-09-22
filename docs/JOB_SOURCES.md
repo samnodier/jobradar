@@ -47,3 +47,9 @@ These remain research recommendations, not implemented integrations. Configure u
 [BrighterMonday Kenya](https://www.brightermonday.co.ke/faq) documents its own job alerts, but no documented public read/search API was found during this review. [Fuzu](https://www.fuzu.com/kenya/company/fuzu-ltd) has Kenya listings, but public search API access was not verified. This does not prove neither offers partner access. Use official alerts or manual job-link import until a supported integration is established; reverse-engineered browser requests are not an official API.
 
 [Remotive's public API](https://remotive.com/remote-jobs/api) is another remote source, but its terms require attribution/backlinks, delay public results by 24 hours and restrict displaying listings to collect signups/email addresses. Confirm compatibility with any future public onboarding flow before adding it.
+
+## RemoteOK feed versus local pagination
+
+[RemoteOK's official feed help](https://remoteok.featurebase.app/help/articles/3140840-is-there-an-api-or-rssjson-feed-of-remote-jobs) documents `/api`, RSS and tag filters; it does not document a next-page cursor or offset for historical backfill. The current adapter ingests returned jobs and retains earlier stored records via upserts. Jobradar pagination queries its own accumulated database. Do not invent source page parameters or delete jobs merely because they drop out of the feed.
+
+The Past month filter and public homepage use the last 30 days, with posting-date/creation-date fallback and known expiry exclusion. Older records remain stored. To seed production, restore the current database backup; this also preserves profiles, saves, applications and the digest ledger.

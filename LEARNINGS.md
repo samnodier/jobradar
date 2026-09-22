@@ -998,3 +998,9 @@ Application moves use a visually hidden live region (`ApplicationsView.vue`) rat
 ## Sender identity, logos and local-time schedules
 
 The email From header supports a display name independently of the verified domain: `Jobradar <jobs@mail.example.com>`. Logo URLs come from source data (currently RemoteOK); HTTPS images are used in the digest, initials remain the fallback and alt text. IANA timezone names encode daylight-saving rules; fixed UTC offsets do not. Settings lists tzdata 2026c zones/aliases and keeps a saved value even if absent from the list. The scheduler reads saved settings each tick. Review later: Why does moving a database require preserving the email ledger and encryption key?
+
+## Honest public homepage and retained history
+
+`HomeView.vue` now treats loading/error/empty states as real states, instead of fabricated counters and scores. Recommendations use the authenticated matched query; public jobs use a credential-free request. `filter=recent` filters by source posting date (creation fallback) and expiry before pagination without deleting records needed by saves/applications. `TestRecentFeedPreservesStoredHistory` verifies old jobs are still in All.
+
+RemoteOK documents a public JSON feed and tag filters, not historical page navigation. Repeated upserts accumulate jobs over time; do not interpret absence from a limited feed as proof of expiry. Database migration to a deployment preserves collected history using pg_dump/pg_restore and persistent volumes. Review later: How are source pagination and local feed pagination different? Why isn't missing from a source response equivalent to deleted?

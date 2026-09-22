@@ -116,3 +116,7 @@ Installed and enabled ~/.config/systemd/user/jobradar-digest.service; `bin/jobra
 ## Sender branding, logos and timezone chooser
 
 Sender now uses Jobradar as the display name. Digest includes source-supplied HTTPS company logos with initials fallback; Adzuna does not supply these in the current integration. Settings lists 597 IANA timezone names/aliases (2026c), supports one or two local delivery hours, and preserves the existing schedule until saved. Hosting choices expanded in docs/HOSTING_OPTIONS.md; no hosting purchase/deployment authorized or performed.
+
+## Public homepage and recent discovery
+
+Removed synthetic homepage totals, source count, recommendation scores and employment defaults. Homepage uses anonymous API requests for the public latest list and a separate authenticated score-ranked query for recommendations. Remote CTA now selects the remote filter. Public recent browsing uses filter=recent for the last 30 days by posting date (creation fallback), excluding known-expired jobs; All and saved/application history remain stored and accessible. No destructive cleanup. 49 frontend tests/build/typecheck/focused lint and backend handler race/integration tests plus vet passed.
