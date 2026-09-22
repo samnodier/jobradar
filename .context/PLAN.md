@@ -101,3 +101,14 @@ Implemented on `feature/feed-ui-health` from dev, for local dev integration with
 ## GitHub connection and toolbar follow-up
 
 Settings now reads the signed-in user's non-revoked GitHub account link and shows GitHub connected instead of repeating Connect GitHub. Server availability and account connection are separate. Older API responses show unknown state rather than incorrectly claiming disconnection. Feed Refresh/Import now use icons with tooltips and accessible names. 45 frontend tests, production build/typecheck, focused lint and backend auth/handler race tests plus vet passed. No push performed; restart the Go server to use the updated API.
+
+
+## Morning digest activated — September 22
+
+Implemented on feature/morning-digest from dev. Table-based Jobradar email follows Sam's supplied visual reference with genuine job data and source attribution. The digest now follows score-only Best matches, with fresh/unexpired/pending/dedup constraints retained. Tests cover top-20 ordering, escaping, delayed start and test-send isolation.
+
+Local configuration: sender jobs@mail.example.com; recipient hello@samnodier.com; enabled, minimum score 60, maximum 20, daily 07:00 America/New_York, first delivery date 2026-09-23. 18 fresh matches currently qualify; no jobs have been reserved by the test. Do not lower the threshold or claim exactly 20 will qualify tomorrow.
+
+Real preview accepted by Resend (message (message id omitted)) and Sam confirmed inbox delivery/rendering. Provider receipt lookup separately returned 401. No need to resend this test.
+
+Installed and enabled ~/.config/systemd/user/jobradar-digest.service; `bin/jobradar --digest-worker` is active, loginctl Linger=yes. Service reads repository .env and runs independently of Go/Vite terminals. Computer must remain awake/online with PostgreSQL available. `DIGEST_START_DATE` prevents today's catch-up send. Rebuild bin/jobradar and restart the service after future digest code changes. Source ingestion still runs in the main application.

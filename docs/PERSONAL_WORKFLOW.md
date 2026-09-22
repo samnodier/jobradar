@@ -67,3 +67,14 @@ Run migrations, start dev, and exercise both scenarios above with your profile. 
 ## Editor diagnostics
 
 Targeted Go compilation and language-server checks passed. A broad `go list ./...` still encounters the existing PostgreSQL-owned `pgdata` directory; use `make test` for source packages. `.lazy.lua` adds project-local gopls exclusions for the installed LazyVim setup. Restart Neovim from the repository, accept its project configuration if prompted, and reconnect/restart gopls. If a marker remains, inspect its actual diagnostic text rather than assuming every marker is a compile failure. Database ownership/permissions were not changed.
+
+
+## Local morning worker
+
+The local installation uses `deploy/jobradar-digest.service` copied to `~/.config/systemd/user/`, with `bin/jobradar --digest-worker`. It runs the scheduler independently of the development HTTP process. Build with `go build -o bin/jobradar ./cmd/jobradar`, then restart using `systemctl --user restart jobradar-digest`. Inspect logs with `journalctl --user -u jobradar-digest`.
+
+The sender must match the exact verified domain: `jobs@mail.example.com`. Set the registered account as DIGEST_RECIPIENT. Delivery time and the maximum job count live in Profile → Settings. DIGEST_START_DATE optionally delays the first scheduled delivery until that YYYY-MM-DD in the profile timezone.
+
+`bin/jobradar --digest-preview` writes HTML without sending. `bin/jobradar --digest-test` sends a real preview to the configured personal recipient without reserving jobs or consuming the morning slot. Repeating the same preview on the same UTC date uses the same provider idempotency key. `--digest-once` runs the real delivery cycle, which does reserve jobs.
+
+This worker uses local infrastructure: the computer must stay awake and online, and PostgreSQL must be running. Keep the main Jobradar server running for new source collection and matching. Existing matches can be emailed by the independent worker. App links currently use APP_BASE_URL (localhost for development); original job links work directly from the email.

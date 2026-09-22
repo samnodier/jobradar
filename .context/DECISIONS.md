@@ -64,3 +64,7 @@
 ## Feed threshold clarification — September 22
 
 Sam clarified that Best matches is score-only: include stored scores at or above the saved minimum, regardless of preference eligibility or pending rematching. Source/search constraints still apply. Notifications/digests keep their stricter gates.
+
+## Morning digest policy — September 22
+
+Sam requested the best 20 jobs each morning using the supplied email design. Digest selection now follows the score-only Best matches rule, retaining the existing 30-day freshness window, expiry exclusion, completed matching and cross-day delivery deduplication. Notifications retain their existing eligibility policy. Send fewer than 20 when fewer qualify. Preview sends do not consume scheduled jobs. Optional DIGEST_START_DATE prevents immediate catch-up during evening setup.

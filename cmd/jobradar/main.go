@@ -50,6 +50,8 @@ func main() {
 	passwordSetup := flag.String("password-setup", "", "issue a private 15-minute password setup/reset link for an email (server owner only)")
 	preview := flag.Bool("digest-preview", false, "render a digest preview without sending")
 	sendOnce := flag.Bool("digest-once", false, "send today's personal digest once")
+	digestWorker := flag.Bool("digest-worker", false, "run only the scheduled digest worker")
+	digestTest := flag.Bool("digest-test", false, "send a preview email to the configured recipient without reserving jobs")
 	flag.Parse()
 	err := godotenv.Load()
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -94,6 +96,22 @@ func main() {
 			log.Fatal(err)
 		}
 		fmt.Print(html)
+		return
+	}
+	if *digestTest {
+		id, err := digestService.SendTest(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("Test email accepted: %s", id)
+		return
+	}
+	if *digestWorker {
+		if !digestConfig.Enabled {
+			log.Fatal("DIGEST_ENABLED must be true to run the worker")
+		}
+		log.Println("Scheduled digest worker started")
+		digestService.Run(ctx)
 		return
 	}
 	if *sendOnce {
