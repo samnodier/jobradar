@@ -911,3 +911,12 @@ Health now shows database, Redis, pending matches and source fetch history in sh
 
 Code: `frontend/src/views/StatusView.vue`, `cmd/jobradar/handler_system.go`; three tests in `frontend/src/__tests__/StatusView.spec.ts` cover polling, overlap prevention, cancellation and failure/retry.
 Questions: Why distinguish liveness from historical observations? Why label stale results? How do intervals leak after component unmount? Why does Redis connectivity not prove source collection is healthy?
+
+## Adding official job feeds without AI
+
+Jobicy and MyJobMag Kenya adapt public JSON/RSS into the existing shared job record; persistence and matching remain in shared ingestion. They are opt-in environment flags and poll no more than every six hours. HTTP timeouts, body limits, context cancellation, malformed-feed rejection and duplicate-ID filtering bound external failures. XML must contain a channel and no malformed trailing content; a syntactically valid but wrong document must not look like a successful empty fetch. RSS declared encodings need decoding rather than assuming UTF-8.
+
+Neither adapter invents required skills or country eligibility. Remote listings keep their geographic restrictions. Jobicy salaries are omitted until intervals can be normalized; an hourly amount cannot safely be compared with an annual preference. MyJobMag skips recognized expired entries, but does not retroactively expire previously saved jobs. Location matching remains literal: add Nairobi as an alternative when a source says Nairobi rather than Kenya. Cross-source duplicates remain possible.
+
+Code: `internal/sources/jobicy.go`, `myjobmag.go`, `public_feeds_test.go`, `cmd/jobradar/config_sources.go`, `config_public_feeds_test.go`. Source tests pass with the race detector; configuration tests verify opt-in and conservative schedules. Research, official links, terms, coverage and next adapters are in `docs/JOB_SOURCES.md`.
+Questions: Why use a normalized adapter boundary? Why distinguish unknown from false? Why preserve canonical links/attribution? Why doesn't an absent record in a partial feed prove expiry? Why do rate limits depend on queries × pages × users × polling frequency? Why is city-to-country inference a separate feature?

@@ -26,6 +26,14 @@ func (cfg *apiConfig) configuredSources() ([]scheduledSource, error) {
 		interval = v
 	}
 	list := []scheduledSource{}
+	// Optional public feeds run at most four times daily, regardless of other sources.
+	feedInterval := max(interval, 6*time.Hour)
+	if os.Getenv("JOBICY_ENABLED") == "true" {
+		list = append(list, scheduledSource{&sources.Jobicy{}, feedInterval})
+	}
+	if os.Getenv("MYJOBMAG_ENABLED") == "true" {
+		list = append(list, scheduledSource{&sources.MyJobMag{}, feedInterval})
+	}
 	if os.Getenv("REMOTEOK_ENABLED") != "false" {
 		list = append(list, scheduledSource{&sources.RemoteOK{}, interval})
 	}
