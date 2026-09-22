@@ -43,6 +43,46 @@ func (q *Queries) ListServiceHealth(ctx context.Context) ([]ServiceHealth, error
 	return items, nil
 }
 
+const listSourceHealthDaily = `-- name: ListSourceHealthDaily :many
+SELECT service_name, to_char(day, 'YYYY-MM-DD')::text AS day, successes, failures
+FROM source_health_daily
+WHERE day >= (NOW() AT TIME ZONE 'UTC')::date - 29
+  AND day <= (NOW() AT TIME ZONE 'UTC')::date
+ORDER BY service_name, day
+`
+
+type ListSourceHealthDailyRow struct {
+	ServiceName string `json:"service_name"`
+	Day         string `json:"day"`
+	Successes   int32  `json:"successes"`
+	Failures    int32  `json:"failures"`
+}
+
+func (q *Queries) ListSourceHealthDaily(ctx context.Context) ([]ListSourceHealthDailyRow, error) {
+	rows, err := q.db.Query(ctx, listSourceHealthDaily)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSourceHealthDailyRow
+	for rows.Next() {
+		var i ListSourceHealthDailyRow
+		if err := rows.Scan(
+			&i.ServiceName,
+			&i.Day,
+			&i.Successes,
+			&i.Failures,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateServiceHealth = `-- name: UpdateServiceHealth :one
 INSERT INTO service_health (
     service_name,

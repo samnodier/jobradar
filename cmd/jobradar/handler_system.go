@@ -70,17 +70,37 @@ func (cfg *apiConfig) handlerSystemStatus(w http.ResponseWriter, r *http.Request
 	if rows == nil {
 		rows = []database.ServiceHealth{}
 	}
+	history, err := cfg.db.ListSourceHealthDaily(ctx)
+	if err != nil {
+		httpx.RespondError(w, 503, "source history unavailable; check database migrations")
+		return
+	}
 	var pending int
 	_ = cfg.pool.QueryRow(ctx, "SELECT count(*) FROM pending_matches").Scan(&pending)
 	// No raw provider errors or credentials are exposed by the health endpoint.
+	type dayStatus struct {
+		Day       string `json:"day"`
+		Successes int32  `json:"successes"`
+		Failures  int32  `json:"failures"`
+	}
+	bySource := map[string][]dayStatus{}
+	for _, day := range history {
+		bySource[day.ServiceName] = append(bySource[day.ServiceName], dayStatus{day.Day, day.Successes, day.Failures})
+	}
 	type sourceStatus struct {
-		Name        string     `json:"name"`
-		Status      string     `json:"status"`
-		LastSuccess *time.Time `json:"last_success"`
+		Name        string      `json:"name"`
+		Status      string      `json:"status"`
+		LastSuccess *time.Time  `json:"last_success"`
+		LastChecked time.Time   `json:"last_checked"`
+		History     []dayStatus `json:"history"`
 	}
 	sources := []sourceStatus{}
 	for _, row := range rows {
-		sources = append(sources, sourceStatus{row.ServiceName, row.ServiceStatus, row.LastSuccessAt})
+		days := bySource[row.ServiceName]
+		if days == nil {
+			days = []dayStatus{}
+		}
+		sources = append(sources, sourceStatus{row.ServiceName, row.ServiceStatus, row.LastSuccessAt, row.LastRunAt.Time, days})
 	}
 	httpx.RespondJSON(w, 200, map[string]any{"database": dbOK, "redis": redisOK, "pending_matches": pending, "sources": sources})
 }

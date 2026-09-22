@@ -150,6 +150,13 @@ type Skill struct {
 	UpdatedAt *time.Time `json:"updated_at"`
 }
 
+type SourceHealthDaily struct {
+	ServiceName string      `json:"service_name"`
+	Day         pgtype.Date `json:"day"`
+	Successes   int32       `json:"successes"`
+	Failures    int32       `json:"failures"`
+}
+
 type User struct {
 	ID                     uuid.UUID  `json:"id"`
 	Email                  string     `json:"email"`

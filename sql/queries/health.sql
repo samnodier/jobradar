@@ -24,3 +24,10 @@ RETURNING *;
 
 -- name: ListServiceHealth :many
 SELECT * FROM service_health ORDER BY service_name;
+
+-- name: ListSourceHealthDaily :many
+SELECT service_name, to_char(day, 'YYYY-MM-DD')::text AS day, successes, failures
+FROM source_health_daily
+WHERE day >= (NOW() AT TIME ZONE 'UTC')::date - 29
+  AND day <= (NOW() AT TIME ZONE 'UTC')::date
+ORDER BY service_name, day;
