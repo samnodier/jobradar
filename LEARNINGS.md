@@ -981,3 +981,5 @@ Sam clarified that Best matches should depend only on the saved score threshold.
 ## Account connection versus provider availability
 
 `internal/auth/password.go` now returns `github_connected` from an owner-scoped EXISTS query in `sql/queries/user_accounts.sql`. An enabled server provider does not imply the current user is linked, and the login method used for this session does not establish all linked identities. Tests cover another user's connection, an active own connection and a revoked link. `PasswordSettings.vue` keeps unknown API state distinct from disconnected. Review later: Why shouldn't the frontend infer linking from the avatar or email?
+
+Application moves use a visually hidden live region (`ApplicationsView.vue`) rather than redundant visible success text. Errors remain visible. Screen-reader users still receive confirmation when a card changes columns.

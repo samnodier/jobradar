@@ -190,7 +190,7 @@ const applicationByStatus = computed(() => {
       </div>
 
       <p v-if="moveError" role="alert" class="text-sm text-red-600">{{ moveError }}</p>
-      <p role="status" aria-live="polite" class="text-sm text-gray-500">{{ announcement }}</p>
+      <p role="status" aria-live="polite" class="sr-only">{{ announcement }}</p>
       <!-- Kanban board -->
       <div
         v-if="!loading && !error && hasApplications"
