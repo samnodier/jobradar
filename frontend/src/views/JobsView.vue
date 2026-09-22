@@ -362,8 +362,8 @@ onUnmounted(() => {
         >
       </div>
       <p v-if="activeFilter === 'matched'" class="text-sm text-gray-600">
-        Jobs at or above your minimum score in Settings. Your work and location preferences also
-        apply; jobs being rescored appear when matching finishes.
+        Jobs with a match score at or above your minimum in Settings. Search and source filters
+        still apply.
         <RouterLink to="/profile" class="text-accent underline">Review profile settings</RouterLink>
       </p>
       <!-- Count row -->
@@ -382,8 +382,8 @@ onUnmounted(() => {
         </div>
         <div v-else-if="jobs.length === 0" class="m-4.5 bg-white p-6 border border-gray-200">
           <template v-if="activeFilter === 'matched' && page === 1">
-            No jobs meet your matching settings and current filters yet. Review your minimum score
-            and preferences, or browse All to see jobs with lower scores.
+            No jobs meet your minimum score and current filters yet. Review your minimum score, or
+            browse All to see jobs with lower scores.
           </template>
           <template v-else
             >No jobs on this page. Try the previous page or adjust your filters.</template

@@ -5,7 +5,7 @@ All `/api` responses are non-cacheable. Job reads allow anonymous access to publ
 | Method | Route | Access / behavior |
 | --- | --- | --- |
 | GET | `/api/health` | Public liveness |
-| GET | `/api/jobs` | Public-or-owned; limit 1–500 (default 50), offset, q, source (case-normalized exact match before pagination), filter=all/saved/applied/remote/today/matched (matched uses profile threshold and eligibility, excludes pending matches), order=newest/oldest/score_desc/score_asc (default score_desc for matched, newest otherwise); array response with X-Has-More header |
+| GET | `/api/jobs` | Public-or-owned; limit 1–500 (default 50), offset, q, source (case-normalized exact match before pagination), filter=all/saved/applied/remote/today/matched (matched uses only the saved score threshold; source/search still apply), order=newest/oldest/score_desc/score_asc (default score_desc for matched, newest otherwise); array response with X-Has-More header |
 | GET | `/api/jobs/stats` | Public-job totals |
 | GET | `/api/jobs/{jobID}` | Public-or-owned details and per-user match |
 | POST | `/api/jobs/import` | Auth; extract draft from URL; no database write |

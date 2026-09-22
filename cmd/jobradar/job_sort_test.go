@@ -42,6 +42,13 @@ func TestJobScoreSortBeforePagination(t *testing.T) {
 			}
 		}
 	}
+	// Feed membership depends only on score, even with failed eligibility or pending rematching.
+	if _, err := p.Exec(ctx, "UPDATE user_job_matches SET preference_eligible=false WHERE user_id=$1", user); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := p.Exec(ctx, "INSERT INTO pending_matches(user_id,job_id) VALUES($1,$2) ON CONFLICT DO NOTHING", user, ids[0]); err != nil {
+		t.Fatal(err)
+	}
 	rows, err := q.GetJobs(ctx, database.GetJobsParams{UserID: user, Search: user.String(), Filter: "matched", SortOrder: "score_desc", Limit: 50})
 	if err != nil {
 		t.Fatal(err)

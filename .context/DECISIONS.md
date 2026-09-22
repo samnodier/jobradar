@@ -60,3 +60,7 @@
 - Native drag-and-drop has a status-select alternative. Custom ordering within columns is out of scope.
 - Public feeds Jobicy/MyJobMag require explicit opt-in, use conservative polling, preserve attribution and unknown metadata.
 - Profile download has an explicit field allowlist and declared limited scope; it is not a database backup.
+
+## Feed threshold clarification — September 22
+
+Sam clarified that Best matches is score-only: include stored scores at or above the saved minimum, regardless of preference eligibility or pending rematching. Source/search constraints still apply. Notifications/digests keep their stricter gates.

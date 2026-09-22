@@ -87,7 +87,7 @@ WHERE (j.created_by_user_id IS NULL OR j.created_by_user_id = $1)
 AND (sqlc.arg(source)::text = '' OR lower(j.job_source) = sqlc.arg(source))
 AND (sqlc.arg(search)::text = '' OR j.title ILIKE '%' || sqlc.arg(search) || '%' OR j.company_name ILIKE '%' || sqlc.arg(search) || '%' OR array_to_string(j.skills, ' ') ILIKE '%' || sqlc.arg(search) || '%')
 AND (sqlc.arg(filter)::text = 'all' OR (sqlc.arg(filter)='saved' AND s.id IS NOT NULL) OR (sqlc.arg(filter)='applied' AND a.id IS NOT NULL)
- OR (sqlc.arg(filter)='remote' AND j.is_remote=true) OR (sqlc.arg(filter)='matched' AND m.preference_eligible=true AND m.match_score >= COALESCE((SELECT min_score FROM user_match_settings WHERE user_id=$1),60) AND NOT EXISTS(SELECT 1 FROM pending_matches p WHERE p.user_id=$1 AND p.job_id=j.id)) OR (sqlc.arg(filter)='today' AND j.created_at >= date_trunc('day',now())))
+ OR (sqlc.arg(filter)='remote' AND j.is_remote=true) OR (sqlc.arg(filter)='matched' AND m.match_score >= COALESCE((SELECT min_score FROM user_match_settings WHERE user_id=$1),60)) OR (sqlc.arg(filter)='today' AND j.created_at >= date_trunc('day',now())))
 ORDER BY CASE WHEN sqlc.arg(sort_order)::text='score_desc' THEN m.match_score END DESC NULLS LAST,
  CASE WHEN sqlc.arg(sort_order)::text='score_asc' THEN m.match_score END ASC NULLS LAST,
  CASE WHEN sqlc.arg(sort_order)::text='oldest' THEN j.created_at END ASC,
