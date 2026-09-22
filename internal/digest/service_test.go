@@ -196,3 +196,62 @@ func TestDueSlot(t *testing.T) {
 		}
 	}
 }
+
+func TestPreviewSendDoesNotConsumeMorningJobs(t *testing.T) {
+	s, f, user, p := setup(t)
+	s.Config.StartDate = "2026-09-23"
+	ctx := context.Background()
+	if _, err := s.SendTest(ctx); err != nil {
+		t.Fatal(err)
+	}
+	var count int
+	if err := p.QueryRow(ctx, "SELECT count(*) FROM email_digest_jobs WHERE user_id=$1", user).Scan(&count); err != nil || count != 0 {
+		t.Fatal("test consumed jobs", count, err)
+	}
+	if err := s.Tick(ctx, time.Date(2026, 9, 22, 18, 0, 0, 0, time.UTC), true); err != nil {
+		t.Fatal(err)
+	}
+	if f.calls != 1 {
+		t.Fatal("sent before start date")
+	}
+	if err := s.Tick(ctx, time.Date(2026, 9, 23, 18, 0, 0, 0, time.UTC), true); err != nil {
+		t.Fatal(err)
+	}
+	if f.calls != 2 {
+		t.Fatal("morning digest was not sent")
+	}
+}
+
+func TestScoreOnlyDigestCapsAtTwenty(t *testing.T) {
+	s, f, user, p := setup(t)
+	ctx := context.Background()
+	if _, err := p.Exec(ctx, "INSERT INTO user_match_settings(user_id,digest_max_jobs) VALUES($1,20)", user); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 24; i++ {
+		job := uuid.New()
+		if _, err := p.Exec(ctx, "INSERT INTO jobs(id,external_id,job_source,title,company_name,source_url,created_by_user_id) VALUES($1,$2,'manual','New role','Example',$4,$3)", job, job.String(), user, "https://example.test/"+job.String()); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := p.Exec(ctx, "INSERT INTO user_job_matches(user_id,job_id,match_score,preference_eligible) VALUES($1,$2,$3,false)", user, job, 60+i); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := p.Exec(ctx, "DELETE FROM pending_matches WHERE user_id=$1", user); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Tick(ctx, time.Now(), true); err != nil {
+		t.Fatal(err)
+	}
+	if f.calls != 1 {
+		t.Fatal("missing email")
+	}
+	var count int
+	var minimum int
+	if err := p.QueryRow(ctx, "SELECT count(*),min(m.match_score) FROM email_digest_jobs d JOIN user_job_matches m ON m.user_id=d.user_id AND m.job_id=d.job_id WHERE d.user_id=$1", user).Scan(&count, &minimum); err != nil {
+		t.Fatal(err)
+	}
+	if count != 20 || minimum != 65 {
+		t.Fatalf("count %d minimum %d", count, minimum)
+	}
+}

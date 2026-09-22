@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Your Jobradar matches</title></head>
+<body style="margin:0;padding:0;background:#f4f3f0;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">Your top {{.Count}} new matches, ranked by score. Find your next role with Jobradar.</div>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#f4f3f0"><tr><td align="center" style="padding:24px 12px;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width:100%;max-width:600px;"><tr><td bgcolor="#fdfdfc" style="border-radius:10px;padding:28px 24px;font-family:Helvetica,Arial,sans-serif;color:#1c1c1a;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+<td><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td width="22" height="22" bgcolor="#2e5bff" style="border-radius:6px;font-size:0;">&nbsp;</td><td style="padding-left:8px;font-family:Helvetica,Arial,sans-serif;font-size:18px;font-weight:bold;">Jobradar</td></tr></table></td>
+<td align="right" style="font-size:12px;color:#6b6963;">{{.Count}} matches</td></tr></table>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td style="padding:28px 0 24px;font-family:Helvetica,Arial,sans-serif;">
+<p style="margin:0 0 8px;font-size:12px;letter-spacing:0.6px;color:#8d8b85;">YOUR JOB DIGEST{{if .Schedule}} · {{.Schedule}}{{end}}</p>
+<h1 style="margin:0 0 8px;font-size:23px;line-height:30px;font-weight:normal;">Your next opportunity starts here.</h1>
+<p style="margin:0;font-size:14px;line-height:21px;color:#6b6963;">{{.Count}} new-to-you roles at or above your minimum score, highest matches first.</p>
+</td></tr></table>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+{{range .Jobs}}<tr><td style="padding:0 0 22px;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+<td width="44" valign="top"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="44"><tr><td width="44" height="44" align="center" valign="middle" bgcolor="#2e5bff" style="border-radius:8px;font-family:Helvetica,Arial,sans-serif;font-size:15px;font-weight:bold;color:#ffffff;">{{initials .CompanyName}}</td></tr></table></td>
+<td width="14" style="font-size:0;">&nbsp;</td>
+<td valign="top" style="font-family:Helvetica,Arial,sans-serif;">
+<a href="{{.SourceUrl}}" style="font-size:15px;font-weight:bold;color:#1f5fd1;text-decoration:none;line-height:21px;">{{.Title}}</a><br>
+<span style="font-size:13px;color:#55534e;line-height:20px;">{{.CompanyName}}{{if .JobLocation}} · {{.JobLocation}}{{end}}{{if mode .IsRemote}} · {{mode .IsRemote}}{{end}}</span><br>
+<span style="font-size:12px;color:#2f7d4f;line-height:19px;">{{.MatchScore}}% match</span><span style="font-size:12px;color:#6b6963;"> · {{.JobSource}}</span>
+{{if eq .JobSource "adzuna"}}<br><span style="font-size:11px;line-height:20px;color:#6b6963;"><a href="https://www.adzuna.com" style="color:#6b6963;">Jobs</a> by <a href="https://www.adzuna.com"><img src="https://zunastatic-abf.kxcdn.com/images/global/landing/press/logo_normal.png" alt="Adzuna" width="70" height="14" style="border:0;vertical-align:middle;"></a></span>{{end}}
+</td></tr></table></td></tr>{{end}}
+</table>
+{{if .JobsURL}}<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#1c1c1a" style="border-radius:24px;padding:12px 24px;"><a href="{{.JobsURL}}" style="font-family:Helvetica,Arial,sans-serif;font-size:14px;color:#ffffff;text-decoration:none;">See all matches</a></td></tr></table>{{end}}
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td style="padding-top:28px;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td style="border-top:1px solid #ecebe7;padding-top:16px;font-family:Helvetica,Arial,sans-serif;font-size:11px;line-height:18px;color:#8d8b85;">
+You're receiving this because you enabled Jobradar email alerts. {{if .SettingsURL}}<a href="{{.SettingsURL}}" style="color:#6b6963;">Manage alerts in Profile → Settings</a>.{{else}}Manage alerts in Profile → Settings.{{end}} Turn off email delivery there to stop these messages.<br>
+Scores describe profile fit; check each listing's requirements and availability before applying.
+</td></tr></table></td></tr></table>
+</td></tr></table></td></tr></table>
+</body></html>

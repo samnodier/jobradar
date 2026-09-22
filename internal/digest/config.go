@@ -5,15 +5,23 @@ import (
 	"github.com/samnodier/jobradar/internal/mailer"
 	"net/mail"
 	"os"
+	"time"
 )
 
 type Config struct {
+	StartDate                 string
 	Enabled                   bool
 	Recipient, From, Provider string
+	BaseURL                   string
 }
 
 func FromEnv() (Config, mailer.Sender, error) {
-	c := Config{Enabled: os.Getenv("DIGEST_ENABLED") == "true", Recipient: os.Getenv("DIGEST_RECIPIENT"), From: os.Getenv("EMAIL_FROM"), Provider: os.Getenv("EMAIL_PROVIDER")}
+	c := Config{StartDate: os.Getenv("DIGEST_START_DATE"), Enabled: os.Getenv("DIGEST_ENABLED") == "true", Recipient: os.Getenv("DIGEST_RECIPIENT"), From: os.Getenv("EMAIL_FROM"), Provider: os.Getenv("EMAIL_PROVIDER"), BaseURL: os.Getenv("APP_BASE_URL")}
+	if c.StartDate != "" {
+		if _, err := time.Parse("2006-01-02", c.StartDate); err != nil {
+			return c, nil, fmt.Errorf("DIGEST_START_DATE must be YYYY-MM-DD")
+		}
+	}
 	if !c.Enabled {
 		return c, nil, nil
 	}

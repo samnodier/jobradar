@@ -2,6 +2,7 @@ package digest
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"log"
@@ -50,7 +51,7 @@ func (s *Service) Preview(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	_, html, err := Render(rows)
+	_, html, err := Render(rows, RenderOptions{BaseURL: s.Config.BaseURL, Schedule: settings.DigestTimezone})
 	return html, err
 }
 func (s *Service) Tick(ctx context.Context, now time.Time, force bool) error {
@@ -97,6 +98,9 @@ func (s *Service) Tick(ctx context.Context, now time.Time, force bool) error {
 		return err
 	}
 	local := now.In(location)
+	if s.Config.StartDate != "" && local.Format("2006-01-02") < s.Config.StartDate {
+		return nil
+	}
 	slot, due := dueSlot(local, settings.DigestHours, force)
 	var pending int
 	if err := s.Pool.QueryRow(ctx, "SELECT count(*) FROM pending_matches WHERE user_id=$1", userID).Scan(&pending); err != nil {
@@ -121,7 +125,7 @@ func (s *Service) Tick(ctx context.Context, now time.Time, force bool) error {
 				if len(jobs) == 0 {
 					return nil
 				}
-				subject, html, e := Render(jobs)
+				subject, html, e := Render(jobs, RenderOptions{BaseURL: s.Config.BaseURL, Schedule: fmt.Sprintf("%02d:00 · %s", slot, settings.DigestTimezone)})
 				if e != nil {
 					return e
 				}
@@ -201,4 +205,17 @@ func dueSlot(local time.Time, hours []int32, force bool) (int32, bool) {
 		slot = hours[0]
 	}
 	return slot, slot >= 0
+}
+
+// SendTest exercises the real provider without consuming tomorrow's job ledger.
+func (s *Service) SendTest(ctx context.Context) (string, error) {
+	if !s.Config.Enabled || s.Sender == nil {
+		return "", fmt.Errorf("email delivery must be configured and enabled")
+	}
+	html, err := s.Preview(ctx)
+	if err != nil {
+		return "", err
+	}
+	key := fmt.Sprintf("jobradar/test/%s/%x", time.Now().UTC().Format("2006-01-02"), sha256.Sum256([]byte(s.Config.From+s.Config.Recipient+html)))
+	return s.Sender.Send(ctx, key, mailer.Message{From: s.Config.From, To: []string{s.Config.Recipient}, Subject: "Jobradar: preview of your morning matches", HTML: html})
 }

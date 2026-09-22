@@ -2,19 +2,63 @@ package digest
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
-	"github.com/samnodier/jobradar/internal/database"
 	"html/template"
+	"strings"
+	"unicode"
+
+	"github.com/samnodier/jobradar/internal/database"
 )
 
-var emailTemplate = template.Must(template.New("digest").Parse(`<!doctype html><html><body style="font-family:system-ui,sans-serif;max-width:680px;margin:auto;padding:24px;color:#172033">
-<h1>Your Jobradar matches</h1><p>New roles matching your profile. Scores are a guide, not a guarantee of eligibility.</p>
-{{range .}}<article style="padding:16px 0;border-bottom:1px solid #ddd"><h2><a href="{{.SourceUrl}}">{{.Title}}</a></h2><p>{{.CompanyName}} · {{if .JobLocation}}{{.JobLocation}}{{else}}Location unspecified{{end}} · Match {{.MatchScore}}%</p>
-{{if eq .JobSource "adzuna"}}<p><a href="https://www.adzuna.com">Jobs</a> by <a href="https://www.adzuna.com"><img src="https://zunastatic-abf.kxcdn.com/images/global/landing/press/logo_normal.png" alt="Adzuna" width="116" height="23"></a></p>{{else}}<p>Source: {{.JobSource}}</p>{{end}}</article>{{end}}
-<p>Personal digest from your Jobradar instance. Disable job notifications in Profile → Preferences to stop delivery.</p></body></html>`))
+//go:embed email.html
+var emailHTML string
+var emailTemplate = template.Must(template.New("digest").Funcs(template.FuncMap{
+	"initials": func(name string) string {
+		words := strings.Fields(name)
+		var letters []rune
+		for _, word := range words {
+			for _, r := range word {
+				letters = append(letters, unicode.ToUpper(r))
+				break
+			}
+			if len(letters) == 2 {
+				break
+			}
+		}
+		if len(letters) == 0 {
+			return "J"
+		}
+		return string(letters)
+	},
+	"mode": func(remote *bool) string {
+		if remote == nil {
+			return ""
+		}
+		if *remote {
+			return "Remote"
+		}
+		return "On-site"
+	},
+}).Parse(emailHTML))
 
-func Render(jobs []database.GetDigestCandidatesRow) (string, string, error) {
+type RenderOptions struct{ BaseURL, Schedule string }
+
+func Render(jobs []database.GetDigestCandidatesRow, options ...RenderOptions) (string, string, error) {
+	var opts RenderOptions
+	if len(options) > 0 {
+		opts = options[0]
+	}
+	data := struct {
+		Jobs                           []database.GetDigestCandidatesRow
+		Count                          int
+		JobsURL, SettingsURL, Schedule string
+	}{Jobs: jobs, Count: len(jobs), Schedule: opts.Schedule}
+	if opts.BaseURL != "" {
+		data.JobsURL = strings.TrimRight(opts.BaseURL, "/") + "/jobs?filter=matched&order=score_desc"
+		data.SettingsURL = strings.TrimRight(opts.BaseURL, "/") + "/profile"
+	}
 	var out bytes.Buffer
-	err := emailTemplate.Execute(&out, jobs)
-	return fmt.Sprintf("Jobradar: %d new job matches", len(jobs)), out.String(), err
+	err := emailTemplate.Execute(&out, data)
+	return fmt.Sprintf("Jobradar: your top %d job matches", len(jobs)), out.String(), err
 }
