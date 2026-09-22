@@ -49,8 +49,8 @@ type PreferencesResponse struct {
 }
 
 type preferencesPatchRequest struct {
-	MinSalary              *int32                       `json:"min_salary"`
-	MaxSalary              *int32                       `json:"max_salary"`
+	MinSalary              json.RawMessage              `json:"min_salary"`
+	MaxSalary              json.RawMessage              `json:"max_salary"`
 	SalaryCurrency         *string                      `json:"salary_currency"`
 	PreferredJobTypes      *[]string                    `json:"preferred_job_types"`
 	PreferredIndustries    *[]string                    `json:"preferred_industries"`
@@ -194,7 +194,12 @@ func (cfg *apiConfig) handlerUpdatePreferences(w http.ResponseWriter, r *http.Re
 	// Create transaction-scoped queries
 	qtx := cfg.db.WithTx(tx)
 
-	// Fetch the current user data to server as fallback values
+	// Lock before reading to serialize overlapping partial updates for this user.
+	if _, err = qtx.LockAuthIdentity(ctx, userID); err != nil {
+		httpx.RespondError(w, 500, "failed to lock preferences")
+		return
+	}
+	// Fetch the current user data to serve as fallback values
 	user, err := qtx.GetUserByID(ctx, userID)
 	if err != nil {
 		httpx.RespondError(w, http.StatusInternalServerError, "failed to fetch the user data")
@@ -204,11 +209,17 @@ func (cfg *apiConfig) handlerUpdatePreferences(w http.ResponseWriter, r *http.Re
 	// merge and update the main preferences
 	minSalary := user.MinSalary
 	if req.MinSalary != nil {
-		minSalary = req.MinSalary
+		if json.Unmarshal(req.MinSalary, &minSalary) != nil {
+			httpx.RespondError(w, 400, "minimum salary must be an integer or null")
+			return
+		}
 	}
 	maxSalary := user.MaxSalary
 	if req.MaxSalary != nil {
-		maxSalary = req.MaxSalary
+		if json.Unmarshal(req.MaxSalary, &maxSalary) != nil {
+			httpx.RespondError(w, 400, "maximum salary must be an integer or null")
+			return
+		}
 	}
 	salaryCurrency := user.SalaryCurrency
 	if req.SalaryCurrency != nil {
@@ -245,26 +256,10 @@ func (cfg *apiConfig) handlerUpdatePreferences(w http.ResponseWriter, r *http.Re
 		httpx.RespondError(w, http.StatusBadRequest, "maximum salary cannot be less than minimum salary")
 		return
 	}
-	_, err = qtx.UpdateUser(ctx, database.UpdateUserParams{
-		ID:                     userID,
-		Username:               user.Username,
-		FullName:               user.FullName,
-		Phone:                  user.Phone,
-		UserLocation:           user.UserLocation,
-		WebsiteUrl:             user.WebsiteUrl,
-		LinkedinUrl:            user.LinkedinUrl,
-		GithubUrl:              user.GithubUrl,
-		Headline:               user.Headline,
-		UserSummary:            user.UserSummary,
-		Availability:           user.Availability,
-		MinSalary:              minSalary,
-		MaxSalary:              maxSalary,
-		SalaryCurrency:         salaryCurrency,
-		YearsOfExperience:      user.YearsOfExperience,
-		PreferredJobTypes:      preferredJobTypes,
-		PreferredIndustries:    preferredIndustries,
-		CompanyStagePreference: companyStagePreference,
-		NotifyJobs:             notifyJobs,
+	err = qtx.UpdateUserPreferences(ctx, database.UpdateUserPreferencesParams{
+		ID: userID, MinSalary: minSalary, MaxSalary: maxSalary, SalaryCurrency: salaryCurrency,
+		PreferredJobTypes: preferredJobTypes, PreferredIndustries: preferredIndustries,
+		CompanyStagePreference: companyStagePreference, NotifyJobs: notifyJobs,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -306,7 +301,7 @@ func (cfg *apiConfig) handlerUpdatePreferences(w http.ResponseWriter, r *http.Re
 			seenSkills[lowerName] = true
 
 			// 1. resolve or create the skill name to get the skill UUID
-			skillID, skillErr := qtx.GetOrCreateSkill(ctx, skillPref.SkillName)
+			skillID, skillErr := qtx.GetOrCreateSkill(ctx, trimmedName)
 			if skillErr != nil {
 				httpx.RespondError(w, http.StatusInternalServerError, "failed to resolve skill")
 				return

@@ -113,3 +113,8 @@ RETURNING *;
 -- name: DeleteUserByID :exec
 DELETE FROM users
 WHERE id = $1;
+
+-- name: UpdateUserPreferences :exec
+UPDATE users SET min_salary=$2,max_salary=$3,salary_currency=$4,
+ preferred_job_types=$5,preferred_industries=$6,company_stage_preference=$7,notify_jobs=$8,updated_at=now()
+WHERE id=$1;

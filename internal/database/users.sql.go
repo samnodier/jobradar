@@ -405,3 +405,34 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 	)
 	return i, err
 }
+
+const updateUserPreferences = `-- name: UpdateUserPreferences :exec
+UPDATE users SET min_salary=$2,max_salary=$3,salary_currency=$4,
+ preferred_job_types=$5,preferred_industries=$6,company_stage_preference=$7,notify_jobs=$8,updated_at=now()
+WHERE id=$1
+`
+
+type UpdateUserPreferencesParams struct {
+	ID                     uuid.UUID `json:"id"`
+	MinSalary              *int32    `json:"min_salary"`
+	MaxSalary              *int32    `json:"max_salary"`
+	SalaryCurrency         *string   `json:"salary_currency"`
+	PreferredJobTypes      []string  `json:"preferred_job_types"`
+	PreferredIndustries    []string  `json:"preferred_industries"`
+	CompanyStagePreference []string  `json:"company_stage_preference"`
+	NotifyJobs             *bool     `json:"notify_jobs"`
+}
+
+func (q *Queries) UpdateUserPreferences(ctx context.Context, arg UpdateUserPreferencesParams) error {
+	_, err := q.db.Exec(ctx, updateUserPreferences,
+		arg.ID,
+		arg.MinSalary,
+		arg.MaxSalary,
+		arg.SalaryCurrency,
+		arg.PreferredJobTypes,
+		arg.PreferredIndustries,
+		arg.CompanyStagePreference,
+		arg.NotifyJobs,
+	)
+	return err
+}

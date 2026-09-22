@@ -864,3 +864,10 @@ Desired locations are individual removable tags. Enter/Add commits a tag, so `Na
 
 Code: `frontend/src/stores/preferences.ts`, `frontend/src/components/PreferencesTab.vue`. Regression tests in `frontend/src/__tests__/preferences.spec.ts` reproduce rapid checkbox changes, delayed responses, retry after failure and location tagging.
 Questions: Why is debouncing alone insufficient for out-of-order network responses? Why copy a payload before waiting? What is the difference between an editable draft and last acknowledged state? Why must failed saves leave a visible retry path?
+
+## Review fix: PATCH omission is different from null
+
+A nullable Go pointer alone treated a missing salary field and explicit JSON null identically, so clearing salary never persisted. Salary patch fields now retain raw JSON presence: omitted preserves the old value; null clears it; a number sets it. Dedicated SQL updates only preference columns instead of copying unrelated profile fields. Locking the user row before reading/merging serializes simultaneous partial updates. Validation failures roll back the entire transaction, including any list replacement.
+
+Code: `cmd/jobradar/handler_preferences.go`, `sql/queries/users.sql`, `cmd/jobradar/preferences_test.go`.
+Questions: Why is PATCH not the same as replacing a resource? Why does SQL COALESCE prevent clearing a nullable field? Why lock before reading rather than after? What would happen if list deletion committed before input validation?
