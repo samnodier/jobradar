@@ -59,7 +59,7 @@ async function save() {
 }
 </script>
 <template>
-  <section class="rounded-xl border border-gray-200 bg-white p-6 space-y-4">
+  <section class="settings-card">
     <h3 class="font-semibold">Sign-in methods</h3>
     <p v-if="settings" class="text-sm">Email: {{ settings.email }}</p>
     <p v-if="error" role="alert" class="text-sm text-red-600">{{ error }}</p>
@@ -76,7 +76,7 @@ async function save() {
           autocomplete="current-password"
           required
           maxlength="1024"
-          class="block w-full border rounded p-2 mt-1"
+          class="form-input mt-1"
       /></label>
       <label class="block text-sm"
         >New password<input
@@ -86,7 +86,7 @@ async function save() {
           required
           minlength="15"
           maxlength="1024"
-          class="block w-full border rounded p-2 mt-1"
+          class="form-input mt-1"
       /></label>
       <label class="block text-sm"
         >Confirm new password<input
@@ -95,13 +95,13 @@ async function save() {
           autocomplete="new-password"
           required
           maxlength="1024"
-          class="block w-full border rounded p-2 mt-1"
+          class="form-input mt-1"
       /></label>
       <p class="text-xs text-gray-600">
         At least 15 characters. Saving signs out other sessions and revokes existing workflow
         tokens.
       </p>
-      <button :disabled="busy" type="submit" class="rounded bg-[#5e6ad2] text-white px-4 py-2">
+      <button :disabled="busy" type="submit" class="button button-primary">
         {{ busy ? 'Saving…' : settings.password_configured ? 'Change password' : 'Add password' }}
       </button>
     </form>
@@ -110,7 +110,7 @@ async function save() {
         Created your account locally? Connect GitHub using the same verified primary email. Sign in
         again first if your session is more than ten minutes old.
       </p>
-      <a href="/auth/github/login?link=1" class="underline">Connect GitHub</a>
+      <a href="/auth/github/login?link=1" class="button button-secondary">Connect GitHub</a>
     </div>
   </section>
 </template>

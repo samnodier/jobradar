@@ -62,7 +62,7 @@ async function revoke(id: string) {
 }
 </script>
 <template>
-  <section class="rounded-xl border border-gray-200 bg-white p-6 space-y-4">
+  <section class="settings-card">
     <h3 class="font-semibold">Personal workflow access</h3>
     <p class="text-sm text-gray-600">
       Create a read-only token to retrieve your matching jobs and Copy for AI context, including
@@ -70,11 +70,11 @@ async function revoke(id: string) {
       time.
     </p>
     <p v-if="error" role="alert" class="text-red-600">{{ error }}</p>
-    <form class="flex gap-2" @submit.prevent="create">
-      <label class="flex-1"
-        >Token name<input v-model="name" required maxlength="80" class="w-full border rounded p-2"
+    <form class="flex flex-wrap items-end gap-2" @submit.prevent="create">
+      <label class="flex-1 min-w-40 text-sm"
+        >Token name<input v-model="name" required maxlength="80" class="form-input mt-1"
       /></label>
-      <button :disabled="busy" class="border rounded px-3" type="submit">Create token</button>
+      <button :disabled="busy" class="button button-primary" type="submit">Create token</button>
     </form>
     <div v-if="secret" class="space-y-2">
       <label class="block text-sm"
@@ -83,11 +83,11 @@ async function revoke(id: string) {
           :value="secret"
           readonly
           spellcheck="false"
-          class="w-full border rounded p-2 font-mono"
+          class="form-input font-mono"
           aria-label="New access token"
         />
       </label>
-      <button class="text-sm underline" @click="secret = ''">Hide token</button>
+      <button class="button button-secondary" @click="secret = ''">Hide token</button>
     </div>
     <ul class="space-y-2">
       <li v-for="token in tokens" :key="token.id" class="flex justify-between gap-3 text-sm">
@@ -102,18 +102,21 @@ async function revoke(id: string) {
         <button
           v-if="!token.revoked_at"
           :disabled="busy"
-          class="underline"
+          class="button button-secondary"
           @click="revoke(token.id)"
         >
           Revoke
         </button>
       </li>
     </ul>
-    <p class="text-sm">
-      Your workflow can request
-      <code>/api/export/jobs?min_score=70&amp;date=today&amp;limit=100</code> with this token in the
-      Authorization: Bearer header. Follow next_cursor to retrieve further pages. Use the job's ID
-      at <code>/api/export/jobs/{id}/ai-context</code> for Markdown.
-    </p>
+    <details class="text-sm break-words">
+      <summary class="cursor-pointer text-accent">Use a token in your workflow</summary>
+      <p class="mt-2">
+        Your workflow can request
+        <code>/api/export/jobs?min_score=70&amp;date=today&amp;limit=100</code> with this token in
+        the Authorization: Bearer header. Follow next_cursor to retrieve further pages. Use the
+        job's ID at <code>/api/export/jobs/{id}/ai-context</code> for Markdown.
+      </p>
+    </details>
   </section>
 </template>

@@ -114,7 +114,7 @@ describe('Preference persistence', () => {
     expect(store.preferences?.desired_locations).toHaveLength(1)
     await wrapper.get('button[aria-label="Remove Nairobi, Kenya"]').trigger('click')
     await flushPromises()
-    expect(writes.at(-1)?.desired_locations).toEqual([])
+    expect(writes[writes.length - 1]?.desired_locations).toEqual([])
     wrapper.unmount()
   })
 })

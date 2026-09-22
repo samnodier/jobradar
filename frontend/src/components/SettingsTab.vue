@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DownloadProfile from './DownloadProfile.vue'
 import PasswordSettings from './PasswordSettings.vue'
 import AccessTokens from './AccessTokens.vue'
 import MatchingSettings from './MatchingSettings.vue'
@@ -133,9 +134,10 @@ async function removeApiKey(providerId: string) {
 </script>
 <template>
   <section class="flex flex-col gap-6">
-    <div class="grid gap-6" style="grid-template-columns: repeat(auto-fit, minmax(400px, 1fr))">
+    <div class="settings-grid">
+      <MatchingSettings />
       <!-- Notifications -->
-      <section class="p-6 bg-white border border-gray-200">
+      <section class="settings-card">
         <h2 class="text-lg font-semibold text-black mb-4">Notifications</h2>
         <div class="flex flex-row justify-between items-center gap-2 mb-4">
           <div class="flex flex-col gap-0.5">
@@ -151,7 +153,7 @@ async function removeApiKey(providerId: string) {
         </div>
       </section>
 
-      <section class="p-6 bg-white border border-gray-200">
+      <section class="settings-card">
         <h2 class="text-lg font-semibold text-black mb-4">Integrations</h2>
         <p class="text-xs text-black mb-4">
           Optional API keys for AI summaries and URL extraction. Matching and Copy for AI work
@@ -234,16 +236,15 @@ async function removeApiKey(providerId: string) {
         </div>
       </section>
 
-      <MatchingSettings />
       <PasswordSettings @changed="credentialVersion++" />
       <AccessTokens :key="credentialVersion" />
 
       <!-- Privacy & Account -->
-      <section class="p-6 bg-white border border-gray-200">
+      <section class="settings-card">
         <h2 class="text-lg font-semibold text-black mb-4">Privacy & Account</h2>
 
         <div class="flex flex-col gap-2 mb-4">
-          <button class="button button-secondary">Download My Data</button>
+          <DownloadProfile />
         </div>
 
         <div v-if="!isDeleteConfirmVisible" class="flex flex-col gap-2">

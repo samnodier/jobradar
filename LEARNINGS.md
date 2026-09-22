@@ -887,3 +887,13 @@ The previous Download My Data button had no action. A dedicated component now fe
 
 Code: `frontend/src/components/DownloadProfile.vue`, `frontend/src/utils/profileDownload.ts`; three regression tests in `frontend/src/__tests__/DownloadProfile.spec.ts` cover field selection, authentication, failure and object-URL cleanup.
 Questions: Why is an allowlist safer than deleting known secret fields? Why is a browser download not a database backup? Can eight separate GETs guarantee a transactionally consistent snapshot? (No.) Why revoke a generated object URL?
+
+## Settings layout, explicit saves and design tokens
+
+The original design reference is Linear light mode (`JOBRADAR_PLAN.md`); account-preferences and notification screens separate related concerns. The settings grid now has compact cards for match criteria, sources, delivery channels and email schedule, followed by account/integration controls. Shared `settings-card`, `form-input` and `button` classes use the existing accent and square borders instead of one-off rounded purple styles. The grid shrinks to the viewport and aligns cards at the top. Matching settings still use one explicit save because they are one API resource; Preferences retains autosave plus its visible Save button. Master recommendations remains separately autosaved.
+
+A save captures the submitted draft, then only reconciles a response if the user has not edited again. Persistent dirty/saving/error state tells the user whether another save is needed. Duplicate hours, more than two slots and hours outside 0–23 are rejected; the server remains authoritative. The formerly inert download control now renders the scoped profile exporter.
+
+Code: `frontend/src/components/MatchingSettings.vue`, `SettingsTab.vue`, `PasswordSettings.vue`, `AccessTokens.vue`, `frontend/src/styles/globals.css`. Regression tests in `MatchingSettings.spec.ts` and `AccountSettings.spec.ts` cover delayed saves, retries, hours, password confirmation/secret clearing and token create/revoke. The preferences test uses indexed array access to match the configured TypeScript library target.
+Questions: Why share design tokens instead of hardcoded colors? Why separate delivery channels from matching eligibility? What is the difference between a dirty draft and a request in flight? Why does client validation not replace server validation? Why does a successful build not prove visual layout or touch interaction?
+References: https://linear.app/docs/account-preferences and https://linear.app/docs/notifications (research September 22, 2026).
