@@ -97,3 +97,7 @@ Implemented on `feature/feed-ui-health` from dev, for local dev integration with
 - Best matches now uses only the stored score threshold, per Sam's clarification; pending/eligibility gates remain for notifications/digests. Backend integration coverage verifies this distinction.
 - Export to PDF loads all saved resume sections and opens a clean browser print document; choose Save as PDF. Popup/request failures are surfaced; no partial export on request failure. This exports the saved profile, without job tailoring.
 - 43 frontend tests, production build/typecheck and focused lint passed; backend handler race/integration tests passed. Native print dialog still requires manual browser verification.
+
+## GitHub connection and toolbar follow-up
+
+Settings now reads the signed-in user's non-revoked GitHub account link and shows GitHub connected instead of repeating Connect GitHub. Server availability and account connection are separate. Older API responses show unknown state rather than incorrectly claiming disconnection. Feed Refresh/Import now use icons with tooltips and accessible names. 45 frontend tests, production build/typecheck, focused lint and backend auth/handler race tests plus vet passed. No push performed; restart the Go server to use the updated API.

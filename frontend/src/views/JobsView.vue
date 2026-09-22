@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Search, X, PlusIcon } from '@lucide/vue'
+import { Search, X, PlusIcon, RefreshCw } from '@lucide/vue'
 import { useToast } from '@/composables/useToast'
 import JobRow from '@/components/JobRow.vue'
 import JobDetail from '@/components/JobDetail.vue'
@@ -342,11 +342,22 @@ onUnmounted(() => {
             <option value="score_desc">Highest score</option>
             <option value="score_asc">Lowest score</option>
           </select>
-          <button class="button button-secondary" @click="fetchJobs()" :disabled="loading">
-            Refresh
+          <button
+            class="button button-ghost !p-2"
+            @click="fetchJobs()"
+            :disabled="loading"
+            aria-label="Refresh jobs"
+            title="Refresh jobs"
+          >
+            <RefreshCw :size="20" aria-hidden="true" />
           </button>
-          <button @click="isJobImportOpen = true" class="button button-primary">
-            Import job <PlusIcon :size="20" />
+          <button
+            @click="isJobImportOpen = true"
+            class="button button-primary !p-2"
+            aria-label="Import job"
+            title="Import job"
+          >
+            <PlusIcon :size="20" aria-hidden="true" />
           </button>
         </div>
       </header>

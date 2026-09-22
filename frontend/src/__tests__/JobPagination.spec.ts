@@ -173,7 +173,7 @@ describe('job pagination', () => {
     expect(view.text()).toContain('Server-selected result')
     await view
       .findAll('button')
-      .find((button) => button.text() === 'Refresh')!
+      .find((button) => button.attributes('aria-label') === 'Refresh jobs')!
       .trigger('click')
     await flushPromises()
     expect(view.text()).toContain('Restart the Go server with make run')
