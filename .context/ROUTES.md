@@ -46,6 +46,6 @@ See `cmd/jobradar/main.go` and `internal/auth/handler.go` for canonical route re
 - GET `/auth/methods`: public enabled login methods, no secrets.
 - POST `/auth/password/login`: email/password, rate-limited, JSON/origin validation, Redis session.
 - POST `/auth/password/setup`: private server-issued token plus chosen password; single-use, no public registration.
-- GET `/auth/password`: session; own email and whether password is configured.
+- GET `/auth/password`: session; own email, whether password is configured, GitHub server availability and account-specific github_connected state.
 - PUT `/auth/password`: session; add after recent GitHub login or change with current password; invalidates other sessions, read tokens and setup links.
 - Server CLI `--password-setup EMAIL`: provision/recover a local account and print a private 15-minute setup link. No password argument; preserves an existing user ID.

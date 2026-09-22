@@ -49,3 +49,14 @@ func (q *Queries) CreateUserAccount(ctx context.Context, arg CreateUserAccountPa
 	)
 	return i, err
 }
+
+const hasGitHubAccount = `-- name: HasGitHubAccount :one
+SELECT EXISTS(SELECT 1 FROM user_accounts WHERE user_id=$1 AND auth_provider='github' AND revoked_at IS NULL)
+`
+
+func (q *Queries) HasGitHubAccount(ctx context.Context, userID uuid.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, hasGitHubAccount, userID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}

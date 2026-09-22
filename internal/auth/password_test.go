@@ -124,3 +124,47 @@ func TestPasswordLifecycleAndSessionInvalidation(t *testing.T) {
 		t.Fatal("expired setup accepted")
 	}
 }
+
+func TestLoginSettingsGitHubConnection(t *testing.T) {
+	p := testutil.Pool(t)
+	ctx := context.Background()
+	user, other := uuid.New(), uuid.New()
+	for _, id := range []uuid.UUID{user, other} {
+		if _, err := p.Exec(ctx, "INSERT INTO users(id,email,username) VALUES($1,$2::text,$2::text)", id, id.String()+"@example.test"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Cleanup(func() { p.Exec(ctx, "DELETE FROM users WHERE id=ANY($1)", []uuid.UUID{user, other}) })
+	h := &Handler{db: database.New(p)}
+	check := func(want bool) {
+		t.Helper()
+		req := httptest.NewRequest("GET", "/password", nil)
+		req = req.WithContext(context.WithValue(ctx, sessionKey, &Session{UserID: user, Email: "test@example.test"}))
+		w := httptest.NewRecorder()
+		h.handlePasswordStatus(w, req)
+		var body struct {
+			Connected bool `json:"github_connected"`
+		}
+		if w.Code != 200 {
+			t.Fatal(w.Code, w.Body.String())
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+			t.Fatal(err)
+		}
+		if body.Connected != want {
+			t.Fatalf("connected=%v, want %v", body.Connected, want)
+		}
+	}
+	if _, err := p.Exec(ctx, "INSERT INTO user_accounts(user_id,auth_provider,auth_provider_id) VALUES($1,'github',$2)", other, other.String()); err != nil {
+		t.Fatal(err)
+	}
+	check(false)
+	if _, err := p.Exec(ctx, "INSERT INTO user_accounts(user_id,auth_provider,auth_provider_id) VALUES($1,'github',$2)", user, user.String()); err != nil {
+		t.Fatal(err)
+	}
+	check(true)
+	if _, err := p.Exec(ctx, "UPDATE user_accounts SET revoked_at=now() WHERE user_id=$1", user); err != nil {
+		t.Fatal(err)
+	}
+	check(false)
+}

@@ -145,7 +145,13 @@ func (h *Handler) handlePasswordStatus(w http.ResponseWriter, r *http.Request) {
 		httpx.RespondError(w, 500, "could not load login settings")
 		return
 	}
-	httpx.RespondJSON(w, 200, map[string]any{"email": session.Email, "password_configured": err == nil, "github_enabled": h.cfg.GitHubEnabled()})
+	passwordConfigured := err == nil
+	githubConnected, err := h.db.HasGitHubAccount(r.Context(), session.UserID)
+	if err != nil {
+		httpx.RespondError(w, 500, "could not load login settings")
+		return
+	}
+	httpx.RespondJSON(w, 200, map[string]any{"email": session.Email, "password_configured": passwordConfigured, "github_enabled": h.cfg.GitHubEnabled(), "github_connected": githubConnected})
 }
 
 // savePassword is called inside a transaction after locking the user row.

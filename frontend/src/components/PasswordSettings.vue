@@ -5,6 +5,7 @@ interface LoginSettings {
   email: string
   password_configured: boolean
   github_enabled: boolean
+  github_connected?: boolean
 }
 const settings = ref<LoginSettings | null>(null)
 const current = ref('')
@@ -105,12 +106,24 @@ async function save() {
         {{ busy ? 'Saving…' : settings.password_configured ? 'Change password' : 'Add password' }}
       </button>
     </form>
-    <div v-if="settings?.github_enabled" class="text-sm space-y-2">
+    <p v-if="settings?.github_connected" role="status" class="text-sm text-green-700">
+      GitHub connected
+      <span v-if="!settings.github_enabled" class="block text-gray-500"
+        >GitHub sign-in is currently disabled on this server.</span
+      >
+    </p>
+    <div
+      v-else-if="settings?.github_enabled && settings.github_connected === false"
+      class="text-sm space-y-2"
+    >
       <p>
         Created your account locally? Connect GitHub using the same verified primary email. Sign in
         again first if your session is more than ten minutes old.
       </p>
       <a href="/auth/github/login?link=1" class="button button-secondary">Connect GitHub</a>
     </div>
+    <p v-else-if="settings?.github_enabled" class="text-sm text-gray-500">
+      GitHub connection status unavailable. Refresh after the server is updated.
+    </p>
   </section>
 </template>

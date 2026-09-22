@@ -977,3 +977,7 @@ Code: `frontend/src/views/StatusView.vue`, `frontend/src/__tests__/StatusView.sp
 `frontend/src/utils/profilePdf.ts` opens a preview during the click (popup permission), fetches every saved resume section, escapes text, and uses print CSS with browser Save as PDF. The explicit field list excludes account settings. A failed section request aborts rather than silently exporting an incomplete resume. Review later: Why escape text before HTML insertion? Why open the window before awaiting network calls?
 
 Sam clarified that Best matches should depend only on the saved score threshold. Feed eligibility/pending gates were removed; notification/digest policy remains independent. Tests cover ineligible/pending rows that still meet the threshold.
+
+## Account connection versus provider availability
+
+`internal/auth/password.go` now returns `github_connected` from an owner-scoped EXISTS query in `sql/queries/user_accounts.sql`. An enabled server provider does not imply the current user is linked, and the login method used for this session does not establish all linked identities. Tests cover another user's connection, an active own connection and a revoked link. `PasswordSettings.vue` keeps unknown API state distinct from disconnected. Review later: Why shouldn't the frontend infer linking from the avatar or email?

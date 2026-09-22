@@ -5,8 +5,49 @@ import AccessTokens from '@/components/AccessTokens.vue'
 const response = (data: unknown) => ({ ok: true, json: async () => data })
 afterEach(() => vi.unstubAllGlobals())
 describe('Account settings', () => {
+  it('shows connected GitHub without offering to link it again', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          response({
+            email: 'test@example.com',
+            password_configured: true,
+            github_enabled: true,
+            github_connected: true,
+          }),
+        ),
+    )
+    const wrapper = mount(PasswordSettings)
+    await flushPromises()
+    expect(wrapper.text()).toContain('GitHub connected')
+    expect(wrapper.find('a[href="/auth/github/login?link=1"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+  it('does not claim an unknown connection is disconnected', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          response({ email: 'test@example.com', password_configured: true, github_enabled: true }),
+        ),
+    )
+    const wrapper = mount(PasswordSettings)
+    await flushPromises()
+    expect(wrapper.text()).toContain('connection status unavailable')
+    expect(wrapper.find('a').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
   it('validates confirmation and clears password fields after successful change', async () => {
-    const settings = { email: 'test@example.com', password_configured: true, github_enabled: true }
+    const settings = {
+      email: 'test@example.com',
+      password_configured: true,
+      github_enabled: true,
+      github_connected: false,
+    }
     const fetch = vi.fn().mockResolvedValue(response(settings))
     vi.stubGlobal('fetch', fetch)
     const wrapper = mount(PasswordSettings)
