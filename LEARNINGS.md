@@ -880,3 +880,10 @@ The earlier notes debounce read the currently selected application when its time
 
 Code: `frontend/src/views/ApplicationsView.vue`, `frontend/src/components/ApplicationDetail.vue`. Eight regression tests cover moving, rollback, overlapping actions, load failure, note identity and timing in `ApplicationsView.spec.ts` and `ApplicationDetail.spec.ts`.
 Questions: Why doesn't debounce prevent concurrent requests? Why capture identity before awaiting? Why roll back optimistic state? Why must drag actions have a non-drag alternative? Why can merging an entire PATCH response lose unrelated edits?
+
+## Profile download: an explicit export contract
+
+The previous Download My Data button had no action. A dedicated component now fetches the authenticated profile/resume/preferences endpoints and downloads JSON. Recursive allowlists exclude credentials and internal account IDs even if future API responses grow. One failed endpoint prevents a misleading partial download. This is a profile copy, not an account backup: saved jobs and applications are excluded and described in the UI.
+
+Code: `frontend/src/components/DownloadProfile.vue`, `frontend/src/utils/profileDownload.ts`; three regression tests in `frontend/src/__tests__/DownloadProfile.spec.ts` cover field selection, authentication, failure and object-URL cleanup.
+Questions: Why is an allowlist safer than deleting known secret fields? Why is a browser download not a database backup? Can eight separate GETs guarantee a transactionally consistent snapshot? (No.) Why revoke a generated object URL?
