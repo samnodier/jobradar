@@ -34,7 +34,13 @@ describe('job source navigation', () => {
 
   it('sends source to the server and preserves it through filters, search and navigation', async () => {
     vi.useFakeTimers()
-    const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => [] })
+    const fetch = vi
+      .fn()
+      .mockResolvedValue({
+        ok: true,
+        headers: new Headers({ 'X-Has-More': 'false' }),
+        json: async () => [],
+      })
     vi.stubGlobal('fetch', fetch)
     const routing = router()
     await routing.push('/jobs?source=adzuna&q=Engineer')

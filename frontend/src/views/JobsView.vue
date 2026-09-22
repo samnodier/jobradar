@@ -8,6 +8,7 @@ import JobDetail from '@/components/JobDetail.vue'
 import type { Job } from '@/types/job'
 import AppSidebar from '@/components/AppSidebar.vue'
 import ImportJobPanel from '@/components/ImportJobPanel.vue'
+import JobPagination from '@/components/JobPagination.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -19,16 +20,44 @@ const hasMore = ref(false)
 let requestController: AbortController | undefined
 let refreshTimer: ReturnType<typeof setInterval> | undefined
 let searchTimer: ReturnType<typeof setTimeout> | undefined
-const pageSize = 50
+const allowedPageSizes = [50, 100, 200, 500]
+const pageSize = computed(() => {
+  const value = Number(route.query.size)
+  return allowedPageSizes.includes(value) ? value : 50
+})
+const page = computed(() => {
+  const value = Number(route.query.page)
+  return Number.isSafeInteger(value) && value > 0
+    ? Math.min(value, Math.floor(100000 / pageSize.value) + 1)
+    : 1
+})
+const canGoNext = computed(() => hasMore.value && page.value * pageSize.value <= 100000)
+function updateQuery(query: Record<string, string | undefined>, push = false) {
+  const destination = { query: { ...route.query, ...query } }
+  return (push ? router.push(destination) : router.replace(destination)).catch(() => {})
+}
+function changePage(next: number) {
+  if (loading.value || next < 1 || (next > page.value && !canGoNext.value)) return
+  void updateQuery({ page: next === 1 ? undefined : String(next) }, true)
+}
+function changePageSize(size: number) {
+  if (!allowedPageSizes.includes(size)) return
+  void updateQuery({ size: String(size), page: undefined })
+}
 const isJobImportOpen = ref(false)
 const error = ref('')
 const selectedJobId = ref<string | null>(null)
-const sortDirection = ref<'newest' | 'oldest'>('newest')
+const sortDirection = computed(() => (route.query.order === 'oldest' ? 'oldest' : 'newest'))
 const searchTerm = ref<string>(typeof route.query.q === 'string' ? route.query.q : '')
 const activeSource = computed(() =>
   typeof route.query.source === 'string' ? route.query.source : '',
 )
-const activeFilter = ref<string>((route.query.filter as string) || 'all')
+const activeFilter = computed({
+  get: () => (typeof route.query.filter === 'string' ? route.query.filter : 'all'),
+  set: (value: string) => {
+    void updateQuery({ filter: value === 'all' ? undefined : value, page: undefined })
+  },
+})
 
 const filters = [
   { label: 'All', value: 'all' },
@@ -40,69 +69,27 @@ const filters = [
 ]
 
 watch(
-  () => route.query.filter,
-  (value) => {
-    activeFilter.value = (Array.isArray(value) ? value[0] : value) || 'all'
-  },
-)
-
-watch(
   () => route.query.q,
   (value) => {
     searchTerm.value = typeof value === 'string' ? value : ''
   },
 )
-
-watch([activeFilter, searchTerm], ([filter, query]) => {
-  router
-    .replace({
-      query: {
-        ...route.query,
-        filter: filter === 'all' ? undefined : filter,
-        q: query || undefined,
-      },
-    })
-    .catch(() => {})
+watch(searchTerm, () => {
+  clearTimeout(searchTimer)
+  if (searchTerm.value === (route.query.q ?? '')) return
+  searchTimer = setTimeout(() => {
+    void updateQuery({ q: searchTerm.value.trim() || undefined, page: undefined })
+  }, 300)
 })
-
-const filteredJobs = computed(() => {
-  let result = [...jobs.value]
-  // Imported jobs and the previous request may be in memory while a new feed loads.
-  if (activeSource.value)
-    result = result.filter(
-      (job) => job.job_source.toLowerCase() === activeSource.value.toLowerCase(),
-    )
-  const q = searchTerm.value.trim().toLowerCase()
-  if (q) {
-    result = result.filter(
-      (job) =>
-        job.title.toLowerCase().includes(q) ||
-        job.company_name.toLowerCase().includes(q) ||
-        job.skills?.some((skill) => skill.toLowerCase().includes(q)),
-    )
-  }
-  if (activeFilter.value === 'remote') result = result.filter((job) => job.is_remote)
-  else if (activeFilter.value === 'saved') result = result.filter((job) => job.is_saved)
-  else if (activeFilter.value === 'applied') result = result.filter((job) => job.is_applied)
-  else if (activeFilter.value === 'today') {
-    const today = new Date().toDateString()
-    result = result.filter((job) => new Date(job.created_at ?? '').toDateString() === today)
-  }
-  return result
-})
-
-const sortedJobs = computed(() => {
-  if (activeFilter.value === 'matched') return filteredJobs.value
-
-  return [...filteredJobs.value].sort((a, b) => {
-    const left = new Date(a.created_at ?? '').getTime()
-    const right = new Date(b.created_at ?? '').getTime()
-    return sortDirection.value === 'newest' ? right - left : left - right
-  })
-})
+function submitSearch() {
+  clearTimeout(searchTimer)
+  const query = searchTerm.value.trim()
+  if (query === (route.query.q ?? '') && page.value === 1) void fetchJobs()
+  else void updateQuery({ q: query || undefined, page: undefined })
+}
 
 const groupedJobs = computed(() => {
-  return sortedJobs.value.reduce<Record<string, Job[]>>((groups, job) => {
+  return jobs.value.reduce<Record<string, Job[]>>((groups, job) => {
     const label =
       activeFilter.value === 'matched'
         ? 'Best matches — highest score first'
@@ -131,7 +118,10 @@ const detailOpen = computed(() => !!selectedJob.value)
 
 function handleImportJobCreated(job: Job) {
   isJobImportOpen.value = false
-  jobs.value = [job, ...jobs.value.filter((existing) => existing.id !== job.id)]
+  linkedJob.value = job
+  selectedJobId.value = job.id
+  // Keep the server's page membership intact; an imported job may not match this feed.
+  void fetchJobs()
   let attempts = 0
   if (refreshTimer) clearInterval(refreshTimer)
   refreshTimer = setInterval(async () => {
@@ -140,6 +130,7 @@ function handleImportJobCreated(job: Job) {
       const response = await fetch(`/api/jobs/${job.id}`, { credentials: 'include' })
       if (response.ok) {
         const updated: Job = await response.json()
+        if (linkedJob.value?.id === updated.id) linkedJob.value = updated
         jobs.value = jobs.value.map((existing) => (existing.id === updated.id ? updated : existing))
         if (updated.is_enriched || attempts >= 12) clearInterval(refreshTimer)
       }
@@ -158,16 +149,18 @@ function closeDetail() {
   router.replace({ query })
 }
 
-async function fetchJobs(append = false) {
+async function fetchJobs() {
   requestController?.abort()
   const controller = new AbortController()
   requestController = controller
   loading.value = true
   error.value = ''
+  jobs.value = []
+  hasMore.value = false
   const params = new URLSearchParams({
-    limit: String(pageSize),
-    offset: String(append ? jobs.value.length : 0),
-    q: searchTerm.value.trim(),
+    limit: String(pageSize.value),
+    offset: String((page.value - 1) * pageSize.value),
+    q: typeof route.query.q === 'string' ? route.query.q : '',
     filter: activeFilter.value,
     source: activeSource.value,
     order: sortDirection.value,
@@ -178,11 +171,15 @@ async function fetchJobs(append = false) {
       signal: controller.signal,
     })
     if (!response.ok) throw new Error('Failed to load jobs')
+    const hasMoreHeader = response.headers?.get('X-Has-More')
+    if (hasMoreHeader !== 'true' && hasMoreHeader !== 'false')
+      throw new Error(
+        'Backend update required. Restart the Go server with make run, then refresh this page.',
+      )
     const batch: Job[] = (await response.json()) ?? []
-    hasMore.value = batch.length === pageSize
-    jobs.value = append
-      ? [...jobs.value, ...batch.filter((job) => !jobs.value.some((old) => old.id === job.id))]
-      : batch
+    if (controller.signal.aborted || requestController !== controller) return
+    hasMore.value = hasMoreHeader === 'true'
+    jobs.value = batch
   } catch (err) {
     if (!controller.signal.aborted)
       error.value = err instanceof Error ? err.message : 'Could not load jobs'
@@ -190,9 +187,8 @@ async function fetchJobs(append = false) {
     if (!controller.signal.aborted) loading.value = false
   }
 }
-watch([searchTerm, activeFilter, sortDirection, activeSource], () => {
-  if (searchTimer) clearTimeout(searchTimer)
-  searchTimer = setTimeout(() => fetchJobs(), 300)
+watch([() => route.query.q, activeFilter, sortDirection, activeSource, page, pageSize], () => {
+  void fetchJobs()
 })
 
 async function handleSaveJob(job: Job) {
@@ -249,7 +245,10 @@ function formatCount(count: number) {
 }
 
 function toggleSort() {
-  sortDirection.value = sortDirection.value === 'newest' ? 'oldest' : 'newest'
+  void updateQuery({
+    order: sortDirection.value === 'newest' ? 'oldest' : undefined,
+    page: undefined,
+  })
 }
 
 async function openLinkedJob() {
@@ -290,6 +289,7 @@ onUnmounted(() => {
             id="search"
             name="search"
             v-model="searchTerm"
+            @keydown.enter="submitSearch"
             type="text"
             placeholder="Search by title, company, or skill"
             class="flex-1 border-none outline-none text-sm bg-transparent text-gray-900 placeholder:text-gray-400"
@@ -302,7 +302,7 @@ onUnmounted(() => {
             <X />
           </span>
           <button
-            @click="fetchJobs()"
+            @click="submitSearch"
             class="button h-full px-5 text-sm text-white"
             :style="{ background: 'var(--color-accent)' }"
           >
@@ -344,27 +344,30 @@ onUnmounted(() => {
         </div>
       </header>
 
-      <button
-        v-if="hasMore"
-        class="button button-secondary"
-        :disabled="loading"
-        @click="fetchJobs(true)"
-      >
-        Load more jobs
-      </button>
+      <JobPagination
+        position="top"
+        :page="page"
+        :page-size="pageSize"
+        :has-next="canGoNext"
+        :loading="loading"
+        @page="changePage"
+        @page-size="changePageSize"
+      />
       <div v-if="activeSource" class="flex items-center gap-3 text-sm">
         <span
           >Source: <strong>{{ activeSource }}</strong></span
         >
         <RouterLink
-          :to="{ query: { ...route.query, source: undefined } }"
+          :to="{ query: { ...route.query, source: undefined, page: undefined } }"
           class="button button-secondary"
           >All sources</RouterLink
         >
       </div>
       <!-- Count row -->
       <div class="flex items-center gap-1 text-sm shrink-0">
-        <span class="font-semibold text-gray-900">{{ formatCount(filteredJobs.length) }}</span>
+        <span class="font-semibold text-gray-900">{{
+          formatCount(jobs.length) + ' on this page'
+        }}</span>
         <span v-if="searchTerm" class="italic text-gray-400">for "{{ searchTerm }}"</span>
       </div>
 
@@ -374,11 +377,8 @@ onUnmounted(() => {
         <div v-else-if="error" class="m-4.5 p-6 border border-red-200 bg-red-50 text-red-700">
           {{ error }}
         </div>
-        <div
-          v-else-if="filteredJobs.length === 0"
-          class="m-4.5 bg-white p-6 border border-gray-200"
-        >
-          No jobs match this filter.
+        <div v-else-if="jobs.length === 0" class="m-4.5 bg-white p-6 border border-gray-200">
+          No jobs on this page. Try the previous page or adjust your filters.
         </div>
         <div v-else class="flex-1 overflow-y-auto min-h-0">
           <div v-for="(group, label) in groupedJobs" :key="label" class="px-5 py-4">
@@ -397,6 +397,15 @@ onUnmounted(() => {
           </div>
         </div>
       </section>
+      <JobPagination
+        position="bottom"
+        :page="page"
+        :page-size="pageSize"
+        :has-next="canGoNext"
+        :loading="loading"
+        @page="changePage"
+        @page-size="changePageSize"
+      />
     </main>
 
     <!-- Detail panel -->
