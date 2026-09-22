@@ -25,8 +25,8 @@ func (cfg *apiConfig) handlerJobsGet(w http.ResponseWriter, r *http.Request) {
 	limit, offset := 50, 0
 	if v := r.URL.Query().Get("limit"); v != "" {
 		n, e := strconv.Atoi(v)
-		if e != nil || n < 1 || n > 100 {
-			httpx.RespondError(w, 400, "limit must be 1–100")
+		if e != nil || n < 1 || n > 500 {
+			httpx.RespondError(w, 400, "limit must be 1–500")
 			return
 		}
 		limit = n
@@ -54,7 +54,7 @@ func (cfg *apiConfig) handlerJobsGet(w http.ResponseWriter, r *http.Request) {
 		httpx.RespondError(w, http.StatusBadRequest, "source must be at most 255 characters")
 		return
 	}
-	jobs, err := cfg.db.GetJobs(r.Context(), database.GetJobsParams{UserID: userID, Limit: int32(limit), Offset: int32(offset), Search: r.URL.Query().Get("q"), Filter: filter, Source: source, Oldest: r.URL.Query().Get("order") == "oldest"})
+	jobs, err := cfg.db.GetJobs(r.Context(), database.GetJobsParams{UserID: userID, Limit: int32(limit + 1), Offset: int32(offset), Search: r.URL.Query().Get("q"), Filter: filter, Source: source, Oldest: r.URL.Query().Get("order") == "oldest"})
 	if err != nil {
 		log.Printf("Error fetching jobs: %v", err)
 		httpx.RespondError(w, http.StatusInternalServerError, "Couldn't fetch jobs")
@@ -63,6 +63,11 @@ func (cfg *apiConfig) handlerJobsGet(w http.ResponseWriter, r *http.Request) {
 	if jobs == nil {
 		jobs = []database.GetJobsRow{}
 	}
+	hasMore := len(jobs) > limit
+	if hasMore {
+		jobs = jobs[:limit]
+	}
+	w.Header().Set("X-Has-More", strconv.FormatBool(hasMore))
 	httpx.RespondJSON(w, http.StatusOK, jobs)
 }
 

@@ -935,3 +935,11 @@ The authorized Resend test returned HTTP 403 because samnodier.com is not verifi
 Questions: Why does hosting the database not host the application? What happens to timers when a server sleeps? Why does changing an environment file not necessarily override Compose's environment block? How do sender-domain verification, API authentication and inbox delivery differ? How would you back up and restore this deployment? Why can a private tailnet URL work for your laptop but not an arbitrary hosted workflow?
 
 Manual acceptance steps are in `docs/REVIEW_CHECKLIST.md`. Automated coverage grew around concrete regressions; it is not complete coverage of every legacy function. A clean build and component tests do not replace visual review or a real provider test.
+
+## Real pages and a stale running backend
+
+The RemoteOK shortcut looked empty because the running Go process was still the older version: a read-only request with source=remoteok returned 50 Adzuna rows, while PostgreSQL contained 791 RemoteOK records. The old browser-side source filter hid those incorrectly fetched rows. Rebuilding/editing source does not replace a running `go run` process. Restart it explicitly; the agent leaves Sam's servers and logs under Sam's control.
+
+The jobs API now accepts up to 500 records and queries limit+1 to determine whether another page exists. It returns the requested array plus X-Has-More, avoiding an empty extra page when the final page is exactly full. This is offset pagination, not a frozen snapshot: new jobs can shift boundaries between requests. The existing deterministic SQL ordering remains important.
+
+Code: `cmd/jobradar/handler_jobs.go`, `cmd/jobradar/job_source_filter_test.go`. Integration tests verify 50/100/200/500 limits, final/empty pages, source filtering and invalid limits. Questions: Why does editing code not update a running binary? Why fetch one extra row? Why isn't a loaded-page count a total count? How can concurrent inserts shift offset pagination?
