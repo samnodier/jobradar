@@ -51,3 +51,12 @@
 - Email/password is the default UI login; GitHub is optional. Existing accounts keep the same user ID. No public email registration; a server-owner command provisions or recovers local accounts.
 - Password hashes are Argon2id and separate from profile data. Atomic password changes increment a session version and revoke workflow/setup tokens. GitHub linking is explicit and requires a recent session plus the same verified primary email.
 - Authentication rate limits use direct peer addresses, not arbitrary forwarded headers. A reverse proxy shares its IP quota unless trusted-proxy handling is designed later.
+
+## September 22 usability review
+
+- Preserve commas within a location tag; Enter/Add location commits it. Locations are literal alternatives, not geocoded regions.
+- Share square card/input/button styles and existing accent. Compact settings cards separate match criteria, source market, channels and schedule while saving the matching resource together.
+- Optimistic saves retain failed drafts, show persistent retry state and do not replace newer edits with older responses.
+- Native drag-and-drop has a status-select alternative. Custom ordering within columns is out of scope.
+- Public feeds Jobicy/MyJobMag require explicit opt-in, use conservative polling, preserve attribution and unknown metadata.
+- Profile download has an explicit field allowlist and declared limited scope; it is not a database backup.

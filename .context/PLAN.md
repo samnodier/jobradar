@@ -58,3 +58,17 @@ Implemented preference-aware numeric ranking and job metadata flow; read-only ac
 Email/password login is implemented on feature/email-login: Argon2id credentials, recent-session initial password setup, current-password changes, auth-version session invalidation, workflow-token revocation, throttling, one-time server-owner setup/recovery, optional GitHub and explicit account linking. Development database migrated through 20260921000300 after a private backup on September 21. Sam will test real GitHub consent and email login locally before any push.
 
 Local review servers started on September 21: frontend http://localhost:5173, backend http://localhost:8080, development PostgreSQL/Redis on 5432/6379. HTTP checks passed for the login page, auth methods (both enabled), health, job feed, GitHub authorization redirect and invalid email-login rejection. Automatic AI enrichment and email sending remain disabled. Sam sets their own password after GitHub sign-in; no owner password has been generated or recorded by the implementation.
+
+## September 22 screenshot review
+
+Work developed on `feature/review-polish` from `dev`; merge to `dev` follows successful checks, with main/push still awaiting Sam's manual review. No new migration is required for this review. Sam runs their own Go/Vite servers and sees their logs.
+
+- Fixed serialized preference autosave, nullable salary clearing and concurrent backend PATCH updates; added location tags and visible Save/retry state.
+- Split matching/delivery into compact shared-style square cards; preserved edits during saves and added account/token component tests.
+- Added scoped profile JSON download; not a full account backup.
+- Implemented application status drag/drop with select alternative, rollback and correct delayed-note identity.
+- Connected source navigation to SQL filtering before pagination; replaced empty Console navigation with actual Health; improved polling/stale-state UI.
+- Added opt-in Jobicy and MyJobMag Kenya sources; flags remain off by default. See docs/JOB_SOURCES.md. Live ingestion of these new feeds has not been verified against Sam's database.
+- Full backend race/integration suite and go vet passed against isolated services. Frontend component tests, type check and production build passed; manual visual/touch review remains.
+- One authorized Resend test attempted September 22: HTTP 403, domain samnodier.com not verified for the configured key. No test message accepted. Cloudflare DNS alone does not establish Resend verification; fix domain/account setup before another test. Scheduled sending remains disabled.
+- Home-server recommendation and Supabase/Render tradeoffs: docs/HOSTING_OPTIONS.md. No deployment or push performed.

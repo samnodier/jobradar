@@ -925,3 +925,13 @@ Questions: Why use a normalized adapter boundary? Why distinguish unknown from f
 
 The Settings master switch now also exposes persistent save/error state and a visible Save preferences action. A failed optimistic toggle leaves the desired selection available for retry rather than silently implying persistence. The same serialized store backs this and the Preferences tab. Regression: `frontend/src/__tests__/SettingsTab.spec.ts` reproduces a failed toggle then successful explicit retry.
 Question: Why should optimistic UI communicate failure until it is resolved, even after a toast disappears?
+
+## Personal hosting and real email verification
+
+An always-running scheduler needs an awake process. Static frontend hosting or a free web service that sleeps cannot run this process's collection/email timers reliably. Supabase can replace PostgreSQL but does not host Go or Redis; production Compose currently overrides DB_URL, so changing only .env is insufficient. The home server remains the zero-hosting-bill recommendation, with power/internet, HTTPS/private access and backups to plan. See `docs/HOSTING_OPTIONS.md` for official references and alternatives; no deployment has occurred.
+
+The authorized Resend test returned HTTP 403 because samnodier.com is not verified for the configured key. Cloudflare DNS entries must be confirmed by Resend, and the domain/key must belong to the expected account. No email was accepted. Do not confuse an HTTP provider acceptance with confirmed inbox delivery. Scheduled sending remains disabled until configuration and delivery verification. The test used a stable idempotency key to prevent duplicate retries.
+
+Questions: Why does hosting the database not host the application? What happens to timers when a server sleeps? Why does changing an environment file not necessarily override Compose's environment block? How do sender-domain verification, API authentication and inbox delivery differ? How would you back up and restore this deployment? Why can a private tailnet URL work for your laptop but not an arbitrary hosted workflow?
+
+Manual acceptance steps are in `docs/REVIEW_CHECKLIST.md`. Automated coverage grew around concrete regressions; it is not complete coverage of every legacy function. A clean build and component tests do not replace visual review or a real provider test.

@@ -64,3 +64,11 @@ Editor follow-up: `go list ./...` reproduced a pgdata permission/traversal error
 ### Local acceptance servers
 
 Started the Go server on 8080 and Vite on 5173 against the migrated development database. Through the Vite proxy: login page, auth methods, health and job feed returned 200; GitHub returned a 302 to github.com with the configured localhost callback; invalid email credentials returned 401. Both login methods are advertised. First live source polls saved 99 RemoteOK and 232 Adzuna records successfully. These are source save counts, not counts of unique new jobs or recommended matches. Email sending and automatic AI enrichment remain off.
+
+## September 22 screenshot review
+
+- Backend race/integration tests passed with isolated PostgreSQL on 55432 and Redis on 56379, including concurrent preferences/null clearing, source filtering before pagination and source fixtures. Go vet passed.
+- Final frontend full suite passed (30 tests across 11 files), including the Settings master-switch retry test. Production build/type checking and focused ESLint passed. Component tests cover rapid edits, retries, delayed responses, application moves/note identity, downloads, account tools and health polling. No claim of complete legacy-code coverage.
+- New feed fixtures and configuration checks passed. No live ingestion into the personal database was performed for the two new adapters.
+- Resend test using the configured sender/key and a stable idempotency key returned HTTP 403: domain samnodier.com not verified. No provider message ID or accepted delivery. Scheduled sending remains disabled. Credentials were not logged.
+- No new migration, no application-server restart, no push/deployment. Manual browser layout, native touch/drag behavior and real delivery remain acceptance checks in docs/REVIEW_CHECKLIST.md.
