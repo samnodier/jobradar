@@ -855,3 +855,12 @@ Review: Why must frontend validation be repeated on the server? Why do new auth 
 After isolated migration rollback/reapply and automated checks, backed up the existing development database and applied all eight outstanding migrations. Then started PostgreSQL/Redis and the Go/Vite servers. A successful HTTP health check alone does not prove a login works: also checked auth-method discovery, Vite proxy routing, OAuth redirect destination and invalid-password rejection. Automated tests exercise successful email sessions and mock GitHub callbacks; Sam must perform real GitHub consent and choose their own password. Live RemoteOK/Adzuna polling succeeded; source save counts are not unique-new-job or matching-job counts. Email sending remains disabled until separately tested.
 
 Review: How do unit tests, integration tests, smoke checks and user acceptance differ? Why back up before migrating an existing database even after testing a clean schema? Why use localhost consistently when OAuth cookies and redirects are configured for that hostname?
+
+## Review fix: autosave must preserve newer edits
+
+The original preference store sent overlapping full snapshots and replaced the editable state with every server reply. A slow response could remove a checkbox clicked after that request began. Saves now run sequentially with copied request payloads; response reconciliation checks the revision and the current draft. An in-flight response cannot overwrite a newer edit waiting for its debounce. Failed saves keep the draft and do not poison the queue. Persistent Saving/Unsaved/Retry/All changes saved text and a visible Save preferences button supplement autosave.
+
+Desired locations are individual removable tags. Enter/Add commits a tag, so `Nairobi, Kenya` stays a single place; commas are not delimiters. Empty salary inputs become null rather than an invalid empty string.
+
+Code: `frontend/src/stores/preferences.ts`, `frontend/src/components/PreferencesTab.vue`. Regression tests in `frontend/src/__tests__/preferences.spec.ts` reproduce rapid checkbox changes, delayed responses, retry after failure and location tagging.
+Questions: Why is debouncing alone insufficient for out-of-order network responses? Why copy a payload before waiting? What is the difference between an editable draft and last acknowledged state? Why must failed saves leave a visible retry path?

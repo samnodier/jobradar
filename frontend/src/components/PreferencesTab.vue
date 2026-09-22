@@ -1,13 +1,19 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { computed } from 'vue'
+import { onBeforeUnmount, ref } from 'vue'
 import { X } from '@lucide/vue'
 import { useToast } from '@/composables/useToast'
 import type { DesiredRolePreference, SkillPreference } from '@/types/preferences'
 import { usePreferencesStore } from '@/stores/preferences'
 
 const preferencesStore = usePreferencesStore()
-const { preferences } = storeToRefs(preferencesStore)
+const {
+  preferences,
+  isSaving,
+  hasUnsavedChanges,
+  error: saveError,
+  lastSavedAt,
+} = storeToRefs(preferencesStore)
 const toast = useToast()
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -39,17 +45,43 @@ const addIndustry = (e: Event) => {
   }
 }
 
-// Locations are actual places, independent of the work-mode setting.
-const desiredLocationsText = computed({
-  get: () => (preferences.value?.desired_locations ?? []).map((l) => l.location_name).join('; '),
-  set: (value: string) => {
-    if (preferences.value)
-      preferences.value.desired_locations = value
-        .split(';')
-        .map((v) => v.trim())
-        .filter(Boolean)
-        .map((location_name) => ({ location_name, is_remote: null, priority: null }))
-  },
+// Enter keeps commas inside a location such as "Nairobi, Kenya" intact.
+const locationInput = ref('')
+function addLocation() {
+  const name = locationInput.value.trim()
+  if (!name || !preferences.value) return
+  if (
+    !preferences.value.desired_locations.some(
+      (l) => l.location_name.toLowerCase() === name.toLowerCase(),
+    )
+  ) {
+    preferences.value.desired_locations.push({
+      location_name: name,
+      is_remote: null,
+      priority: null,
+    })
+  }
+  locationInput.value = ''
+  void handleSavePreferences()
+}
+function removeLocation(name: string) {
+  if (!preferences.value) return
+  preferences.value.desired_locations = preferences.value.desired_locations.filter(
+    (l) => l.location_name !== name,
+  )
+  void handleSavePreferences()
+}
+function setSalary(field: 'min_salary' | 'max_salary', event: Event) {
+  if (!preferences.value) return
+  const input = event.target as HTMLInputElement
+  preferences.value[field] = input.value === '' ? null : Number(input.value)
+  handleSalarySave()
+}
+onBeforeUnmount(() => {
+  if (debounceTimer) {
+    clearTimeout(debounceTimer)
+    void handleSavePreferences()
+  }
 })
 
 const removeRole = (roleTitle: string) => {
@@ -126,10 +158,14 @@ function handleSalarySave() {
 }
 
 async function handleSavePreferences() {
+  if (debounceTimer) {
+    clearTimeout(debounceTimer)
+    debounceTimer = null
+  }
   if (!preferences?.value) return
   try {
     await preferencesStore.updatePreferences(preferences.value)
-    toast.success('Preferences saved.')
+    // Persistent save status below remains visible after the request finishes.
   } catch (err) {
     toast.error(err instanceof Error ? err.message : 'Failed to save preferences.')
   }
@@ -138,7 +174,30 @@ async function handleSavePreferences() {
 
 <template>
   <section v-if="preferences" class="flex flex-col gap-6">
-    <div class="grid gap-6" style="grid-template-columns: repeat(auto-fit, minmax(400px, 1fr))">
+    <div
+      class="flex flex-wrap items-center justify-between gap-3 border border-ui-border bg-white p-4"
+    >
+      <div role="status" aria-live="polite" class="text-sm">
+        <span v-if="isSaving">Saving preferences…</span>
+        <span v-else-if="saveError" class="text-red-700"
+          >{{ saveError }} — your edits are still here. Retry saving.</span
+        >
+        <span v-else-if="hasUnsavedChanges">Unsaved changes</span>
+        <span v-else>{{ lastSavedAt ? 'All changes saved' : 'Preferences are up to date' }}</span>
+        <p class="text-xs text-gray-500 mt-1">
+          Changes save automatically. You can also save them here.
+        </p>
+      </div>
+      <button
+        type="button"
+        class="button button-primary"
+        :disabled="isSaving"
+        @click="handleSavePreferences"
+      >
+        {{ isSaving ? 'Saving…' : 'Save preferences' }}
+      </button>
+    </div>
+    <div class="grid gap-6 lg:grid-cols-2">
       <!-- Job Preferences -->
       <section class="p-6 bg-white border border-gray-200">
         <h2 class="text-lg font-semibold text-gray-900 mb-4">Job Preferences</h2>
@@ -195,16 +254,43 @@ async function handleSavePreferences() {
           <label for="desired-locations" class="text-sm font-semibold text-gray-900"
             >Desired locations</label
           >
-          <input
-            id="desired-locations"
-            v-model.lazy="desiredLocationsText"
-            @change="handleSavePreferences"
-            placeholder="Nairobi; Kenya; Worldwide"
-            class="border p-2 w-full"
-          />
+          <div class="flex flex-wrap gap-2">
+            <span
+              v-for="location in preferences.desired_locations"
+              :key="location.location_name"
+              class="flex items-center gap-2 px-2 py-1 border border-ui-border text-xs font-medium"
+            >
+              {{ location.location_name }}
+              <button
+                type="button"
+                :aria-label="`Remove ${location.location_name}`"
+                class="cursor-pointer"
+                @click="removeLocation(location.location_name)"
+              >
+                <X :size="12" />
+              </button>
+            </span>
+          </div>
+          <div class="flex gap-2">
+            <input
+              id="desired-locations"
+              v-model="locationInput"
+              @keydown.enter.prevent="addLocation"
+              placeholder="e.g. Nairobi, Kenya"
+              class="form-input flex-1 min-w-0"
+            />
+            <button
+              type="button"
+              class="button button-secondary"
+              :disabled="!locationInput.trim()"
+              @click="addLocation"
+            >
+              Add location
+            </button>
+          </div>
           <p class="text-xs text-gray-500">
-            Separate alternatives with semicolons. Use actual locations, not Remote or Hybrid. Set
-            work mode and score threshold in Settings.
+            Press Enter or Add location for each place. Commas stay within a tag. Set Remote or
+            On-site in Settings.
           </p>
         </div>
 
@@ -212,8 +298,8 @@ async function handleSavePreferences() {
           <div class="flex flex-col gap-2 flex-1">
             <label class="text-sm font-semibold text-gray-900">Min Salary</label>
             <input
-              v-model="preferences.min_salary"
-              @input="handleSalarySave"
+              :value="preferences.min_salary"
+              @input="setSalary('min_salary', $event)"
               type="number"
               placeholder="Min"
               class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
@@ -222,8 +308,8 @@ async function handleSavePreferences() {
           <div class="flex flex-col gap-2 flex-1">
             <label class="text-sm font-semibold text-gray-900">Max Salary</label>
             <input
-              v-model="preferences.max_salary"
-              @input="handleSalarySave"
+              :value="preferences.max_salary"
+              @input="setSalary('max_salary', $event)"
               type="number"
               placeholder="Max"
               class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent)] transition-all"
@@ -237,6 +323,7 @@ async function handleSavePreferences() {
               @change="handleSavePreferences"
               class="px-3 py-2 border border-gray-200 text-sm bg-white text-gray-900 w-full focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transitional-all"
             >
+              <option value="KES">KES (KSh)</option>
               <option value="USD">USD ($)</option>
               <option value="EUR">EUR (€)</option>
               <option value="GBP">GBP (£)</option>
@@ -279,7 +366,9 @@ async function handleSavePreferences() {
         </div>
 
         <div class="flex flex-col gap-2 mb-4">
-          <label class="text-sm font-semibold text-gray-900">Industries / Job Categories of Interest</label>
+          <label class="text-sm font-semibold text-gray-900"
+            >Industries / Job Categories of Interest</label
+          >
           <div class="flex flex-wrap gap-2 mb-2">
             <span
               v-for="ind in preferences.preferred_industries"
