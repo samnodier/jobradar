@@ -65,3 +65,8 @@ The original abbreviated list above is historical; migration files and SQLC mode
 - users adds auth_version BIGINT default 0; session checks compare versions.
 - user_passwords: user_id PK/FK cascade, password_hash (Argon2id encoding), updated_at. Never joined into public/profile queries.
 - password_setup_tokens: token_hash PK, user_id FK cascade, expires_at. Server-issued, 15-minute, single-use links; password changes revoke them.
+
+## Source history — September 22
+
+- Migration `20260922000100_source_daily_health.sql`: source_health_daily `(service_name,day)` primary key, FK to service_health, nonnegative successes/failures. An observation trigger updates daily UTC counters whenever the scraper records last_run_at and prunes dates outside 30 days. No fabricated backfill.
+- ListSourceHealthDaily supplies bounded daily observations to the authenticated status API; provider raw errors remain private.

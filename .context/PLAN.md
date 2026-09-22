@@ -72,3 +72,11 @@ Work developed on `feature/review-polish` from `dev`; merge to `dev` follows suc
 - Full backend race/integration suite and go vet passed against isolated services. Frontend component tests, type check and production build passed; manual visual/touch review remains.
 - One authorized Resend test attempted September 22: HTTP 403, domain samnodier.com not verified for the configured key. No test message accepted. Cloudflare DNS alone does not establish Resend verification; fix domain/account setup before another test. Scheduled sending remains disabled.
 - Home-server recommendation and Supabase/Render tradeoffs: docs/HOSTING_OPTIONS.md. No deployment or push performed.
+
+## Pagination and status-page follow-up
+
+Developed on `feature/feed-pagination-status` from dev. API limit now 500 with exact X-Has-More metadata; top/bottom UI offers 50/100/200/500, Previous/Next and route-preserved page state. Removed browser filtering after pagination. Live diagnosis found the old running backend ignored source=remoteok and returned Adzuna rows despite 791 RemoteOK database rows. Sam must restart their Go process; it has not been restarted by the agent.
+
+Health now has a summary banner and 30 UTC-day source bars backed by a new daily observation table/trigger. Percentages measure collection success, not uptime; gray means no data. Migration 20260922000100 passed isolated up/down/up but **is not yet applied to Sam's development database**. Sam runs `make migrate-up` before restarting `make run`.
+
+Final verification: 37 frontend tests, production build/typecheck, focused ESLint, backend race/integration suite and go vet passed. No push, production deployment, real email send or server restart in this follow-up.

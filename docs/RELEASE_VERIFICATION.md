@@ -72,3 +72,10 @@ Started the Go server on 8080 and Vite on 5173 against the migrated development 
 - New feed fixtures and configuration checks passed. No live ingestion into the personal database was performed for the two new adapters.
 - Resend test using the configured sender/key and a stable idempotency key returned HTTP 403: domain samnodier.com not verified. No provider message ID or accepted delivery. Scheduled sending remains disabled. Credentials were not logged.
 - No new migration, no application-server restart, no push/deployment. Manual browser layout, native touch/drag behavior and real delivery remain acceptance checks in docs/REVIEW_CHECKLIST.md.
+
+## Pagination and measured source history follow-up
+
+- Read-only live diagnosis: old Go server returned 50 Adzuna rows for both source=remoteok and source=adzuna, through ports 8080 and 5173. Database had 791 RemoteOK rows. Backend restart required; no source rename/data migration was needed.
+- 37 frontend tests passed; production build/typecheck and focused ESLint passed. Backend race/integration suite and go vet passed. Pagination tests cover boundaries/header, size changes, filters, navigation, stale responses and missing backend metadata.
+- Source-history migration up/down/up passed on isolated PostgreSQL. Daily observations, retention and sanitized API output tested. Not applied to the development database; Sam retains control of migration/startup commands.
+- Development servers untouched. No push/deployment. Native browser visual acceptance remains Sam's check.
