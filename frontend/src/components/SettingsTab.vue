@@ -57,7 +57,21 @@ function isConfigured(providerId: string): boolean {
   return props.user?.configured_providers?.includes(providerId) ?? false
 }
 
-const { preferences } = storeToRefs(preferencesStore)
+const {
+  preferences,
+  isSaving: savingPreferences,
+  hasUnsavedChanges,
+  error: preferencesError,
+} = storeToRefs(preferencesStore)
+
+async function savePreferences() {
+  if (!preferences.value) return
+  try {
+    await preferencesStore.updatePreferences(preferences.value)
+  } catch {
+    // The persistent error below remains visible until retry succeeds.
+  }
+}
 
 const props = defineProps<{
   user: User | null
@@ -147,10 +161,33 @@ async function removeApiKey(providerId: string) {
           <button
             class="toggle-switch"
             role="switch"
+            aria-label="Job Recommendations"
+            :disabled="!preferences"
             :aria-checked="preferences?.notify_jobs"
             @click="toggleNotifyJobs"
           />
         </div>
+        <p role="status" class="text-sm text-gray-600">
+          {{
+            savingPreferences
+              ? 'Saving…'
+              : preferencesError
+                ? 'Retry saving preferences'
+                : hasUnsavedChanges
+                  ? 'Unsaved preferences'
+                  : 'Preferences saved automatically'
+          }}
+        </p>
+        <p v-if="preferencesError" role="alert" class="text-sm text-red-700">
+          {{ preferencesError }}
+        </p>
+        <button
+          class="button button-secondary"
+          :disabled="!preferences || savingPreferences || !hasUnsavedChanges"
+          @click="savePreferences"
+        >
+          Save preferences
+        </button>
       </section>
 
       <section class="settings-card">

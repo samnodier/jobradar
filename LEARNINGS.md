@@ -920,3 +920,8 @@ Neither adapter invents required skills or country eligibility. Remote listings 
 
 Code: `internal/sources/jobicy.go`, `myjobmag.go`, `public_feeds_test.go`, `cmd/jobradar/config_sources.go`, `config_public_feeds_test.go`. Source tests pass with the race detector; configuration tests verify opt-in and conservative schedules. Research, official links, terms, coverage and next adapters are in `docs/JOB_SOURCES.md`.
 Questions: Why use a normalized adapter boundary? Why distinguish unknown from false? Why preserve canonical links/attribution? Why doesn't an absent record in a partial feed prove expiry? Why do rate limits depend on queries × pages × users × polling frequency? Why is city-to-country inference a separate feature?
+
+### Master recommendation switch retry
+
+The Settings master switch now also exposes persistent save/error state and a visible Save preferences action. A failed optimistic toggle leaves the desired selection available for retry rather than silently implying persistence. The same serialized store backs this and the Preferences tab. Regression: `frontend/src/__tests__/SettingsTab.spec.ts` reproduces a failed toggle then successful explicit retry.
+Question: Why should optimistic UI communicate failure until it is resolved, even after a toast disappears?
