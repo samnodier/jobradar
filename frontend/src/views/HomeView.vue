@@ -15,8 +15,8 @@
         </h1>
 
         <p class="mt-6 mb-8 max-w-2xl text-gray-700 text-[1.05rem] leading-[1.75] mx-auto">
-          JobRadar scrapes the best job boards and surfaces roles matched to your profile — no
-          noise, just signal.
+          Browse recent jobs from connected sources. Sign in to see matches ranked against your
+          profile.
         </p>
 
         <!-- Search Bar -->
@@ -29,24 +29,16 @@
             @keyup.enter="goToJobs"
             type="text"
             placeholder="Search by title, company, or skill"
-            class="flex-1 border-none outline-none h-full p-3 text-base text-gray-900 placeholder:text-gray-400"
+            class="flex-1 min-w-0 border-none outline-none h-full p-3 text-base text-gray-900 placeholder:text-gray-400"
           />
           <button @click="goToJobs" class="h-full button button-primary">Search</button>
         </div>
 
         <div class="flex justify-center gap-4 mt-8">
           <RouterLink to="/jobs" class="button button-primary"> Browse All Jobs </RouterLink>
-          <button @click="goToJobs()" class="button button-secondary">Find Remote Roles</button>
-        </div>
-
-        <div class="flex flex-wrap gap-3 mt-7 items-center justify-center">
-          <span
-            v-for="tag in ['Go Engineer', 'Vue Developer', 'Full Stack', 'Remote']"
-            :key="tag"
-            class="inline-flex items-center justify-center px-4 py-1 bg-[#f8faff] text-gray-700 border border-ui-border text-[0.9rem]"
+          <RouterLink to="/jobs?filter=remote" class="button button-secondary"
+            >Find Remote Roles</RouterLink
           >
-            {{ tag }}
-          </span>
         </div>
       </div>
     </section>
@@ -60,19 +52,23 @@
               Jobs tracked
             </div>
             <div class="text-4xl font-bold text-gray-900">{{ jobsTracked }}</div>
-            <div class="mt-2.5 text-gray-600 text-[0.92rem]">+{{ jobsToday }} today</div>
+            <div class="mt-2.5 text-gray-600 text-[0.92rem]">
+              {{ stats ? `+${jobsToday} added today` : 'Awaiting statistics' }}
+            </div>
           </div>
           <div class="bg-white p-6 border border-ui-border">
             <div class="text-[0.75rem] uppercase tracking-widest text-accent mb-3">Sources</div>
-            <div class="text-4xl font-bold text-gray-900">2</div>
-            <div class="mt-2.5 text-gray-600 text-[0.92rem]">RemoteOK · Adzuna</div>
+            <div class="text-4xl font-bold text-gray-900">{{ stats?.sources?.length ?? '—' }}</div>
+            <div class="mt-2.5 text-gray-600 text-[0.92rem]">
+              {{ stats?.sources?.join(' · ') || 'No sources recorded' }}
+            </div>
           </div>
           <div class="bg-white p-6 border border-ui-border">
             <div class="text-[0.75rem] uppercase tracking-widest text-accent mb-3">
-              Latest scrape
+              Latest addition
             </div>
             <div class="text-4xl font-bold text-gray-900">{{ latestScrape }}</div>
-            <div class="mt-2.5 text-gray-600 text-[0.92rem]">Fresh data from the feed</div>
+            <div class="mt-2.5 text-gray-600 text-[0.92rem]">Most recently stored public job</div>
           </div>
         </div>
 
@@ -85,27 +81,31 @@
               </p>
               <h2 class="m-0 text-xl text-gray-900">Recommended for you</h2>
             </div>
-            <RouterLink to="/jobs" class="text-accent text-[0.94rem] font-semibold"
+            <RouterLink to="/jobs?filter=matched" class="text-accent text-[0.94rem] font-semibold"
               >View all matches</RouterLink
             >
           </div>
 
+          <p v-if="recommendationsError" role="alert" class="text-sm text-red-700">
+            {{ recommendationsError }}
+          </p>
+          <p v-else-if="!recommendedJobs.length" class="text-sm text-gray-600">
+            No matches at your minimum score yet.
+          </p>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <article
-              v-for="(job, index) in recommendedJobs"
+              v-for="job in recommendedJobs"
               :key="job.id"
               class="bg-white p-5 grid gap-4 border border-ui-border-soft hover:border-ui-border transition-colors"
             >
               <div class="flex justify-between items-start gap-4">
                 <h3 class="m-0 text-base text-gray-900 leading-tight font-semibold">
-                  {{ job.title }}
+                  <RouterLink :to="{ path: '/jobs', query: { job: job.id } }">{{
+                    job.title
+                  }}</RouterLink>
                 </h3>
-                <Bookmark
-                  :fill="job.is_saved ? 'currentColor' : 'none'"
-                  class="w-6 h-6 text-gray-400 cursor-pointer shrink-0"
-                />
               </div>
-              <div class="text-[0.82rem] text-accent font-bold">{{ 92 - index * 4 }}% match</div>
+              <div class="text-[0.82rem] text-accent font-bold">{{ job.match_score }}% match</div>
 
               <p class="m-0 mt-1.5 text-gray-700 text-[0.92rem]">{{ job.company_name }}</p>
               <div class="flex flex-wrap gap-2">
@@ -117,7 +117,7 @@
                 <span
                   class="px-2 py-1 text-[0.75rem] bg-bg-secondary text-gray-700 border border-ui-border"
                 >
-                  {{ job.employment_type || 'Full time' }}
+                  {{ job.employment_type || 'Type not specified' }}
                 </span>
               </div>
               <div
@@ -133,12 +133,19 @@
         <!-- Latest Jobs Table -->
         <div class="mt-8">
           <div class="flex justify-between items-end mb-4 gap-4">
-            <p class="m-0 uppercase tracking-widest text-[0.78rem] text-gray-600">Latest jobs</p>
+            <p class="m-0 uppercase tracking-widest text-[0.78rem] text-gray-600">
+              Jobs from the past month
+            </p>
             <RouterLink to="/jobs" class="text-accent text-[0.94rem] font-semibold"
               >View all jobs</RouterLink
             >
           </div>
 
+          <p v-if="loading" class="text-sm text-gray-600">Loading jobs…</p>
+          <p v-else-if="jobsError" role="alert" class="text-sm text-red-700">{{ jobsError }}</p>
+          <p v-else-if="!latestJobs.length" class="text-sm text-gray-600">
+            No recent public jobs yet.
+          </p>
           <div class="bg-white overflow-hidden border border-ui-border">
             <div
               v-for="job in latestJobs"
@@ -151,18 +158,17 @@
                   :class="job.is_remote ? 'bg-[#5e6ad2]' : 'bg-[#22c55e]'"
                 ></div>
                 <div>
-                  <a
-                    :href="job.source_url"
-                    target="_blank"
+                  <RouterLink
+                    :to="{ path: '/jobs', query: { job: job.id } }"
                     class="text-sm font-semibold text-gray-900 hover:text-accent transition-colors line-clamp-1"
                   >
                     {{ job.title }}
-                  </a>
+                  </RouterLink>
                 </div>
               </div>
               <span class="hidden md:block text-sm text-gray-600">{{ job.company_name }}</span>
               <span class="hidden md:block text-sm text-gray-500">{{
-                job.employment_type || 'Full time'
+                job.employment_type || 'Type not specified'
               }}</span>
               <span class="text-sm text-gray-400 text-right md:text-left">{{
                 formatWhen(job)
@@ -176,36 +182,29 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { Bookmark, Search } from '@lucide/vue'
+import { Search } from '@lucide/vue'
 
 type JobStats = {
+  sources: string[]
   total_jobs: number
   new_jobs_today: number
   latest_scrape_at: string | null
 }
 
-type Job = {
-  id: string
-  title: string
-  company_name: string
-  source_url: string
-  job_location?: string | null
-  is_remote?: boolean | null
-  employment_type?: string | null
-  salary_min?: number | null
-  salary_max?: number | null
-  posted_at?: string | null
-  is_saved: boolean
-}
+import type { Job } from '@/types/job'
 const router = useRouter()
 const authStore = useAuthStore()
 
 const stats = ref<JobStats | null>(null)
 const jobs = ref<Job[]>([])
 const searchTerm = ref('')
+const recommendedJobs = ref<Job[]>([])
+const recommendationsError = ref('')
+const jobsError = ref('')
+const loading = ref(true)
 
 const eyebrowText = computed(() => {
   if (!stats.value) {
@@ -217,16 +216,16 @@ const eyebrowText = computed(() => {
 })
 
 const jobsTracked = computed(() => {
-  return stats.value?.total_jobs.toLocaleString() ?? '12,483'
+  return stats.value?.total_jobs.toLocaleString() ?? '—'
 })
 
 const jobsToday = computed(() => {
-  return stats.value?.new_jobs_today ?? 241
+  return stats.value?.new_jobs_today ?? '—'
 })
 
 const latestScrape = computed(() => {
   if (!stats.value?.latest_scrape_at) {
-    return 'Just now'
+    return 'Not recorded'
   }
   return new Date(stats.value.latest_scrape_at).toLocaleTimeString([], {
     hour: 'numeric',
@@ -234,24 +233,29 @@ const latestScrape = computed(() => {
   })
 })
 
-const latestJobs = computed(() => {
-  return [...jobs.value]
-    .sort((a, b) => {
-      return (
-        (new Date(b.posted_at ?? '').getTime() || 0) - (new Date(a.posted_at ?? '').getTime() || 0)
-      )
-    })
-    .slice(0, 5)
-})
+const latestJobs = computed(() => jobs.value)
 
-const recommendedJobs = computed(() => {
-  if (!authStore.user) return []
-  return latestJobs.value.slice(0, 3)
-})
+async function fetchRecommendations() {
+  const id = authStore.user?.id
+  recommendedJobs.value = []
+  recommendationsError.value = ''
+  if (!id) return
+  try {
+    const response = await fetch('/api/jobs?filter=matched&order=score_desc&limit=3', {
+      credentials: 'include',
+    })
+    if (!response.ok) throw new Error('Could not load your matches.')
+    const result = await response.json()
+    if (authStore.user?.id === id) recommendedJobs.value = result ?? []
+  } catch {
+    if (authStore.user?.id === id) recommendationsError.value = 'Could not load your matches.'
+  }
+}
+watch(() => authStore.user?.id, fetchRecommendations, { immediate: true })
 
 function formatSalary(job: Job) {
   if (!job.salary_min && !job.salary_max) return 'Salary n/a'
-  const currency = 'USD'
+  const currency = job.currency || ''
   if (job.salary_min && job.salary_max) {
     return `${currency} ${job.salary_min.toLocaleString()} - ${job.salary_max.toLocaleString()}`
   }
@@ -277,22 +281,29 @@ function goToJobs() {
 }
 
 onMounted(async () => {
-  try {
-    const response = await fetch('/api/jobs/stats')
-    if (response.ok) {
-      stats.value = await response.json()
-    }
-  } catch {
-    stats.value = null
-  }
-
-  try {
-    const response = await fetch('/api/jobs')
-    if (response.ok) {
-      jobs.value = await response.json()
-    }
-  } catch {
-    jobs.value = []
-  }
+  await Promise.all([
+    (async () => {
+      try {
+        const response = await fetch('/api/jobs/stats', { credentials: 'omit' })
+        if (!response.ok) throw new Error('Statistics unavailable')
+        stats.value = await response.json()
+      } catch {
+        stats.value = null
+      }
+    })(),
+    (async () => {
+      try {
+        const response = await fetch('/api/jobs?filter=recent&order=newest&limit=5', {
+          credentials: 'omit',
+        })
+        if (!response.ok) throw new Error('Could not load recent jobs.')
+        jobs.value = (await response.json()) ?? []
+      } catch {
+        jobsError.value = 'Could not load recent jobs. Please try again.'
+      } finally {
+        loading.value = false
+      }
+    })(),
+  ])
 })
 </script>

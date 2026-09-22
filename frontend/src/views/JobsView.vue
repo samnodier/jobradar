@@ -68,6 +68,7 @@ const activeFilter = computed({
 
 const filters = [
   { label: 'All', value: 'all' },
+  { label: 'Past month', value: 'recent' },
   { label: 'Best matches', value: 'matched' },
   { label: 'Saved', value: 'saved' },
   { label: 'Applied', value: 'applied' },

@@ -57,3 +57,30 @@ func TestJobScoreSortBeforePagination(t *testing.T) {
 		t.Fatalf("threshold filter: %+v", rows)
 	}
 }
+
+func TestRecentFeedPreservesStoredHistory(t *testing.T) {
+	p := testutil.Pool(t)
+	ctx := context.Background()
+	ids := []uuid.UUID{uuid.New(), uuid.New(), uuid.New()}
+	marker := uuid.NewString()
+	for i, id := range ids {
+		age := 0
+		if i == 1 {
+			age = 40
+		}
+		if _, err := p.Exec(ctx, "INSERT INTO jobs(id,external_id,job_source,title,company_name,source_url,posted_at,expires_at) VALUES($1,$2,'test-recent',$3,'Example','https://example.test',now()-$4*interval '1 day',CASE WHEN $5 THEN now()-interval '1 hour' ELSE NULL END)", id, id.String(), marker, age, i == 2); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Cleanup(func() { p.Exec(ctx, "DELETE FROM jobs WHERE id=ANY($1)", ids) })
+	q := database.New(p)
+	for filter, want := range map[string]int{"recent": 1, "all": 3} {
+		rows, err := q.GetJobs(ctx, database.GetJobsParams{Filter: filter, Search: marker, SortOrder: "newest", Limit: 50})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(rows) != want {
+			t.Fatalf("%s returned %d, want %d", filter, len(rows), want)
+		}
+	}
+}
