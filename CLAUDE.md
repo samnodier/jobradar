@@ -33,7 +33,7 @@ At the start of every session:
 **Jobradar** is a full-stack job search command center built by Sam Nodier.
 Owner: Sam Nodier (sam0132nodier@gmail.com)
 Purpose: Portfolio project + genuine job-hunting tool
-Current phase: **Phase 5 — AI Matching** (Not Started)
+Current phase: **Personal release on dev** (see `.context/PLAN.md`; older phase numbers are historical)
 
 Stack:
 - Backend: Go, Chi router, SQLC, pgx, PostgreSQL, Redis
