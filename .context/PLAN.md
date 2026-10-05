@@ -120,3 +120,12 @@ Sender now uses Jobradar as the display name. Digest includes source-supplied HT
 ## Public homepage and recent discovery
 
 Removed synthetic homepage totals, source count, recommendation scores and employment defaults. Homepage uses anonymous API requests for the public latest list and a separate authenticated score-ranked query for recommendations. Remote CTA now selects the remote filter. A short-lived filter=recent (past month) was removed September 22 at Sam's request; the homepage lists the newest public jobs. All stored history remains accessible. No destructive cleanup. 49 frontend tests/build/typecheck/focused lint and backend handler race/integration tests plus vet passed.
+
+
+## October 5 — digest outage and machine move
+
+- Root cause of zero scheduled digests: development Compose had no restart policy. After a host reboot PostgreSQL stayed down and the digest worker crash-looped silently (`email_digests` had no rows). Fixed with `restart: unless-stopped`.
+- Only one machine runs the digest scheduler at a time; development machines set `DIGEST_ENABLED=false`.
+- Moving between machines: `docs/MOVING_MACHINES.md` (dump/restore, `.env` copied privately, full test commands).
+- Verified before the move: Go build/vet, frontend type-check/build and unit tests. Backend integration suite to be run on the new machine. Known lint debt in test mocks and `src/env.d.ts`.
+- Next: supervise the app on an always-on host, decide public access, schedule off-host backups, and alert when an expected digest is missing.
