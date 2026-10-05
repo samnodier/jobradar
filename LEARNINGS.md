@@ -1004,3 +1004,13 @@ The email From header supports a display name independently of the verified doma
 `HomeView.vue` now treats loading/error/empty states as real states, instead of fabricated counters and scores. Recommendations use the authenticated matched query; public jobs use a credential-free request. A past-month `filter=recent` was added and then removed: Sam's actual question was whether RemoteOK can return more than one page, not a request for a new feed filter. Clarify the question before adding a feature.
 
 RemoteOK documents a public JSON feed and tag filters, not historical page navigation. Repeated upserts accumulate jobs over time; do not interpret absence from a limited feed as proof of expiry. Database migration to a deployment preserves collected history using pg_dump/pg_restore and persistent volumes. Review later: How are source pagination and local feed pagination different? Why isn't missing from a source response equivalent to deleted?
+
+## A scheduler that silently never ran — October 5
+
+The digest worker was installed, enabled and "active", yet `email_digests` stayed empty for two weeks. Development Compose had no `restart:` policy, so after a reboot PostgreSQL never came back; systemd restarted the worker every 30 seconds and each attempt failed to connect. `Restart=always` hid the failure instead of surfacing it. Fixed with `restart: unless-stopped` on the development database and Redis.
+
+Lessons: a supervisor that restarts forever is not monitoring; a dependency must be supervised as well as its consumer; "service enabled" is not evidence that work happened — check the ledger/outcome (`email_digests` rows, inbox). A tiny alert (for example, emailing when no digest was recorded by 09:00) would have caught it on day one.
+
+Questions: What is the difference between liveness and outcome monitoring? Why does `Restart=always` with a short delay hide a dependency outage? Which component should own "PostgreSQL is up" on a single-host deployment? How would you alert on the absence of an expected event (a dead man's switch)?
+
+Code/config: `docker-compose.yml`, `docs/MOVING_MACHINES.md`.
