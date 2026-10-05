@@ -31,7 +31,7 @@ At the start of every session:
 ## Project Identity
 
 **Jobradar** is a full-stack job search command center built by Sam Nodier.
-Owner: Sam Nodier (sam0132nodier@gmail.com)
+Owner: Sam Nodier (hello@samnodier.com)
 Purpose: Portfolio project + genuine job-hunting tool
 Current phase: **Personal release on dev** (see `.context/PLAN.md`; older phase numbers are historical)
 
