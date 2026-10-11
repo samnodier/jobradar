@@ -196,6 +196,37 @@ func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, erro
 	return i, err
 }
 
+const deleteExpiredPublicJobs = `-- name: DeleteExpiredPublicJobs :execrows
+DELETE FROM jobs
+WHERE jobs.id IN (
+    SELECT j.id FROM jobs j
+    WHERE j.created_by_user_id IS NULL
+      AND COALESCE(j.posted_at, j.created_at) < $1::timestamptz
+      AND NOT EXISTS (SELECT 1 FROM saved_jobs s WHERE s.job_id = j.id)
+      AND NOT EXISTS (SELECT 1 FROM applications a WHERE a.job_id = j.id)
+    ORDER BY COALESCE(j.posted_at, j.created_at)
+    LIMIT $2::int
+)
+`
+
+type DeleteExpiredPublicJobsParams struct {
+	Cutoff    pgtype.Timestamptz `json:"cutoff"`
+	BatchSize int32              `json:"batch_size"`
+}
+
+// Retention: delete public source postings whose age (posting date, else first-seen date)
+// is before the cutoff. Deleting a job cascades to applications, saved jobs, matches,
+// notifications and the digest ledger, so jobs the user saved or applied to are kept,
+// and private imports are never touched. Oldest first, in bounded batches so a large
+// backlog never holds long locks.
+func (q *Queries) DeleteExpiredPublicJobs(ctx context.Context, arg DeleteExpiredPublicJobsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteExpiredPublicJobs, arg.Cutoff, arg.BatchSize)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const getAllJobIDs = `-- name: GetAllJobIDs :many
 SELECT id FROM jobs
 WHERE created_by_user_id IS NULL OR created_by_user_id = $1

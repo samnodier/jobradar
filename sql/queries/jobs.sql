@@ -192,3 +192,20 @@ DO UPDATE SET title=excluded.title, company_name=excluded.company_name,
  excluded.salary_min,excluded.salary_max,excluded.currency,excluded.job_location,excluded.is_remote,excluded.skills,excluded.category,excluded.employment_type)
  THEN now() ELSE jobs.updated_at END
 RETURNING *;
+
+-- name: DeleteExpiredPublicJobs :execrows
+-- Retention: delete public source postings whose age (posting date, else first-seen date)
+-- is before the cutoff. Deleting a job cascades to applications, saved jobs, matches,
+-- notifications and the digest ledger, so jobs the user saved or applied to are kept,
+-- and private imports are never touched. Oldest first, in bounded batches so a large
+-- backlog never holds long locks.
+DELETE FROM jobs
+WHERE jobs.id IN (
+    SELECT j.id FROM jobs j
+    WHERE j.created_by_user_id IS NULL
+      AND COALESCE(j.posted_at, j.created_at) < sqlc.arg(cutoff)::timestamptz
+      AND NOT EXISTS (SELECT 1 FROM saved_jobs s WHERE s.job_id = j.id)
+      AND NOT EXISTS (SELECT 1 FROM applications a WHERE a.job_id = j.id)
+    ORDER BY COALESCE(j.posted_at, j.created_at)
+    LIMIT sqlc.arg(batch_size)::int
+);
