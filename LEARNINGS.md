@@ -1060,3 +1060,15 @@ This is the ambiguous-success problem again (see the email outbox section): a re
 Questions: Why can't a client tell "request failed" from "reply lost"? Why is retrying a non-idempotent request (consume token) unsafe while retrying a read (fetch session) is safe? How did server request logs (a 200 with no follow-up request) reveal what the browser saw?
 
 Code: `frontend/src/views/LoginView.vue`, `frontend/src/__tests__/LoginView.spec.ts`.
+
+## A fuller resume scored worse — October 11
+
+After replacing placeholder profile data with a real resume (three roles, including a social media role), jobs scoring 60+ fell from 18 to 7. Cause: the experience component (25% of the core score) divided the overlapping words by the vocabulary of all experiences combined. Every added role — especially an unrelated one — grew the denominator and shrank every score. It is the same denominator flaw already recorded for skills ("matched/userSkills penalizes broad skill sets"), repeated in a second dimension.
+
+Fix: `BestExperienceMatch` scores each experience separately and keeps the best ("how well does your most relevant experience fit?"), which can only stay equal or rise when experiences are added. A regression test shows the old formula dropping a match from 88 to 74 when a marketing role is added. Before shipping, the change was replayed against all 589 real scored jobs read-only: 60+ matches ~7 → ~13; the average experience component 0.062 → 0.102.
+
+The remaining lesson: word-overlap ratios are weak signals, so scores cluster in a narrow band (mostly 55–65) and title similarity dominates. A threshold of 60 on a compressed scale is fragile — small formula changes move many jobs across it. Calibrating against real outcomes (which matches you saved or applied to) is the principled next step, not tweaking weights by feel.
+
+Questions: Why does a ratio with a growing denominator punish richer input? Why is "max over items" robust to irrelevant items while "union" is not? Why replay a scoring change on real data before deploying it? What does a compressed score distribution do to a fixed threshold?
+
+Code: `internal/matcher/experience_match.go`, `internal/matcher/matcher.go`, `internal/matcher/experience_match_test.go`.

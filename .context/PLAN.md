@@ -142,3 +142,10 @@ Removed synthetic homepage totals, source count, recommendation scores and emplo
 
 - Public postings older than `JOB_RETENTION_DAYS` (default 90; posting date, else first-seen) are deleted hourly in batches; saved, applied-to and imported jobs are never deleted. Collection skips postings already past the cutoff. Code: `cmd/jobradar/retention.go`, `DeleteExpiredPublicJobs`.
 - Commit messages now use conventional type prefixes (`feat:`, `fix:`, `docs:`, `test:`, `ci:`, `chore:`).
+
+## October 11 — real profile, login recovery, experience scoring
+
+- Owner profile filled from the public resume/LinkedIn (one-off data change on the server, backed up first; not in the repo).
+- Login page recovers when a single-use setup reply is lost or the link is spent.
+- Experience scoring uses the best single experience (`BestExperienceMatch`); the union version diluted scores as experiences were added. Replayed on real data: 60+ matches ~7 → ~13.
+- Open: scores cluster ~55–65, so the 60 threshold is fragile; calibrate with real outcomes (saved/applied) before further weight changes.
