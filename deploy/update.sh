@@ -52,6 +52,10 @@ compose up -d db redis
 if compose ps -q db >/dev/null && [ -n "$running" ]; then
   ./deploy/backup.sh
 fi
+# Stop the old app before migrating so old code never runs against a newer schema, and
+# never processes work a migration queues (for example re-scoring) with outdated logic.
+# Costs a few seconds of downtime per deploy, acceptable for a single personal instance.
+compose stop app
 compose --profile tools run --rm migrate up
 compose up -d app
 
