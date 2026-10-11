@@ -1014,3 +1014,17 @@ Lessons: a supervisor that restarts forever is not monitoring; a dependency must
 Questions: What is the difference between liveness and outcome monitoring? Why does `Restart=always` with a short delay hide a dependency outage? Which component should own "PostgreSQL is up" on a single-host deployment? How would you alert on the absence of an expected event (a dead man's switch)?
 
 Code/config: `docker-compose.yml`, `docs/MOVING_MACHINES.md`.
+
+## Continuous deployment to a home server — October 11
+
+Push versus pull deployment. Push-based CD (CI connects to the server and runs commands) needs an inbound path and server credentials stored in CI. A self-hosted Actions runner avoids inbound ports, but on a public repository a pull request can execute arbitrary code on the host. Pull-based CD inverts this: CI only publishes artifacts after tests pass; the server polls (`deploy/update.sh` every five minutes) and decides when to apply them. Nothing reaches into the server, and a broken CI cannot touch production.
+
+Artifacts, not source, are deployed. CI builds images once (`ghcr.io/.../jobradar:<sha>` and `:main`); the server never compiles Go or Vue, which matters on old hardware. A commit SHA tag is immutable, so rollback is pinning `JOBRADAR_TAG` to a previous SHA. `:main` is a moving pointer for convenience.
+
+Order of a deploy: back up → migrate → replace the app → verify health. Migrations run before the new binary because new code may need new columns; an image rollback does not undo a migration, which is why the backup comes first. The updater is idempotent (no change → no action), serialized with `flock`, and refuses to run on a diverged or non-main checkout.
+
+Gating matters: publishing depends on the test jobs (`needs: [backend, frontend]`), so a red build never produces a deployable image. A backup on the same disk protects against bad migrations and mistakes, not disk failure; copy it off-host.
+
+Questions: Why is a self-hosted runner risky on a public repository? What does pull-based deployment trade away (latency up to one polling interval, no immediate failure signal in CI)? Why tag images with a commit SHA as well as a branch name? Why must migrations be backward-compatible if old and new app versions could briefly overlap? What is the difference between CI (verify) and CD (deliver)? How would you alert when the updater fails repeatedly?
+
+Code/config: `.github/workflows/ci.yml`, `compose.production.yml`, `deploy/update.sh`, `deploy/backup.sh`, `deploy/install-systemd.sh`, `docs/DEPLOYMENT.md`.
