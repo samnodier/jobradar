@@ -137,3 +137,8 @@ Removed synthetic homepage totals, source count, recommendation scores and emplo
 - Server: `deploy/update.sh` (pull-based; backup → migrate → recreate → health check), `deploy/backup.sh` (nightly, 14 kept), `deploy/install-systemd.sh` (user timers). See `docs/DEPLOYMENT.md`.
 - Development machines keep `DIGEST_ENABLED=false`; only production sends.
 - Not yet done: first production deploy and data restore, public access choice, production OAuth app, off-host backup copies, missed-digest alerting.
+
+## October 11 — job retention
+
+- Public postings older than `JOB_RETENTION_DAYS` (default 90; posting date, else first-seen) are deleted hourly in batches; saved, applied-to and imported jobs are never deleted. Collection skips postings already past the cutoff. Code: `cmd/jobradar/retention.go`, `DeleteExpiredPublicJobs`.
+- Commit messages now use conventional type prefixes (`feat:`, `fix:`, `docs:`, `test:`, `ci:`, `chore:`).

@@ -1038,3 +1038,15 @@ Fixes: remove the fragment with `history.replaceState` (no navigation, no guard)
 Questions: Why can a side effect in `onMounted` loop when a parent conditionally renders the component? What is the difference between a router navigation and `history.replaceState`? Why should loading state for a background refresh not replace existing content? How do server request logs reveal a client-side loop?
 
 Code: `frontend/src/views/LoginView.vue`, `frontend/src/App.vue`, `frontend/src/stores/auth.ts`.
+
+## Deleting old jobs without deleting your history — October 11
+
+Requirement: postings older than three months should disappear automatically. The trap is `ON DELETE CASCADE`: deleting a job row also deletes every row that references it — applications, saved jobs, scores, notifications and the email ledger. A naive `DELETE FROM jobs WHERE created_at < now() - interval '90 days'` would silently erase your application history.
+
+Rules (`DeleteExpiredPublicJobs` in `sql/queries/jobs.sql`): only public source postings (`created_by_user_id IS NULL`); never if saved or applied to (`NOT EXISTS` checks); age is the posting date, falling back to first-seen date. It runs hourly from the existing maintenance loop (`cmd/jobradar/retention.go`), oldest first in batches of 500 so a large backlog never holds long locks. Collection also skips postings already past the cutoff; otherwise a feed that keeps returning old jobs would re-insert them every cycle and retention would delete them again ("churn"). `JOB_RETENTION_DAYS` configures it; invalid values stop startup instead of guessing.
+
+Testing a destructive query against a shared test database: fixtures use dates around the year 2000 and an explicit cutoff, so the delete can never touch rows other tests create. The test asserts both what is deleted and what must survive.
+
+Questions: Why is `ON DELETE CASCADE` convenient for integrity but dangerous for cleanup jobs? Why delete in batches instead of one statement? Why must ingestion and retention agree on the same cutoff? What is the difference between "posted", "first seen" and "last seen", and which one defines age here? How would you make deletion reversible (soft delete/archive) and what would it cost?
+
+Code: `sql/queries/jobs.sql`, `cmd/jobradar/retention.go`, `cmd/jobradar/scraper_remoteok.go`, `cmd/jobradar/retention_test.go`.
