@@ -77,9 +77,44 @@ Restore into a NEW empty database/isolated stack first, using `pg_restore -U sam
 
 The development `./pgdata` directory and production named volume are separate. To bring development data into production, use a logical pg_dump/pg_restore migration; do not copy a live PostgreSQL data directory between containers.
 
-## Upgrade
+## Continuous deployment
 
-Build/test on a feature branch, back up, run the pending migrations, deploy the verified image, then inspect health/backlog/delivery history. Keep `dev` as the integration branch and promote a verified release to `main`. Image rollback alone may not undo a schema change; inspect the migration compatibility first.
+Pushing to `main` deploys without logging in to the server:
+
+1. GitHub Actions (`.github/workflows/ci.yml`) runs the backend integration tests, vet, frontend tests and the production build on every push and pull request.
+2. Only for `main`, and only after every test passes, it publishes `ghcr.io/<owner>/jobradar` and `ghcr.io/<owner>/jobradar-migrate`, tagged `main` and the commit SHA.
+3. On the server, a user systemd timer runs `deploy/update.sh` every five minutes. It fast-forwards the checkout to `origin/main` (Compose file and scripts), pulls the images, and when something changed: backs up the database, runs migrations, recreates the app and waits for `/api/health`. Otherwise it does nothing.
+
+The server needs no inbound port and no GitHub credentials while the repository and its packages are public. A self-hosted Actions runner is deliberately not used: on a public repository, pull requests could run code on the host.
+
+One-time server setup:
+
+```sh
+git clone https://github.com/<owner>/jobradar.git && cd jobradar   # stays on main
+cp /path/to/production.env .env && chmod 600 .env
+sudo loginctl enable-linger "$USER"   # timers run without a login session
+./deploy/update.sh                    # first deploy (pulls images, migrates, starts)
+./deploy/install-systemd.sh           # update timer (5 min) + nightly backup timer
+```
+
+Watch it: `journalctl --user -u jobradar-update -f` and `systemctl --user list-timers`. Deploy a fix by merging to `main`; it is live within about ten minutes (CI plus the next timer tick). Pin a version with `JOBRADAR_TAG=<commit sha>` in `.env`.
+
+If the first pull is denied, the container package is private: make it public in the package settings on GitHub, or `docker login ghcr.io` on the server with a read-only `read:packages` token.
+
+Rollback: set `JOBRADAR_TAG` to the previous good commit SHA and run `./deploy/update.sh`. An image rollback does not undo a schema migration; restore the pre-deploy backup if a migration must be reversed.
+
+Nightly backups go to `~/jobradar-backups` (14 kept; override with `BACKUP_DIR`/`BACKUP_KEEP`). They are on the same disk, so copy them off the host regularly.
+
+## Public access without opening ports
+
+The app listens on `127.0.0.1:8080`. Two ways to publish it over HTTPS without router port forwarding:
+
+- **Tailscale Funnel:** `sudo tailscale funnel --bg 8080` gives `https://<machine>.<tailnet>.ts.net`. Use `tailscale serve` instead to keep it private to your own devices.
+- **Cloudflare Tunnel:** `cloudflared` maps a hostname in a Cloudflare-managed domain to `http://127.0.0.1:8080`.
+
+Then set `APP_BASE_URL`, `ALLOWED_ORIGINS` and `GITHUB_REDIRECT_URL` to the public HTTPS address, and keep `APP_ENV=production` so cookies are `Secure`. A GitHub OAuth app has a single callback URL, so use a separate OAuth app for production (or rely on email/password login there).
+
+Only one machine may run the digest scheduler: production sets `DIGEST_ENABLED=true`; every development machine sets it to `false`.
 
 ## Personal home-server workflow
 
