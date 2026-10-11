@@ -18,7 +18,11 @@ const error = ref(
 )
 onMounted(async () => {
   setupToken.value = new URLSearchParams(window.location.hash.slice(1)).get('setup') || ''
-  if (setupToken.value) await router.replace({ hash: '' })
+  // Remove the secret from the address bar without a router navigation: a navigation re-runs
+  // the session check, which would remount this view and read the fragment again.
+  if (setupToken.value) {
+    window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search)
+  }
   try {
     const response = await fetch('/auth/methods', { credentials: 'include' })
     if (!response.ok) throw new Error('Could not load sign-in methods. Please refresh.')

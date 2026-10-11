@@ -84,7 +84,7 @@ async function logout() {
     <!-- Content -->
     <main class="flex-1 flex flex-col min-h-0 relative">
       <div
-        v-if="authStore.loading"
+        v-if="!authStore.checked"
         class="p-4 px-5 bg-indigo-500/6 text-gray-900 border border-indigo-500/12"
       >
         Loading auth state…

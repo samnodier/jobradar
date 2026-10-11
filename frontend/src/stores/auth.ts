@@ -5,6 +5,8 @@ interface AuthState {
   user: User | null
   isSaving: boolean
   loading: boolean
+  // True once the first session check has finished; later re-checks run in the background.
+  checked: boolean
   error: string | null
 }
 
@@ -13,6 +15,7 @@ export const useAuthStore = defineStore('auth', {
     user: null,
     isSaving: false,
     loading: false,
+    checked: false,
     error: null,
   }),
 
@@ -36,6 +39,7 @@ export const useAuthStore = defineStore('auth', {
         this.user = null
       } finally {
         this.loading = false
+        this.checked = true
       }
     },
 
