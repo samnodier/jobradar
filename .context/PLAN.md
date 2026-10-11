@@ -129,3 +129,11 @@ Removed synthetic homepage totals, source count, recommendation scores and emplo
 - Moving between machines: `docs/MOVING_MACHINES.md` (dump/restore, `.env` copied privately, full test commands).
 - Verified before the move: Go build/vet, frontend type-check/build and unit tests. Backend integration suite to be run on the new machine. Known lint debt in test mocks and `src/env.d.ts`.
 - Next: supervise the app on an always-on host, decide public access, schedule off-host backups, and alert when an expected digest is missing.
+
+## October 11 — CI and continuous deployment
+
+- `.github/workflows/ci.yml`: backend integration tests (Postgres/Redis services, race detector), vet, frontend type-check/tests/build on every push and PR; publishes app and migration images to GHCR only from `main` after tests pass.
+- `compose.production.yml` uses the published images (local `--build` still works).
+- Server: `deploy/update.sh` (pull-based; backup → migrate → recreate → health check), `deploy/backup.sh` (nightly, 14 kept), `deploy/install-systemd.sh` (user timers). See `docs/DEPLOYMENT.md`.
+- Development machines keep `DIGEST_ENABLED=false`; only production sends.
+- Not yet done: first production deploy and data restore, public access choice, production OAuth app, off-host backup copies, missed-digest alerting.
