@@ -1028,3 +1028,13 @@ Gating matters: publishing depends on the test jobs (`needs: [backend, frontend]
 Questions: Why is a self-hosted runner risky on a public repository? What does pull-based deployment trade away (latency up to one polling interval, no immediate failure signal in CI)? Why tag images with a commit SHA as well as a branch name? Why must migrations be backward-compatible if old and new app versions could briefly overlap? What is the difference between CI (verify) and CD (deliver)? How would you alert when the updater fails repeatedly?
 
 Code/config: `.github/workflows/ci.yml`, `compose.production.yml`, `deploy/update.sh`, `deploy/backup.sh`, `deploy/install-systemd.sh`, `docs/DEPLOYMENT.md`.
+
+## A login page that reloaded itself forever — October 11
+
+The first production password-setup link froze the browser. The login view read `#setup=…`, then called `router.replace` to remove it. That navigation ran the global guard, which re-checked the session; the app shell replaced `<RouterView>` with "Loading auth state…" while checking, destroying the login view. When the check finished (signed out), the view mounted again, the fragment was still in the address bar, and the cycle repeated — visible in server logs as hundreds of `/auth/users/me` + `/auth/methods` pairs per second. It never appeared in development because the setup link had only been used while already signed in, which skips the check.
+
+Fixes: remove the fragment with `history.replaceState` (no navigation, no guard), and show the loading screen only until the first session check completes, so background re-checks never unmount the current page. Regression tests in `LoginView.spec.ts` and `App.spec.ts` fail on the old code and pass on the fix — a test that also passes on the buggy code proves nothing.
+
+Questions: Why can a side effect in `onMounted` loop when a parent conditionally renders the component? What is the difference between a router navigation and `history.replaceState`? Why should loading state for a background refresh not replace existing content? How do server request logs reveal a client-side loop?
+
+Code: `frontend/src/views/LoginView.vue`, `frontend/src/App.vue`, `frontend/src/stores/auth.ts`.
