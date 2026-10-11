@@ -103,6 +103,8 @@ If the first pull is denied, the container package is private: make it public in
 
 Rollback: set `JOBRADAR_TAG` to the previous good commit SHA and run `./deploy/update.sh`. An image rollback does not undo a schema migration; restore the pre-deploy backup if a migration must be reversed.
 
+Job retention runs inside the app: every hour it deletes public postings older than `JOB_RETENTION_DAYS` (default 90) in batches, and collection skips postings already older than that. Jobs you saved, applied to or imported are never deleted, because deleting a job also deletes its applications, saves, matches and notifications. Check `job retention: removed=…` in the app logs.
+
 Nightly backups go to `~/jobradar-backups` (14 kept; override with `BACKUP_DIR`/`BACKUP_KEEP`). They are on the same disk, so copy them off the host regularly.
 
 ## Public access without opening ports
