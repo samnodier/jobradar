@@ -37,7 +37,9 @@ func (cfg *apiConfig) dispatchPendingMatches(ctx context.Context) error {
 func (cfg *apiConfig) runMaintenance(ctx context.Context) {
 	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
+	var lastPrune time.Time
 	for {
+		cfg.maybePruneOldJobs(ctx, &lastPrune)
 		callCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		if err := cfg.dispatchPendingMatches(callCtx); err != nil && ctx.Err() == nil {
 			log.Printf("pending match dispatch: %v", err)

@@ -44,6 +44,7 @@ type apiConfig struct {
 	newExtractor        func(ctx context.Context, provider, apiKey string) (llm.Extractor, error)
 	IsProduction        bool
 	digest              *digest.Service
+	jobRetention        time.Duration // 0 disables deleting old public postings
 }
 
 func main() {
@@ -151,6 +152,10 @@ func main() {
 		aiMatchThreshold = int32(parsed)
 	}
 	aiMatchThreshold = max(int32(0), min(int32(100), aiMatchThreshold))
+	jobRetention, err := jobRetentionFromEnv()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	cfg := &apiConfig{
 		db:                  dbClient.Queries,
@@ -166,6 +171,7 @@ func main() {
 		aiMatchThreshold:    aiMatchThreshold,
 		aiEnrichmentEnabled: os.Getenv("AI_ENRICHMENT_ENABLED") == "true",
 		IsProduction:        os.Getenv("APP_ENV") == "production",
+		jobRetention:        jobRetention,
 	}
 
 	wp := queue.NewWorkerPool(q, 2)
