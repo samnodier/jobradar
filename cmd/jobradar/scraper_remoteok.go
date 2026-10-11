@@ -26,9 +26,16 @@ func (cfg *apiConfig) scrapeSource(ctx context.Context, source sources.Source) e
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Minute)
 	defer cancel()
 	jobs, err := source.Fetch(ctx)
-	count := 0
+	count, skippedOld := 0, 0
+	// Don't re-insert postings retention would delete on its next run; otherwise feeds that
+	// keep returning old jobs would recreate them every cycle.
+	cutoff, retain := cfg.retentionCutoff(time.Now())
 	if err == nil {
 		for _, j := range jobs {
+			if retain && j.PostedAt != nil && j.PostedAt.Before(cutoff) {
+				skippedOld++
+				continue
+			}
 			if j.Skills == nil {
 				j.Skills = []string{}
 			}
@@ -61,6 +68,6 @@ func (cfg *apiConfig) scrapeSource(ctx context.Context, source sources.Source) e
 	if healthErr != nil {
 		log.Printf("source health write failed: %v", healthErr)
 	}
-	log.Printf("source=%s saved=%d status=%s", source.Name(), count, status)
+	log.Printf("source=%s saved=%d skipped_old=%d status=%s", source.Name(), count, skippedOld, status)
 	return err
 }
