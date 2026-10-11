@@ -1050,3 +1050,13 @@ Testing a destructive query against a shared test database: fixtures use dates a
 Questions: Why is `ON DELETE CASCADE` convenient for integrity but dangerous for cleanup jobs? Why delete in batches instead of one statement? Why must ingestion and retention agree on the same cutoff? What is the difference between "posted", "first seen" and "last seen", and which one defines age here? How would you make deletion reversible (soft delete/archive) and what would it cost?
 
 Code: `sql/queries/jobs.sql`, `cmd/jobradar/retention.go`, `cmd/jobradar/scraper_remoteok.go`, `cmd/jobradar/retention_test.go`.
+
+## Single-use links and lost replies — October 11
+
+A password setup link is single-use: the server consumes it and saves the password in one transaction. In production the server logged a successful save (200), but the browser never sent the follow-up "who am I?" request — the reply was lost in transit (a brief relay hiccup). The page showed an error and kept the spent link, so the user's natural retry returned "invalid or expired setup link" even though their password had been saved.
+
+This is the ambiguous-success problem again (see the email outbox section): a request can succeed on the server while the client sees failure. The client now treats a network error during setup as "unknown": it asks the server whether a session exists, signs in if so, and otherwise switches to the normal sign-in form with an explanation. A spent link likewise switches to sign-in instead of inviting more retries. Tests cover all three paths and fail on the previous code.
+
+Questions: Why can't a client tell "request failed" from "reply lost"? Why is retrying a non-idempotent request (consume token) unsafe while retrying a read (fetch session) is safe? How did server request logs (a 200 with no follow-up request) reveal what the browser saw?
+
+Code: `frontend/src/views/LoginView.vue`, `frontend/src/__tests__/LoginView.spec.ts`.
