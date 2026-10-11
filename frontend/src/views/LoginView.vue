@@ -31,26 +31,58 @@ onMounted(async () => {
     error.value = String(e)
   }
 })
+const SETUP_LINK_SPENT =
+  'This setup link was already used or has expired. If you just chose a password, sign in with it below. Otherwise ask the server owner for a new link.'
+const SETUP_REPLY_LOST =
+  "The connection dropped before we could confirm your new password. Try signing in with the password you just chose. If that fails, ask the server owner for a new setup link."
+
+// Setup links are single-use. The server may save the password even when its reply never
+// reaches the browser (a dropped connection), so a failed setup attempt must not leave the
+// user resubmitting a spent link: check for a session, otherwise fall back to sign-in.
+async function recoverFromLostSetupReply() {
+  await auth.fetchMe()
+  if (auth.user) {
+    await router.replace('/jobs')
+    return
+  }
+  setupToken.value = ''
+  error.value = SETUP_REPLY_LOST
+}
+
 async function submit() {
   error.value = ''
   if (setupToken.value && password.value !== confirmation.value) {
     error.value = 'Passwords do not match'
     return
   }
+  const settingUp = Boolean(setupToken.value)
   busy.value = true
   try {
-    const endpoint = setupToken.value ? '/auth/password/setup' : '/auth/password/login'
-    const body = setupToken.value
+    const endpoint = settingUp ? '/auth/password/setup' : '/auth/password/login'
+    const body = settingUp
       ? { token: setupToken.value, password: password.value }
       : { email: email.value, password: password.value }
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
+    let response: Response
+    try {
+      response = await fetch(endpoint, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+    } catch {
+      if (settingUp) {
+        await recoverFromLostSetupReply()
+        return
+      }
+      throw new Error('Could not reach the server. Check your connection and try again.')
+    }
     if (!response.ok) {
       const data = await response.json().catch(() => null)
+      if (settingUp && response.status === 400 && data?.error === 'invalid or expired setup link') {
+        setupToken.value = ''
+        throw new Error(SETUP_LINK_SPENT)
+      }
       throw new Error(data?.error || 'Sign-in failed')
     }
     setupToken.value = ''

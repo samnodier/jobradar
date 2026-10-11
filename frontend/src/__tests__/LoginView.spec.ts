@@ -78,4 +78,53 @@ describe('Email sign-in', () => {
     expect(fetcher.mock.calls.filter(([path]) => path === '/auth/methods')).toHaveLength(1)
     wrapper.unmount()
   })
+
+  async function submitSetup(fetcher: ReturnType<typeof vi.fn>) {
+    window.history.replaceState(null, '', '/login#setup=private-one-time-token')
+    vi.stubGlobal('fetch', fetcher)
+    const { wrapper, router } = await render()
+    const fields = wrapper.findAll('input[type="password"]')
+    await fields[0]!.setValue('a long personal password')
+    await fields[1]!.setValue('a long personal password')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    return { wrapper, router }
+  }
+
+  it('switches to sign-in when the setup link was already used', async () => {
+    const fetcher = vi.fn(async (path: string) =>
+      path === '/auth/password/setup'
+        ? { ok: false, status: 400, json: async () => ({ error: 'invalid or expired setup link' }) }
+        : { ok: true, status: 200, json: async () => ({ github: false }) },
+    )
+    const { wrapper } = await submitSetup(fetcher)
+    expect(wrapper.text()).toContain('already used or has expired')
+    expect(wrapper.find('input[type="email"]').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('signs in when the setup reply is lost but the password was saved', async () => {
+    const fetcher = vi.fn(async (path: string) => {
+      if (path === '/auth/password/setup') throw new TypeError('Failed to fetch')
+      if (path === '/auth/users/me') return { ok: true, status: 200, json: async () => ({ id: 'owner' }) }
+      return { ok: true, status: 200, json: async () => ({ github: false }) }
+    })
+    const { wrapper, router } = await submitSetup(fetcher)
+    expect(router.currentRoute.value.path).toBe('/jobs')
+    wrapper.unmount()
+  })
+
+  it('falls back to sign-in when the setup reply is lost and no session exists', async () => {
+    const fetcher = vi.fn(async (path: string) => {
+      if (path === '/auth/password/setup') throw new TypeError('Failed to fetch')
+      if (path === '/auth/users/me') return { ok: false, status: 401, json: async () => ({}) }
+      return { ok: true, status: 200, json: async () => ({ github: false }) }
+    })
+    const { wrapper, router } = await submitSetup(fetcher)
+    expect(router.currentRoute.value.path).toBe('/login')
+    expect(wrapper.text()).toContain('connection dropped')
+    expect(wrapper.find('input[type="email"]').exists()).toBe(true)
+    wrapper.unmount()
+  })
 })
+
