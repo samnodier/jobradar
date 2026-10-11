@@ -1,6 +1,8 @@
 # An isolated production stack. Existing development pgdata is never mounted.
 services:
   app:
+    # Published by CI from main; `--build` still builds locally from this checkout.
+    image: ${JOBRADAR_IMAGE:-ghcr.io/samnodier/jobradar}:${JOBRADAR_TAG:-main}
     build: .
     restart: unless-stopped
     env_file: .env
@@ -42,6 +44,7 @@ services:
       timeout: 3s
       retries: 10
   migrate:
+    image: ${JOBRADAR_MIGRATE_IMAGE:-ghcr.io/samnodier/jobradar-migrate}:${JOBRADAR_TAG:-main}
     build:
       context: .
       dockerfile: Dockerfile.migrations
