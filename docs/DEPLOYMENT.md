@@ -107,7 +107,7 @@ Nightly backups go to `~/jobradar-backups` (14 kept; override with `BACKUP_DIR`/
 
 ## Public access without opening ports
 
-The app listens on `127.0.0.1:8080`. Two ways to publish it over HTTPS without router port forwarding:
+The app listens on `127.0.0.1:8080`; set `JOBRADAR_PORT` in `.env` if another service already uses that port. Two ways to publish it over HTTPS without router port forwarding:
 
 - **Tailscale Funnel:** `sudo tailscale funnel --bg 8080` gives `https://<machine>.<tailnet>.ts.net`. Use `tailscale serve` instead to keep it private to your own devices.
 - **Cloudflare Tunnel:** `cloudflared` maps a hostname in a Cloudflare-managed domain to `http://127.0.0.1:8080`.

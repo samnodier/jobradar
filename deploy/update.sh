@@ -9,6 +9,9 @@ exec 9>/tmp/jobradar-update.lock
 flock -n 9 || { echo "another update is running"; exit 0; }
 
 compose() { docker compose -p jobradar -f compose.production.yml "$@"; }
+# Host port the app is published on (JOBRADAR_PORT in .env, default 8080).
+port=$(sed -n 's/^JOBRADAR_PORT=//p' .env 2>/dev/null | tail -1)
+port="${port:-8080}"
 log() { echo "[update] $*"; }
 
 # A re-exec after pulling main passes along why it is deploying.
@@ -53,7 +56,7 @@ compose --profile tools run --rm migrate up
 compose up -d app
 
 for _ in $(seq 1 30); do
-  if curl -fsS http://127.0.0.1:8080/api/health >/dev/null; then
+  if curl -fsS http://127.0.0.1:${port}/api/health >/dev/null; then
     log "healthy on $(git rev-parse --short HEAD)"
     docker image prune -f >/dev/null
     exit 0
