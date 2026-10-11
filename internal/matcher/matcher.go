@@ -87,7 +87,8 @@ func MatchJob(
 	// 3. Experience Matching
 	expScore := 0.0
 	if len(userExperiences) != 0 {
-		expScore = ExperienceMatch(userExperiences, jobDesc)
+		// Best single experience, not the union: see BestExperienceMatch.
+		expScore = BestExperienceMatch(userExperiences, jobDesc)
 		weightedSum += 0.25 * expScore
 		activeWeight += 0.25
 	}

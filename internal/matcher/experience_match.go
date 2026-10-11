@@ -40,6 +40,22 @@ func ExperienceMatch(expTexts []string, jobDesc string) float64 {
 	return float64(matched) / float64(len(expWords))
 }
 
+// BestExperienceMatch scores each experience on its own and keeps the best ratio.
+// ExperienceMatch over the union of all experiences divides by the size of the whole
+// vocabulary, so adding an unrelated role (marketing work on a developer profile) shrank
+// every score: a fuller resume ranked worse. Taking the strongest single experience asks
+// "how well does your most relevant experience fit this job?" and can only stay equal or
+// improve when experiences are added.
+func BestExperienceMatch(expTexts []string, jobDesc string) float64 {
+	best := 0.0
+	for _, text := range expTexts {
+		if score := ExperienceMatch([]string{text}, jobDesc); score > best {
+			best = score
+		}
+	}
+	return best
+}
+
 // tokenizeAndFilter splits text into alphanumeric lowercase words, filtering out stop words.
 func tokenizeAndFilter(text string) []string {
 	text = strings.ToLower(text)
