@@ -36,35 +36,59 @@ const availability = ref<{ status: string; checked_at?: string; response_code?: 
 )
 const availabilityBusy = ref(false)
 const availabilityError = ref('')
+let availabilityRequest: AbortController | undefined
+onUnmounted(() => availabilityRequest?.abort())
 async function checkAvailability() {
   if (availabilityBusy.value) return
   const jobID = props.job.id
+  availabilityRequest?.abort()
+  const controller = new AbortController()
+  availabilityRequest = controller
   availabilityBusy.value = true
   availabilityError.value = ''
   try {
     const response = await fetch(`/api/jobs/${jobID}/availability`, {
       method: 'POST',
       credentials: 'include',
+      signal: controller.signal,
     })
     if (!response.ok)
       throw new Error(
         response.status === 401 ? 'Sign in to check this posting' : 'Could not check the posting',
       )
     const result = await response.json()
-    if (props.job.id === jobID) availability.value = result
+    if (!controller.signal.aborted && props.job.id === jobID) availability.value = result
   } catch (error) {
-    if (props.job.id === jobID)
+    if (!controller.signal.aborted && props.job.id === jobID)
       availabilityError.value = error instanceof Error ? error.message : 'Could not check'
   } finally {
-    availabilityBusy.value = false
+    if (availabilityRequest === controller) availabilityBusy.value = false
   }
 }
 watch(
-  () => props.job.id,
-  () => {
+  () => [props.job.id, auth.user?.id],
+  async () => {
+    availabilityRequest?.abort()
+    availabilityBusy.value = false
     availability.value = null
     availabilityError.value = ''
+    if (!auth.user) return
+    const controller = new AbortController()
+    availabilityRequest = controller
+    try {
+      const response = await fetch(`/api/jobs/${props.job.id}/availability`, {
+        credentials: 'include',
+        signal: controller.signal,
+      })
+      if (!response.ok) throw new Error('Could not load posting availability')
+      const result = await response.json()
+      if (!controller.signal.aborted) availability.value = result
+    } catch {
+      if (!controller.signal.aborted)
+        availabilityError.value = 'Could not load posting availability. Try checking the link.'
+    }
   },
+  { immediate: true },
 )
 const feedback = ref(0)
 const feedbackBusy = ref(false)
@@ -152,7 +176,7 @@ async function copyForAI() {
       aiError.value = 'Clipboard unavailable. Select and copy the text below.'
     }
   } catch (e) {
-    aiError.value = e instanceof Error ? e.message : 'Could not copy'
+    if (props.job.id === jobID) aiError.value = e instanceof Error ? e.message : 'Could not copy'
   } finally {
     aiBusy.value = false
   }

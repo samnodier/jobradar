@@ -107,4 +107,63 @@ describe('job preparation and feedback', () => {
     expect(view.find('textarea[aria-label="AI application context"]').exists()).toBe(false)
     view.unmount()
   })
+  it('ignores a failed AI export after switching jobs', async () => {
+    let fail!: (reason: Error) => void
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) =>
+        url.includes('ai-context')
+          ? new Promise((_resolve, reject) => {
+              fail = reject
+            })
+          : Promise.resolve(response({ sentiment: 0, status: 'unchecked' })),
+      ),
+    )
+    const view = render()
+    await flushPromises()
+    await view
+      .findAll('button')
+      .find((button) => button.text() === 'Copy for AI')!
+      .trigger('click')
+    await view.setProps({ job: { ...job, id: 'job-2' } })
+    fail(new Error('Old job request failed'))
+    await flushPromises()
+    expect(view.text()).not.toContain('Old job request failed')
+    view.unmount()
+  })
+  it('loads cached availability and ignores stale responses after a job switch', async () => {
+    let finish!: (value: unknown) => void
+    let oldSignal!: AbortSignal
+    const fetch = vi.fn((url: string, options: { signal: AbortSignal }) => {
+      if (url === '/api/jobs/job-1/availability') {
+        oldSignal = options.signal
+        return new Promise((resolve) => {
+          finish = resolve
+        })
+      }
+      return Promise.resolve(
+        response(url.endsWith('/availability') ? { status: 'reachable' } : { sentiment: 0 }),
+      )
+    })
+    vi.stubGlobal('fetch', fetch)
+    const view = render()
+    await flushPromises()
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/jobs/job-1/availability',
+      expect.objectContaining({ credentials: 'include' }),
+    )
+    await view.setProps({ job: { ...job, id: 'job-2' } })
+    await flushPromises()
+    expect(oldSignal.aborted).toBe(true)
+    expect(view.text()).toContain('Link: reachable')
+    finish(response({ status: 'unavailable' }))
+    await flushPromises()
+    expect(view.text()).toContain('Link: reachable')
+    expect(view.text()).not.toContain('Link: unavailable')
+    const latestSignal = fetch.mock.calls.find(
+      ([url]) => url === '/api/jobs/job-2/availability',
+    )![1].signal
+    view.unmount()
+    expect(latestSignal.aborted).toBe(true)
+  })
 })
