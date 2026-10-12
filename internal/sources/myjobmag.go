@@ -14,15 +14,27 @@ import (
 
 // MyJobMag consumes the detailed Kenya RSS feed linked by /feeds/.
 type MyJobMag struct {
+	Country string // ke (default) or za; official public feed, never arbitrary market URLs
 	Client  *http.Client
 	BaseURL string
 }
 
-func (*MyJobMag) Name() string { return "myjobmag" }
+func (s *MyJobMag) Name() string {
+	if s.Country == "za" {
+		return "myjobmag-za"
+	}
+	return "myjobmag"
+}
 func (s *MyJobMag) Fetch(ctx context.Context) ([]Job, error) {
+	if s.Country != "" && s.Country != "ke" && s.Country != "za" {
+		return nil, fmt.Errorf("unsupported MyJobMag country")
+	}
 	endpoint := s.BaseURL
 	if endpoint == "" {
 		endpoint = "https://www.myjobmag.co.ke/jobsxml_by_categories.xml"
+		if s.Country == "za" {
+			endpoint = "https://www.myjobmag.co.za/jobsxml_by_categories.xml"
+		}
 	}
 	client := s.Client
 	if client == nil {

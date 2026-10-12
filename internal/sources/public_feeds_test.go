@@ -85,3 +85,19 @@ func TestMyJobMagRejectsInvalidRSSStructure(t *testing.T) {
 		})
 	}
 }
+
+func TestJobicyUsesBoundedCursorPagination(t *testing.T) {
+	calls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		if calls > 1 && r.URL.Query().Get("cursor") == "" {
+			t.Error("cursor lost")
+		}
+		w.Write([]byte(`{"nextCursor":"next-token","jobs":[{"id":1,"jobTitle":"Engineer","companyName":"Example","url":"https://jobicy.com/jobs/1"}]}`))
+	}))
+	defer server.Close()
+	jobs, err := (&Jobicy{BaseURL: server.URL}).Fetch(context.Background())
+	if err != nil || len(jobs) != 1 || calls != 2 {
+		t.Fatalf("dedup/repeated cursor: jobs=%d calls=%d err=%v", len(jobs), calls, err)
+	}
+}

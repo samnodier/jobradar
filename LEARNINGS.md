@@ -1122,3 +1122,11 @@ Backups and retention solve different problems: retention deletes stale listings
 Review questions: What failure can an in-process monitor never observe? Why is an alert sent through the failed email provider unreliable? Why claim a non-idempotent send before making it? Why must you rehearse a database restore? What data survives a Git clone and what does not?
 
 Code: `cmd/jobradar/operations.go`, `deploy/monitor.sh`, `deploy/update.sh`, `deploy/backup.sh`, `deploy/copy-backup.sh`.
+
+## Search market is not residence
+
+Adzuna was using the first desired location (for example a residence) as `where` within whichever API market was selected. A Kenyan city combined with a US search market produces empty results without a transport error. A separate saved `search_location` now scopes searches within the selected market; blank searches the whole market. Geographic matching preferences remain separate. South Africa market `za` plus Johannesburg searches that city. Jobicy follows up to three official cursor pages, deduplicating IDs and stopping on repeated cursors. MyJobMag's official South African feed is a separate optional source so its IDs and health do not collide with Kenya's feed.
+
+Review questions: Why does HTTP 200 with zero results not prove a useful query? Why separate retrieval breadth from eligibility filters? Why treat cursors as opaque values and bound traversal?
+
+Code: `cmd/jobradar/config_sources.go`, `sql/queries/match_settings.sql`, `internal/sources/jobicy.go`, `internal/sources/myjobmag.go`.

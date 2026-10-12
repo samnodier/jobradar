@@ -74,3 +74,5 @@ The original abbreviated list above is historical; migration files and SQLC mode
 ## Explicit job feedback
 
 - Migration `20261011000200`: `job_feedback` keyed by `(user_id,job_id)` with sentiment -1/1 and updated_at. Owner-scoped writes authorize public-or-owned jobs; a trigger schedules rematching in the transaction. Digest candidates exclude negative votes immediately.
+
+- Migration `20261011000300` adds `user_match_settings.search_location` (up to 100 characters, blank means whole selected market). Desired matching locations remain independent.

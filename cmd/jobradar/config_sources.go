@@ -34,6 +34,9 @@ func (cfg *apiConfig) configuredSources() ([]scheduledSource, error) {
 	if os.Getenv("MYJOBMAG_ENABLED") == "true" {
 		list = append(list, scheduledSource{&sources.MyJobMag{}, feedInterval})
 	}
+	if os.Getenv("MYJOBMAG_ZA_ENABLED") == "true" {
+		list = append(list, scheduledSource{&sources.MyJobMag{Country: "za"}, feedInterval})
+	}
 	if os.Getenv("REMOTEOK_ENABLED") != "false" {
 		list = append(list, scheduledSource{&sources.RemoteOK{}, interval})
 	}
@@ -119,19 +122,24 @@ func (a *profileAdzuna) Fetch(ctx context.Context) ([]sources.Job, error) {
 	if err != nil {
 		return nil, err
 	}
-	locations, err := a.cfg.db.GetUserDesiredLocations(ctx, user)
-	if err != nil {
-		return nil, err
-	}
-	location := ""
-	if len(locations) > 0 {
-		location = locations[0].LocationName
-	}
-	for _, label := range []string{"remote", "worldwide", "anywhere", "on-site", "hybrid"} {
-		if strings.EqualFold(location, label) {
-			location = ""
-		}
-	}
+	// A desired location belongs to MATCHING, not the selected provider market.
+	// Nairobi passed to the US endpoint silently produced empty searches. Use a
+	// separate explicit market location; blank means search the selected country.
+	location := strings.TrimSpace(settings.SearchLocation)
 	source := sources.Adzuna{AppID: a.appID, AppKey: a.key, Country: settings.SearchCountry, Queries: queries, Pages: a.pages, Location: location}
 	return source.Fetch(ctx)
+}
+
+// A read-only probe can validate integrations without starting collection or email.
+func checkPublicFeeds(ctx context.Context) error {
+	for _, source := range []sources.Source{&sources.Jobicy{}, &sources.MyJobMag{}, &sources.MyJobMag{Country: "za"}} {
+		callCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		jobs, err := source.Fetch(callCtx)
+		cancel()
+		if err != nil {
+			return fmt.Errorf("%s: %w", source.Name(), err)
+		}
+		fmt.Printf("%s: %d normalized jobs (read-only, none saved)\n", source.Name(), len(jobs))
+	}
+	return nil
 }

@@ -6,7 +6,9 @@ import (
 	"github.com/samnodier/jobradar/internal/httpx"
 	"net/http"
 	"slices"
+	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 func (cfg *apiConfig) handlerMatchSettingsGet(w http.ResponseWriter, r *http.Request) {
@@ -30,6 +32,11 @@ func (cfg *apiConfig) handlerMatchSettingsPut(w http.ResponseWriter, r *http.Req
 	var input database.UpsertMatchSettingsParams
 	if json.NewDecoder(r.Body).Decode(&input) != nil {
 		httpx.RespondError(w, 400, "invalid matching settings")
+		return
+	}
+	input.SearchLocation = strings.TrimSpace(input.SearchLocation)
+	if utf8.RuneCountInString(input.SearchLocation) > 100 {
+		httpx.RespondError(w, 400, "search location must be at most 100 characters")
 		return
 	}
 	input.UserID = id // Ownership always comes from the authenticated session.

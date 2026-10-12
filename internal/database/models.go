@@ -314,6 +314,7 @@ type UserMatchSetting struct {
 	DigestTimezone       string    `json:"digest_timezone"`
 	DigestHours          []int32   `json:"digest_hours"`
 	DigestMaxJobs        int32     `json:"digest_max_jobs"`
+	SearchLocation       string    `json:"search_location"`
 }
 
 type UserPassword struct {

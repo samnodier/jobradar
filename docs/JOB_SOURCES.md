@@ -53,3 +53,13 @@ These remain research recommendations, not implemented integrations. Configure u
 [RemoteOK's official feed help](https://remoteok.featurebase.app/help/articles/3140840-is-there-an-api-or-rssjson-feed-of-remote-jobs) documents `/api`, RSS and tag filters; it does not document a next-page cursor or offset for historical backfill. The current adapter ingests returned jobs and retains earlier stored records via upserts. Jobradar pagination queries its own accumulated database. Do not invent source page parameters or delete jobs merely because they drop out of the feed; age-based retention is the only automatic deletion.
 
 The public homepage lists the newest public jobs. Public postings older than `JOB_RETENTION_DAYS` (default 90; posting date, else first-seen date) are deleted hourly and are not re-collected; jobs you saved, applied to or imported are kept. To seed production, restore the current database backup; this also preserves profiles, saves, applications and the digest ledger.
+
+## Source follow-up
+
+Adzuna uses up to five desired roles and a separately saved location within the selected market. Leaving the source location blank searches the whole market. Desired matching locations no longer become an incompatible `where` parameter. For Johannesburg choose ZA and enter Johannesburg. See [Adzuna search documentation](https://developer.adzuna.com/docs/search).
+
+Jobicy now follows up to three cursor pages (maximum 600 returned records before deduplication); it retains the public canonical listing URL and geographic restrictions. See [official Jobicy feed documentation](https://jobicy.com/jobs-rss-feed).
+
+`MYJOBMAG_ZA_ENABLED=true` enables the separate `myjobmag-za` source using the [official South African feed](https://www.myjobmag.co.za/feeds/), while `MYJOBMAG_ENABLED=true` remains Kenya. `JOBICY_ENABLED=true` enables Jobicy. Polling is at least six hours. Set these in production's private `.env` and recreate the app after deployment; changing a file alone does not change the environment of an existing container.
+
+`go run ./cmd/jobradar --check-public-feeds` reads all three public feeds without saving jobs or sending email. It does not need a running database or model keys.

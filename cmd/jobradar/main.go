@@ -48,6 +48,7 @@ type apiConfig struct {
 }
 
 func main() {
+	publicFeeds := flag.Bool("check-public-feeds", false, "read Jobicy and MyJobMag feeds without writing jobs or sending email")
 	opsCheck := flag.Bool("ops-check", false, "check operational failures and send configured owner alerts")
 	passwordSetup := flag.String("password-setup", "", "issue a private 15-minute password setup/reset link for an email (server owner only)")
 	preview := flag.Bool("digest-preview", false, "render a digest preview without sending")
@@ -61,6 +62,12 @@ func main() {
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+	if *publicFeeds {
+		if err := checkPublicFeeds(ctx); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 	if *opsCheck {
 		if err := runOperationsCheck(ctx); err != nil {
 			log.Fatal(err)

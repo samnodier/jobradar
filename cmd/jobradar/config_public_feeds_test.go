@@ -6,7 +6,7 @@ import (
 )
 
 func TestPublicFeedsRequireOptInAndConservativeSchedule(t *testing.T) {
-	for _, key := range []string{"JOBICY_ENABLED", "MYJOBMAG_ENABLED", "ADZUNA_APP_ID", "ADZUNA_APP_KEY", "GREENHOUSE_BOARDS"} {
+	for _, key := range []string{"JOBICY_ENABLED", "MYJOBMAG_ENABLED", "MYJOBMAG_ZA_ENABLED", "ADZUNA_APP_ID", "ADZUNA_APP_KEY", "GREENHOUSE_BOARDS"} {
 		t.Setenv(key, "")
 	}
 	t.Setenv("REMOTEOK_ENABLED", "false")
@@ -18,8 +18,9 @@ func TestPublicFeedsRequireOptInAndConservativeSchedule(t *testing.T) {
 	}
 	t.Setenv("JOBICY_ENABLED", "true")
 	t.Setenv("MYJOBMAG_ENABLED", "true")
+	t.Setenv("MYJOBMAG_ZA_ENABLED", "true")
 	list, err = cfg.configuredSources()
-	if err != nil || len(list) != 2 {
+	if err != nil || len(list) != 3 {
 		t.Fatalf("missing opt-in sources: %v %v", list, err)
 	}
 	for _, source := range list {
