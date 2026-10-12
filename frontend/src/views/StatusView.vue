@@ -24,6 +24,7 @@ interface SystemStatus {
     backup?: { completed_at: string }
   }
   alerts?: { code: string; detail: string }[]
+  monitor?: { checked_at: string; email_status: string; email_detail: string }
   history_available?: boolean
   database: boolean
   redis: boolean
@@ -49,6 +50,7 @@ const banner = computed(() => {
   if (!status.value) return { text: 'Waiting for a health check', tone: 'unknown' }
   if (error.value || stale.value) return { text: 'Status may be out of date', tone: 'unknown' }
   if (
+    status.value.monitor?.email_status === 'unconfirmed' ||
     status.value.alerts?.some((alert) => alert.code !== 'publication_pending') ||
     !status.value.database ||
     !status.value.redis ||
@@ -98,7 +100,7 @@ function rate(source: Source) {
     : 'No recorded attempts in this period'
 }
 function time(value?: string | null) {
-  return value ? new Date(value).toLocaleString() : 'Not recorded'
+  return value && !value.startsWith('0001-') ? new Date(value).toLocaleString() : 'Not recorded'
 }
 async function refresh() {
   if (loading.value) return
@@ -201,6 +203,16 @@ onUnmounted(() => {
                 Selected release: <code>{{ status.deployment.update.target_revision }}</code>
               </p>
             </template>
+            <p
+              v-if="status.monitor?.checked_at && !status.monitor.checked_at.startsWith('0001')"
+              class="text-sm"
+            >
+              Operational monitor: {{ time(status.monitor.checked_at) }} · Email
+              {{ (status.monitor.email_status || 'not recorded').replace(/_/g, ' ') }}
+            </p>
+            <p v-if="status.monitor?.email_detail" class="text-sm text-amber-800">
+              {{ status.monitor.email_detail }}
+            </p>
             <p class="text-sm">
               Last server backup: {{ time(status.deployment.backup?.completed_at) }}
             </p>

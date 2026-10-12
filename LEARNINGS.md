@@ -1113,7 +1113,7 @@ Code: `sql/queries/applications.sql`, `frontend/src/views/ApplicationsView.vue`.
 
 ## Monitor from outside the process being monitored
 
-The server timer runs a one-off `--ops-check` process every fifteen minutes, reusing the deployed image rather than a mutable registry tag. It checks application availability, DB/Redis, source health, update/backup timestamps and overdue digests. Sanitized update/backup files are mounted into the app so System health reports real host events. Reading System health never sends mail. Owner email alerts use explicit `OPS_EMAIL_ENABLED` configuration and the existing provider; day-keyed claim files limit attempts and avoid repeated ambiguous sends. This conservative policy can delay another email until the next UTC day after a failed attempt.
+The server timer runs a one-off `--ops-check` process every fifteen minutes, reusing the deployed image rather than a mutable registry tag. It checks application availability, DB/Redis, source health, update/backup timestamps and overdue digests. Sanitized update/backup files are mounted into the app so System health reports real host events. Reading System health never sends mail. Owner email alerts use explicit `OPS_EMAIL_ENABLED` configuration and the existing provider; day-keyed delivery records persist an immutable payload and limit retries to three attempts. Retry-safe providers use the same key/body; ambiguous non-idempotent sends stop for owner review. System health shows the monitor timestamp and unconfirmed email state. Dependency probing and email have separate time budgets so a failed database cannot consume the notification deadline.
 
 A separate process can detect an app crash but not a dead host. Using the same mail provider to report its own outage is also a dependency cycle. Keep the UI/log record and plan an independent external heartbeat monitor for those failures. Absence checks must account for intentional no-op behavior: no qualifying jobs means no digest, and CI publication waiting is expected rather than an email incident.
 
@@ -1148,3 +1148,11 @@ A live collection failure was HTTP 503 from Adzuna, confirmed in server logs. Th
 Review questions: Why does a successful transport with zero results differ from HTTP 503? Why do retries affect an attempt-based success percentage? Why must error summaries be allowlisted rather than simply truncating a raw error?
 
 Code: `cmd/jobradar/source_failure.go`, `cmd/jobradar/handler_system.go`, `frontend/src/views/StatusView.vue`.
+
+## Review findings before promoting a release
+
+A matching image ID is not enough to clear a failed deployment: the updater now probes its embedded revision even on an unchanged release. It records failures before Git operations and validates full commit SHA pins. Operational mail retries need an immutable payload as well as an idempotency key; changing the body under the same key can invalidate safe retries. Retry-safe failures and definite rejections get bounded retries, while ambiguous non-idempotent delivery stops. A sanitized readable monitor snapshot makes failed alert delivery visible in System health. Monitor staleness is itself visible even if its Docker command never starts.
+
+Review questions: Why must an idempotency key refer to the same payload? Why is a definite rejection different from a lost response? Why must an absence check account for a stopped monitor? Why can build context exclusions matter even when a Dockerfile never copies a private file into the final image?
+
+Code: `deploy/update_test.py`, `cmd/jobradar/operations_test.go`, `.dockerignore`.

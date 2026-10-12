@@ -9,3 +9,15 @@ jobradar
 cookies.txt
 .context
 LEARNINGS.md
+# Private handoffs, recovery data and local operation records never enter build context.
+transfer
+memory
+deploy-state
+*.dump
+*.dump.partial
+AGENTS.md
+JOBRADAR_PLAN.md
+.claude
+.codex
+.agents
+bin

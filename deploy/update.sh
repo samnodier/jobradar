@@ -8,6 +8,14 @@ cd "$(dirname "$0")/.."
 exec 9>/tmp/jobradar-update.lock
 flock -n 9 || { echo "another update is running"; exit 0; }
 
+mkdir -p deploy-state
+write_state() {
+  printf '{"status":"%s","target_revision":"%s","checked_at":"%s"}\n' "$1" "${release:-unknown}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > deploy-state/update.json.tmp
+  mv deploy-state/update.json.tmp deploy-state/update.json
+}
+# Persist a sanitized outcome for System health, never command output or secrets.
+trap 'write_state failed' ERR
+
 compose() { docker compose -p jobradar -f compose.production.yml "$@"; }
 # Host port the app is published on (JOBRADAR_PORT in .env, default 8080).
 port=$(sed -n 's/^JOBRADAR_PORT=//p' .env 2>/dev/null | tail -1)
@@ -19,12 +27,14 @@ reason="${JOBRADAR_UPDATE_REASON:-}"
 
 # 1. Configuration and scripts come from main.
 if [ "$(git branch --show-current)" != "main" ]; then
+  write_state failed
   log "this checkout must be on main; not deploying"
   exit 1
 fi
 git fetch --quiet origin main
 if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
   if ! git merge --ff-only --quiet origin/main; then
+    write_state failed
     log "local checkout has diverged from origin/main; not deploying"
     exit 1
   fi
@@ -32,19 +42,18 @@ if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
   JOBRADAR_UPDATE_REASON="main moved to $(git rev-parse --short HEAD)" exec "$0" "$@"
 fi
 
-mkdir -p deploy-state
-write_state() {
-  printf '{"status":"%s","target_revision":"%s","checked_at":"%s"}\n' "$1" "${release:-unknown}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > deploy-state/update.json.tmp
-  mv deploy-state/update.json.tmp deploy-state/update.json
-}
-# Persist a sanitized outcome for System health, never command output or secrets.
-trap 'write_state failed' ERR
-
 # Pin BOTH artifacts to the selected release. If CI has not published either image,
 # leave the running app untouched; the next timer tick retries this same release.
 release=$(git rev-parse HEAD)
 pinned=$(sed -n 's/^JOBRADAR_TAG=//p' .env | tail -1)
 if [ -n "$pinned" ] && [ "$pinned" != main ]; then
+  # CI publishes only full commit IDs. Reject shorthand or arbitrary tag text;
+  # the revision health check must match the exact revision baked into the image.
+  if [[ ! "$pinned" =~ ^[0-9a-f]{40}$ ]]; then
+    write_state failed
+    log "JOBRADAR_TAG must be main or a full 40-character lowercase commit SHA"
+    exit 1
+  fi
   release="$pinned"
 fi
 export JOBRADAR_TAG="$release"
@@ -60,9 +69,22 @@ if [ "$wanted" != "$running" ]; then
   reason="${reason:+$reason; }new application image"
 fi
 
+release_is_healthy() {
+  local health
+  health=$(curl --max-time 5 -fsS "http://127.0.0.1:${port}/api/health" || true)
+  printf '%s' "$health" | grep -Eq '"revision"[[:space:]]*:[[:space:]]*"'"$release"'"'
+}
+
 if [ -z "$reason" ]; then
-  write_state healthy
-  exit 0
+  # An identical image is not evidence that its process or dependencies are healthy.
+  # Keep deployment failures visible until the selected release actually answers.
+  if release_is_healthy; then
+    write_state healthy
+    exit 0
+  fi
+  write_state failed
+  log "the selected release is unchanged but its health check failed"
+  exit 1
 fi
 write_state deploying
 log "deploying: $reason"
@@ -80,8 +102,7 @@ compose --profile tools run --rm migrate up
 compose up -d app
 
 for _ in $(seq 1 30); do
-  health=$(curl --max-time 5 -fsS "http://127.0.0.1:${port}/api/health" || true)
-  if printf '%s' "$health" | grep -Eq '"revision"[[:space:]]*:[[:space:]]*"'"$release"'"'; then
+  if release_is_healthy; then
     write_state healthy
     log "healthy on running release $release"
     docker image prune -f >/dev/null
