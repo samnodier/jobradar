@@ -1088,3 +1088,15 @@ Copy for AI now selects evaluation, resume, cover letter, interview preparation,
 Review questions: Why should mode validation happen on the server? Why is a job description data rather than an instruction? Why must tailoring never fabricate missing qualifications?
 
 Code: `cmd/jobradar/handler_ai_context.go`, `frontend/src/components/JobDetail.vue`.
+
+## Learning preferences without model APIs
+
+Explicit Good match / Not relevant votes are stored per account and posting. A trigger schedules durable rematching in the vote transaction. Content-based learning compares titles and required skills against the latest 200 labeled examples; two neutral pseudo-votes shrink sparse evidence, and the adjustment is bounded to ten points. The original role/skill/experience score still supplies the baseline. No browsing history, cross-user behavior, or demographic features are collected. A direct negative vote excludes that job from new digest selection immediately, even before rematching; clearing the vote queues a fresh score. Already-prepared emails are immutable and may still include a previously selected job.
+
+This is an initial feedback-driven recommender, not Facebook's model or a calibrated hiring probability. It deliberately trades sophisticated generalization for explainability and cheap operation. The adjustment is included in preference notes. Votes disappear when their source job is deleted by retention; longer-lived training snapshots would require an explicit data-retention design.
+
+Review questions: Why shrink one vote toward zero? How can recommendations create a feedback loop? Why should learning never override geographic eligibility? Why must vote writes and rematch scheduling be atomic? How do you distinguish relevance from a hiring outcome?
+
+Code: `internal/matcher/feedback.go`, `cmd/jobradar/worker_match.go`, `sql/queries/feedback.sql`, `frontend/src/components/JobDetail.vue`.
+
+Integration tests share one database. Parallel Go packages insert public jobs whose triggers schedule work for every account; another package can delete its account or clear its pending queue at the same time. This caused foreign-key failures and intermittent missing digest sends. CI and `make integration-test` now serialize packages (`-p 1`), while retaining the race detector inside each package. Tests should ultimately use separate per-package databases if parallel runtime is needed.

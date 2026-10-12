@@ -49,6 +49,6 @@ digest-once:
 	go run ./cmd/jobradar --digest-once
 
 integration-test:
-	TEST_DATABASE_URL='postgres://jobradar_test:jobradar_test@127.0.0.1:55432/jobradar_test?sslmode=disable' TEST_REDIS_ADDR=127.0.0.1:56379 go test -race ./internal/... ./cmd/...
+	TEST_DATABASE_URL='postgres://jobradar_test:jobradar_test@127.0.0.1:55432/jobradar_test?sslmode=disable' TEST_REDIS_ADDR=127.0.0.1:56379 go test -race -p 1 ./internal/... ./cmd/...
 
 .PHONY: build run frontend-build digest-preview digest-once integration-test migrate-reset

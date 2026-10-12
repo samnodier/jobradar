@@ -70,3 +70,7 @@ The original abbreviated list above is historical; migration files and SQLC mode
 
 - Migration `20260922000100_source_daily_health.sql`: source_health_daily `(service_name,day)` primary key, FK to service_health, nonnegative successes/failures. An observation trigger updates daily UTC counters whenever the scraper records last_run_at and prunes dates outside 30 days. No fabricated backfill.
 - ListSourceHealthDaily supplies bounded daily observations to the authenticated status API; provider raw errors remain private.
+
+## Explicit job feedback
+
+- Migration `20261011000200`: `job_feedback` keyed by `(user_id,job_id)` with sentiment -1/1 and updated_at. Owner-scoped writes authorize public-or-owned jobs; a trigger schedules rematching in the transaction. Digest candidates exclude negative votes immediately.

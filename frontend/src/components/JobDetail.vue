@@ -14,6 +14,8 @@ import {
   X,
 } from '@lucide/vue'
 import { ref, watch } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+const auth = useAuthStore()
 import DOMPurify from 'dompurify'
 import { useJobFormatting } from '@/composables/useJobFormatting'
 const { scoreBadgeClass, formatSalary, timeAgo } = useJobFormatting()
@@ -29,6 +31,42 @@ function toggleAnalysis() {
   if (!analysisSeen.value) analysisSeen.value = true
 }
 
+const feedback = ref(0)
+const feedbackBusy = ref(false)
+const feedbackMessage = ref('')
+let feedbackRead: AbortController | undefined
+watch(() => [props.job.id, auth.user?.id], async () => {
+  feedbackRead?.abort()
+  feedback.value = 0
+  feedbackMessage.value = ''
+  if (!auth.user) return
+  const controller = new AbortController()
+  feedbackRead = controller
+  try {
+    const response = await fetch(`/api/jobs/${props.job.id}/feedback`, { credentials: 'include', signal: controller.signal })
+    if (!response.ok) throw new Error('Could not load feedback')
+    const result = await response.json()
+    if (!controller.signal.aborted) feedback.value = result.sentiment
+  } catch { if (!controller.signal.aborted) feedbackMessage.value = 'Could not load your feedback.' }
+}, { immediate: true })
+async function vote(sentiment: number) {
+  if (feedbackBusy.value) return
+  const jobID = props.job.id
+  feedbackBusy.value = true
+  feedbackMessage.value = ''
+  try {
+    const response = await fetch(`/api/jobs/${jobID}/feedback`, {
+      method: sentiment ? 'PUT' : 'DELETE', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }, body: sentiment ? JSON.stringify({ sentiment }) : undefined,
+    })
+    if (!response.ok) throw new Error('Could not save feedback. Try again.')
+    if (props.job.id === jobID) {
+      feedback.value = sentiment
+      feedbackMessage.value = 'Saved. Recommendations will update as matching completes.'
+    }
+  } catch (error) { if (props.job.id === jobID) feedbackMessage.value = error instanceof Error ? error.message : 'Could not save feedback' }
+  finally { feedbackBusy.value = false }
+}
 const aiMode = ref('')
 const aiText = ref('')
 const aiError = ref('')
@@ -302,6 +340,16 @@ watch(
     </div>
 
     <section class="border-t p-4 space-y-3">
+      <div v-if="auth.user" class="space-y-2">
+        <p class="text-sm font-medium">Does this job suit you?</p>
+        <div class="flex flex-wrap gap-2">
+          <button class="button button-secondary" :aria-pressed="feedback === 1" :disabled="feedbackBusy" @click="vote(1)">Good match</button>
+          <button class="button button-secondary" :aria-pressed="feedback === -1" :disabled="feedbackBusy" @click="vote(-1)">Not relevant</button>
+          <button v-if="feedback" class="button button-secondary" :disabled="feedbackBusy" @click="vote(0)">Clear feedback</button>
+        </div>
+        <p class="text-xs text-gray-500">Your choices gently adjust rankings for similar jobs. Not relevant also excludes this job from future digests. Clearing restores its ranking.</p>
+        <p v-if="feedbackMessage" role="status" class="text-sm">{{ feedbackMessage }}</p>
+      </div>
       <p v-if="job.preference_eligible === false" class="text-sm text-amber-800">
         Outside your current preferences. You can still review and apply.
       </p>

@@ -47,7 +47,9 @@ jobs:
       - name: Vet
         run: go vet ./cmd/... ./internal/...
       - name: Unit and integration tests
-        run: go test -race ./cmd/... ./internal/...
+        # Packages share the integration database; serialize packages so fixture
+        # cleanup and public-job triggers cannot interfere across suites.
+        run: go test -race -p 1 ./cmd/... ./internal/...
 
   frontend:
     runs-on: ubuntu-latest

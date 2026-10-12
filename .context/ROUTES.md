@@ -51,3 +51,7 @@ See `cmd/jobradar/main.go` and `internal/auth/handler.go` for canonical route re
 - Server CLI `--password-setup EMAIL`: provision/recover a local account and print a private 15-minute setup link. No password argument; preserves an existing user ID.
 
 The public homepage requests the newest public jobs (order=newest) and omits session credentials for that list.
+
+- GET/PUT/DELETE `/api/jobs/{jobID}/feedback`: authenticated own vote for a public-or-owned job; PUT accepts sentiment -1 or 1; DELETE clears and schedules rematching.
+- AI-context routes accept optional `mode=evaluate|resume|cover-letter|interview|outreach`; omitted mode retains combined preparation. Invalid modes return 400.
+- System status includes the running binary revision and process start time; public health includes revision for deployment verification.

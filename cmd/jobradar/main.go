@@ -273,6 +273,9 @@ func main() {
 			r.Use(authHandler.RequireAuth)
 
 			r.Get("/jobs/{jobID}/ai-context", cfg.handlerAIContext)
+			r.Get("/jobs/{jobID}/feedback", cfg.handlerJobFeedback)
+			r.Put("/jobs/{jobID}/feedback", cfg.handlerJobFeedback)
+			r.Delete("/jobs/{jobID}/feedback", cfg.handlerJobFeedback)
 			r.Post("/jobs/import", cfg.handlerExtractJob)
 			r.Post("/jobs/import/confirm", cfg.handlerImportConfirm)
 

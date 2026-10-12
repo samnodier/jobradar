@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"strings"
 
@@ -170,6 +171,35 @@ func (cfg *apiConfig) handleMatchJob(ctx context.Context, qJob *queue.Job) error
 		return *v
 	}
 	rankedScore, eligible, notes := matcher.PreferenceScore(result.Score, matcher.Preferences{WorkMode: settings.WorkMode, IncludeUnknown: settings.IncludeUnknown, Industries: user.PreferredIndustries, CompanyStages: user.CompanyStagePreference, Locations: locationNames, JobTypes: user.PreferredJobTypes, MinSalary: user.MinSalary, MaxSalary: user.MaxSalary, Currency: value(user.SalaryCurrency)}, matcher.JobFacts{Industry: value(job.Industry), Category: value(job.Category), CompanyStage: value(job.CompanyStage), Remote: job.IsRemote, Location: value(job.JobLocation), JobType: value(job.EmploymentType), Currency: value(job.Currency), SalaryMin: job.SalaryMin, SalaryMax: job.SalaryMax})
+	feedback, err := cfg.db.ListJobFeedback(ctx, userID)
+	if err != nil {
+		return err
+	}
+	examples := make([]matcher.FeedbackExample, 0, len(feedback))
+	ownSentiment, ownErr := cfg.db.GetJobFeedback(ctx, database.GetJobFeedbackParams{UserID: userID, JobID: jobID})
+	if ownErr != nil && !errors.Is(ownErr, pgx.ErrNoRows) {
+		return ownErr
+	}
+	ownVote := int(ownSentiment)
+	for _, vote := range feedback {
+		if vote.ID == jobID {
+			continue
+		}
+		examples = append(examples, matcher.FeedbackExample{Title: vote.Title, Skills: vote.Skills, Sentiment: int(vote.Sentiment)})
+	}
+	adjustment := matcher.FeedbackAdjustment(job.Title, job.Skills, examples)
+	// Direct rejection puts this posting below every positive match threshold.
+	// Clearing feedback restores the professional/preference score on rematching.
+	if ownVote < 0 {
+		rankedScore = 0
+		eligible = false
+		notes = append(notes, "You marked this job not relevant")
+	} else {
+		rankedScore = max(0, min(100, rankedScore+adjustment))
+		if adjustment != 0 {
+			notes = append(notes, fmt.Sprintf("Your feedback on similar jobs adjusted ranking by %+d points", adjustment))
+		}
+	}
 	score := int32(rankedScore)
 	titleScore := convert.ToFloat8(result.TitleScore)
 	skillScore := convert.ToFloat8(result.SkillScore)
