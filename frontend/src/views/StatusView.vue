@@ -10,12 +10,19 @@ interface Day {
 interface Source {
   name: string
   status: string
+  detail?: string
+  jobs_last_run?: number | null
   last_success: string | null
   last_checked?: string | null
   history?: Day[]
 }
 interface SystemStatus {
-  deployment?: { revision: string; started_at: string; update?: { status: string; target_revision: string; checked_at: string }; backup?: { completed_at: string } }
+  deployment?: {
+    revision: string
+    started_at: string
+    update?: { status: string; target_revision: string; checked_at: string }
+    backup?: { completed_at: string }
+  }
   alerts?: { code: string; detail: string }[]
   history_available?: boolean
   database: boolean
@@ -42,7 +49,7 @@ const banner = computed(() => {
   if (!status.value) return { text: 'Waiting for a health check', tone: 'unknown' }
   if (error.value || stale.value) return { text: 'Status may be out of date', tone: 'unknown' }
   if (
-    status.value.alerts?.some(alert => alert.code !== 'publication_pending') ||
+    status.value.alerts?.some((alert) => alert.code !== 'publication_pending') ||
     !status.value.database ||
     !status.value.redis ||
     status.value.sources.some((source) => sourceState(source) === 'failure')
@@ -173,21 +180,48 @@ onUnmounted(() => {
           </p>
         </section>
         <template v-if="status">
-          <section v-if="status.deployment" class="border border-gray-200 p-5 space-y-2" aria-label="Deployment">
+          <section
+            v-if="status.deployment"
+            class="border border-gray-200 p-5 space-y-2"
+            aria-label="Deployment"
+          >
             <h2 class="font-semibold">Running deployment</h2>
-            <p class="text-sm break-all">Version: <code>{{ status.deployment.revision }}</code></p>
-            <p class="text-sm text-gray-500">Application started: {{ time(status.deployment.started_at) }}</p>
+            <p class="text-sm break-all">
+              Version: <code>{{ status.deployment.revision }}</code>
+            </p>
+            <p class="text-sm text-gray-500">
+              Application started: {{ time(status.deployment.started_at) }}
+            </p>
             <template v-if="status.deployment.update?.status">
-              <p class="text-sm">Latest update check: {{ status.deployment.update.status.replace(/_/g, ' ') }} · {{ time(status.deployment.update.checked_at) }}</p>
-              <p class="text-xs break-all">Selected release: <code>{{ status.deployment.update.target_revision }}</code></p>
+              <p class="text-sm">
+                Latest update check: {{ status.deployment.update.status.replace(/_/g, ' ') }} ·
+                {{ time(status.deployment.update.checked_at) }}
+              </p>
+              <p class="text-xs break-all">
+                Selected release: <code>{{ status.deployment.update.target_revision }}</code>
+              </p>
             </template>
-            <p class="text-sm">Last server backup: {{ time(status.deployment.backup?.completed_at) }}</p>
-            <p class="text-xs text-gray-500">This version comes from the running application. A successful health check alone does not prove the latest release is running.</p>
+            <p class="text-sm">
+              Last server backup: {{ time(status.deployment.backup?.completed_at) }}
+            </p>
+            <p class="text-xs text-gray-500">
+              This version comes from the running application. A successful health check alone does
+              not prove the latest release is running.
+            </p>
           </section>
-          <section v-if="status.alerts?.length" class="border border-amber-200 bg-amber-50 p-5 space-y-2" aria-label="Operational alerts">
+          <section
+            v-if="status.alerts?.length"
+            class="border border-amber-200 bg-amber-50 p-5 space-y-2"
+            aria-label="Operational alerts"
+          >
             <h2 class="font-semibold">Needs attention</h2>
-            <ul class="space-y-2 text-sm"><li v-for="alert in status.alerts" :key="alert.code">{{ alert.detail }}</li></ul>
-            <p class="text-xs text-gray-500">The server monitor can email these alerts when configured. An outage of the whole server or its email provider needs an independent monitor.</p>
+            <ul class="space-y-2 text-sm">
+              <li v-for="alert in status.alerts" :key="alert.code">{{ alert.detail }}</li>
+            </ul>
+            <p class="text-xs text-gray-500">
+              The server monitor can email these alerts when configured. An outage of the whole
+              server or its email provider needs an independent monitor.
+            </p>
           </section>
           <section
             class="border border-gray-200 divide-y divide-gray-200"
@@ -271,6 +305,7 @@ onUnmounted(() => {
                     >Latest result: {{ source.status || 'Unknown' }}</span
                   >
                 </div>
+                <p v-if="source.detail" class="text-sm text-amber-800">{{ source.detail }}</p>
                 <div class="history-bars" :aria-label="`${source.name} daily fetch results`">
                   <span
                     v-for="day in history(source)"
@@ -290,6 +325,9 @@ onUnmounted(() => {
                   <summary class="cursor-pointer text-accent">Fetch details</summary>
                   <div class="mt-2 space-y-1">
                     <p>Last attempt: {{ time(source.last_checked) }}</p>
+                    <p v-if="source.jobs_last_run != null">
+                      Jobs saved or updated on that attempt: {{ source.jobs_last_run }}
+                    </p>
                     <p>Last success: {{ time(source.last_success) }}</p>
                     <p>
                       Gray days have no recorded attempts. Historical results begin when collection

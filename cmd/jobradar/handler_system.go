@@ -95,6 +95,8 @@ func (cfg *apiConfig) handlerSystemStatus(w http.ResponseWriter, r *http.Request
 		LastSuccess *time.Time  `json:"last_success"`
 		LastChecked time.Time   `json:"last_checked"`
 		History     []dayStatus `json:"history"`
+		Detail      string      `json:"detail"`
+		JobsLastRun *int32      `json:"jobs_last_run"`
 	}
 	sources := []sourceStatus{}
 	for _, row := range rows {
@@ -102,7 +104,7 @@ func (cfg *apiConfig) handlerSystemStatus(w http.ResponseWriter, r *http.Request
 		if days == nil {
 			days = []dayStatus{}
 		}
-		sources = append(sources, sourceStatus{row.ServiceName, row.ServiceStatus, row.LastSuccessAt, row.LastRunAt.Time, days})
+		sources = append(sources, sourceStatus{row.ServiceName, row.ServiceStatus, row.LastSuccessAt, row.LastRunAt.Time, days, sourceFailureSummary(row.ServiceStatus, row.LastError), row.JobCountLastRun})
 	}
 	httpx.RespondJSON(w, 200, map[string]any{"deployment": map[string]any{"revision": buildRevision, "started_at": processStartedAt, "update": readOperationState("update.json"), "backup": readOperationState("backup.json")}, "alerts": collectOperationAlerts(ctx, cfg.pool, cfg.rdb, time.Now()), "database": dbOK, "redis": redisOK, "pending_matches": pending, "sources": sources, "history_available": historyErr == nil})
 }

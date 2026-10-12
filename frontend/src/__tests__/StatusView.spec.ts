@@ -29,12 +29,10 @@ describe('system health', () => {
   it('keeps core checks visible when history is unavailable', async () => {
     vi.stubGlobal(
       'fetch',
-      vi
-        .fn()
-        .mockResolvedValue({
-          ok: true,
-          json: async () => ({ ...snapshot, history_available: false }),
-        }),
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ ...snapshot, history_available: false }),
+      }),
     )
     const view = render()
     await flushPromises()
@@ -117,4 +115,36 @@ describe('system health', () => {
     await vi.advanceTimersByTimeAsync(30000)
     expect(fetcher).toHaveBeenCalledTimes(2)
   })
+})
+
+it('shows the running revision independently from the selected release and surfaces failures', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        ...snapshot,
+        deployment: {
+          revision: 'running-release',
+          started_at: '2026-10-11T12:00:00Z',
+          update: {
+            status: 'failed',
+            target_revision: 'new-release',
+            checked_at: '2026-10-11T12:05:00Z',
+          },
+          backup: { completed_at: '2026-10-11T03:30:00Z' },
+        },
+        alerts: [{ code: 'deployment_failed', detail: 'The latest deployment failed.' }],
+      }),
+    }),
+  )
+  const view = render()
+  await flushPromises()
+  expect(view.get('[aria-label="Deployment"]').text()).toContain('running-release')
+  expect(view.get('[aria-label="Deployment"]').text()).toContain('new-release')
+  expect(view.get('[aria-label="Operational alerts"]').text()).toContain(
+    'The latest deployment failed.',
+  )
+  expect(view.get('[role="status"]').text()).toContain('need attention')
+  view.unmount()
 })

@@ -125,17 +125,38 @@ describe('application board', () => {
   })
 })
 
-
 it('shows due follow-ups only for active applications and groups current outcomes', async () => {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response([
-    { ...application, follow_up_at: '2000-01-01T00:00:00Z', job_source: 'adzuna', match_score: 72 },
-    { ...application, id: 'app-2', application_status: 'accepted', follow_up_at: '2000-01-01T00:00:00Z', job_source: 'adzuna', match_score: 72 },
-    { ...application, id: 'app-3', follow_up_at: '2099-01-01T00:00:00Z' },
-  ])))
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue(
+      response([
+        {
+          ...application,
+          follow_up_at: '2000-01-01T00:00:00Z',
+          job_source: 'adzuna',
+          match_score: 72,
+        },
+        {
+          ...application,
+          id: 'app-2',
+          application_status: 'accepted',
+          follow_up_at: '2000-01-01T00:00:00Z',
+          job_source: 'adzuna',
+          match_score: 72,
+        },
+        { ...application, id: 'app-3', follow_up_at: '2099-01-01T00:00:00Z' },
+      ]),
+    ),
+  )
   const view = render()
   await flushPromises()
   expect(view.get('[aria-label="Due follow-ups"]').text()).toContain('Follow-ups due · 1')
   const rows = view.findAll('tbody tr')
-  expect(rows.find(row => row.text().includes('adzuna'))?.findAll('td').map(cell => cell.text())).toEqual(['adzuna', '60–79', '2', '0', '1', '0'])
+  expect(
+    rows
+      .find((row) => row.text().includes('adzuna'))
+      ?.findAll('td')
+      .map((cell) => cell.text()),
+  ).toEqual(['adzuna', '60–79', '2', '0', '1', '0'])
   view.unmount()
 })

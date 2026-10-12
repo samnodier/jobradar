@@ -1140,3 +1140,11 @@ The filter runs during the digest preparation transaction for consistency and si
 Review questions: Why does a 403 not establish closure? Why must redirect targets be checked for private addresses? Why cache a liveness result? What is the cost of network I/O inside a transaction? What stronger source evidence could establish a job has closed?
 
 Code: `internal/fetcher/availability.go`, `cmd/jobradar/handler_availability.go`, `internal/digest/service.go`, `sql/queries/availability.sql`.
+
+## Health percentages and readable failures
+
+A live collection failure was HTTP 503 from Adzuna, confirmed in server logs. This is separate from the incompatible search-market/location query bug: one is provider availability, the other is retrieval configuration. Source health percentages count recorded attempts (including retries), not the fraction of jobs collected or provider uptime. The UI now shows allowlisted failure categories and saved/updated counts for the latest attempt. Raw provider errors never leave the server because URLs may contain credentials. An old source error is not shown once the latest status becomes healthy.
+
+Review questions: Why does a successful transport with zero results differ from HTTP 503? Why do retries affect an attempt-based success percentage? Why must error summaries be allowlisted rather than simply truncating a raw error?
+
+Code: `cmd/jobradar/source_failure.go`, `cmd/jobradar/handler_system.go`, `frontend/src/views/StatusView.vue`.

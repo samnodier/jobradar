@@ -80,7 +80,7 @@ func collectOperationAlerts(ctx context.Context, pool *pgxpool.Pool, rdb *redis.
 	} else {
 		for _, source := range sources {
 			if source.ServiceStatus == "unhealthy" || source.ServiceStatus == "failed" || source.ServiceStatus == "degraded" || source.ServiceStatus == "error" {
-				alerts = append(alerts, operationAlert{"source_failed_" + source.ServiceName, source.ServiceName + ": the latest collection failed. Inspect collection logs; provider errors are not exported."})
+				alerts = append(alerts, operationAlert{"source_failed_" + source.ServiceName, source.ServiceName + ": " + sourceFailureSummary(source.ServiceStatus, source.LastError)})
 			} else if source.LastSuccessAt == nil || now.Sub(*source.LastSuccessAt) > 48*time.Hour {
 				alerts = append(alerts, operationAlert{"source_stale_" + source.ServiceName, source.ServiceName + ": no successful collection in 48 hours."})
 			}

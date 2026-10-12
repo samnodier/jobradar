@@ -49,17 +49,44 @@ onMounted(async () => {
 
 const clock = ref(Date.now())
 let reminderTimer: ReturnType<typeof setInterval> | undefined
-onMounted(() => { reminderTimer = setInterval(() => { clock.value = Date.now() }, 60000) })
+onMounted(() => {
+  reminderTimer = setInterval(() => {
+    clock.value = Date.now()
+  }, 60000)
+})
 onUnmounted(() => clearInterval(reminderTimer))
-const dueFollowUps = computed(() => applications.value.filter(app =>
-  app.follow_up_at && new Date(app.follow_up_at).getTime() <= clock.value &&
-  !['accepted', 'rejected', 'withdrawn'].includes(app.application_status),
-).sort((a, b) => new Date(a.follow_up_at!).getTime() - new Date(b.follow_up_at!).getTime()))
+const dueFollowUps = computed(() =>
+  applications.value
+    .filter(
+      (app) =>
+        app.follow_up_at &&
+        new Date(app.follow_up_at).getTime() <= clock.value &&
+        !['accepted', 'rejected', 'withdrawn'].includes(app.application_status),
+    )
+    .sort((a, b) => new Date(a.follow_up_at!).getTime() - new Date(b.follow_up_at!).getTime()),
+)
 const outcomeRows = computed(() => {
-  const rows = new Map<string, { source: string; band: string; total: number; interviews: number; offers: number; rejected: number }>()
+  const rows = new Map<
+    string,
+    {
+      source: string
+      band: string
+      total: number
+      interviews: number
+      offers: number
+      rejected: number
+    }
+  >()
   for (const app of applications.value) {
     const source = app.job_source ?? 'Unknown source'
-    const band = app.match_score == null ? 'Unscored' : app.match_score < 60 ? '0–59' : app.match_score < 80 ? '60–79' : '80–100'
+    const band =
+      app.match_score == null
+        ? 'Unscored'
+        : app.match_score < 60
+          ? '0–59'
+          : app.match_score < 80
+            ? '60–79'
+            : '80–100'
     const key = `${source}:${band}`
     const row = rows.get(key) ?? { source, band, total: 0, interviews: 0, offers: 0, rejected: 0 }
     row.total++
@@ -68,7 +95,9 @@ const outcomeRows = computed(() => {
     if (app.application_status === 'rejected') row.rejected++
     rows.set(key, row)
   }
-  return [...rows.values()].sort((a, b) => a.source.localeCompare(b.source) || a.band.localeCompare(b.band))
+  return [...rows.values()].sort(
+    (a, b) => a.source.localeCompare(b.source) || a.band.localeCompare(b.band),
+  )
 })
 const hasApplications = computed(() => applications.value.length > 0)
 
@@ -179,21 +208,57 @@ const applicationByStatus = computed(() => {
         </RouterLink>
       </header>
 
-      <section v-if="!loading && !error && dueFollowUps.length" class="border border-amber-200 bg-amber-50 p-4 shrink-0" aria-label="Due follow-ups">
+      <section
+        v-if="!loading && !error && dueFollowUps.length"
+        class="border border-amber-200 bg-amber-50 p-4 shrink-0"
+        aria-label="Due follow-ups"
+      >
         <h2 class="font-semibold">Follow-ups due · {{ dueFollowUps.length }}</h2>
         <ul class="mt-2 space-y-1 max-h-32 overflow-y-auto">
           <li v-for="app in dueFollowUps" :key="app.id">
-            <button class="text-sm underline text-accent" @click="selectedApplicationID = app.id">{{ app.job_title }} · {{ app.company_name }} · {{ new Date(app.follow_up_at!).toLocaleDateString() }}</button>
+            <button class="text-sm underline text-accent" @click="selectedApplicationID = app.id">
+              {{ app.job_title }} · {{ app.company_name }} ·
+              {{ new Date(app.follow_up_at!).toLocaleDateString() }}
+            </button>
           </li>
         </ul>
-        <p class="text-xs text-gray-500 mt-2">Open the application to reschedule or clear its follow-up date after contacting the employer.</p>
+        <p class="text-xs text-gray-500 mt-2">
+          Open the application to reschedule or clear its follow-up date after contacting the
+          employer.
+        </p>
       </section>
-      <details v-if="!loading && !error && hasApplications" class="border border-gray-200 p-4 shrink-0">
+      <details
+        v-if="!loading && !error && hasApplications"
+        class="border border-gray-200 p-4 shrink-0"
+      >
         <summary class="cursor-pointer font-semibold">Outcomes by source and score</summary>
-        <p class="text-xs text-gray-500 my-2">Current stages and current scores, not historical conversion rates. Scores can change when your profile or feedback changes.</p>
+        <p class="text-xs text-gray-500 my-2">
+          Current stages and current scores, not historical conversion rates. Scores can change when
+          your profile or feedback changes.
+        </p>
         <div class="overflow-auto max-h-48">
-          <table class="w-full text-sm text-left"><thead><tr><th>Source</th><th>Score</th><th>Tracked</th><th>Interview now</th><th>Offer / accepted</th><th>Rejected</th></tr></thead>
-          <tbody><tr v-for="row in outcomeRows" :key="`${row.source}:${row.band}`"><td>{{ row.source }}</td><td>{{ row.band }}</td><td>{{ row.total }}</td><td>{{ row.interviews }}</td><td>{{ row.offers }}</td><td>{{ row.rejected }}</td></tr></tbody></table>
+          <table class="w-full text-sm text-left">
+            <thead>
+              <tr>
+                <th>Source</th>
+                <th>Score</th>
+                <th>Tracked</th>
+                <th>Interview now</th>
+                <th>Offer / accepted</th>
+                <th>Rejected</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in outcomeRows" :key="`${row.source}:${row.band}`">
+                <td>{{ row.source }}</td>
+                <td>{{ row.band }}</td>
+                <td>{{ row.total }}</td>
+                <td>{{ row.interviews }}</td>
+                <td>{{ row.offers }}</td>
+                <td>{{ row.rejected }}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </details>
       <!-- Loading skeletons -->

@@ -178,8 +178,14 @@ async function save() {
           Select the market to search, not your residence. Searches use up to five desired roles and
           an optional location within that market. Your desired locations still control matching.
         </p>
-        <label class="block text-sm">Location within the selected market
-          <input v-model="settings.search_location" maxlength="100" class="form-input mt-1" placeholder="Blank: whole market; ZA: Johannesburg" />
+        <label class="block text-sm"
+          >Location within the selected market
+          <input
+            v-model="settings.search_location"
+            maxlength="100"
+            class="form-input mt-1"
+            placeholder="Blank: whole market; ZA: Johannesburg"
+          />
         </label>
         <p class="text-xs text-gray-600">
           Kenya is not supported by this Adzuna integration. You can import Kenyan links or enable

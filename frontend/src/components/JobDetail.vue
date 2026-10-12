@@ -31,7 +31,9 @@ function toggleAnalysis() {
   if (!analysisSeen.value) analysisSeen.value = true
 }
 
-const availability = ref<{ status: string; checked_at?: string; response_code?: number } | null>(null)
+const availability = ref<{ status: string; checked_at?: string; response_code?: number } | null>(
+  null,
+)
 const availabilityBusy = ref(false)
 const availabilityError = ref('')
 async function checkAvailability() {
@@ -40,33 +42,58 @@ async function checkAvailability() {
   availabilityBusy.value = true
   availabilityError.value = ''
   try {
-    const response = await fetch(`/api/jobs/${jobID}/availability`, { method: 'POST', credentials: 'include' })
-    if (!response.ok) throw new Error(response.status === 401 ? 'Sign in to check this posting' : 'Could not check the posting')
+    const response = await fetch(`/api/jobs/${jobID}/availability`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+    if (!response.ok)
+      throw new Error(
+        response.status === 401 ? 'Sign in to check this posting' : 'Could not check the posting',
+      )
     const result = await response.json()
     if (props.job.id === jobID) availability.value = result
-  } catch (error) { if (props.job.id === jobID) availabilityError.value = error instanceof Error ? error.message : 'Could not check' }
-  finally { availabilityBusy.value = false }
+  } catch (error) {
+    if (props.job.id === jobID)
+      availabilityError.value = error instanceof Error ? error.message : 'Could not check'
+  } finally {
+    availabilityBusy.value = false
+  }
 }
-watch(() => props.job.id, () => { availability.value = null; availabilityError.value = '' })
+watch(
+  () => props.job.id,
+  () => {
+    availability.value = null
+    availabilityError.value = ''
+  },
+)
 const feedback = ref(0)
 const feedbackBusy = ref(false)
 const feedbackMessage = ref('')
 let feedbackRead: AbortController | undefined
 onUnmounted(() => feedbackRead?.abort())
-watch(() => [props.job.id, auth.user?.id], async () => {
-  feedbackRead?.abort()
-  feedback.value = 0
-  feedbackMessage.value = ''
-  if (!auth.user) return
-  const controller = new AbortController()
-  feedbackRead = controller
-  try {
-    const response = await fetch(`/api/jobs/${props.job.id}/feedback`, { credentials: 'include', signal: controller.signal })
-    if (!response.ok) throw new Error('Could not load feedback')
-    const result = await response.json()
-    if (!controller.signal.aborted) feedback.value = result.sentiment
-  } catch { if (!controller.signal.aborted) feedbackMessage.value = 'Could not load your feedback.' }
-}, { immediate: true })
+watch(
+  () => [props.job.id, auth.user?.id],
+  async () => {
+    feedbackRead?.abort()
+    feedback.value = 0
+    feedbackMessage.value = ''
+    if (!auth.user) return
+    const controller = new AbortController()
+    feedbackRead = controller
+    try {
+      const response = await fetch(`/api/jobs/${props.job.id}/feedback`, {
+        credentials: 'include',
+        signal: controller.signal,
+      })
+      if (!response.ok) throw new Error('Could not load feedback')
+      const result = await response.json()
+      if (!controller.signal.aborted) feedback.value = result.sentiment
+    } catch {
+      if (!controller.signal.aborted) feedbackMessage.value = 'Could not load your feedback.'
+    }
+  },
+  { immediate: true },
+)
 async function vote(sentiment: number) {
   if (feedbackBusy.value) return
   const jobID = props.job.id
@@ -75,27 +102,40 @@ async function vote(sentiment: number) {
   feedbackMessage.value = ''
   try {
     const response = await fetch(`/api/jobs/${jobID}/feedback`, {
-      method: sentiment ? 'PUT' : 'DELETE', credentials: 'include',
-      headers: { 'Content-Type': 'application/json' }, body: sentiment ? JSON.stringify({ sentiment }) : undefined,
+      method: sentiment ? 'PUT' : 'DELETE',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: sentiment ? JSON.stringify({ sentiment }) : undefined,
     })
     if (!response.ok) throw new Error('Could not save feedback. Try again.')
     if (props.job.id === jobID) {
       feedback.value = sentiment
       feedbackMessage.value = 'Saved. Recommendations will update as matching completes.'
     }
-  } catch (error) { if (props.job.id === jobID) feedbackMessage.value = error instanceof Error ? error.message : 'Could not save feedback' }
-  finally { feedbackBusy.value = false }
+  } catch (error) {
+    if (props.job.id === jobID)
+      feedbackMessage.value = error instanceof Error ? error.message : 'Could not save feedback'
+  } finally {
+    feedbackBusy.value = false
+  }
 }
 const aiMode = ref('')
 const aiText = ref('')
 const aiError = ref('')
 const aiBusy = ref(false)
+function resetAIContext() {
+  aiText.value = ''
+  aiError.value = ''
+}
 async function copyForAI() {
   const jobID = props.job.id
   aiBusy.value = true
   aiError.value = ''
   try {
-    const response = await fetch(`/api/jobs/${jobID}/ai-context?mode=${encodeURIComponent(aiMode.value)}`, { credentials: 'include' })
+    const response = await fetch(
+      `/api/jobs/${jobID}/ai-context?mode=${encodeURIComponent(aiMode.value)}`,
+      { credentials: 'include' },
+    )
     if (!response.ok)
       throw new Error(
         response.status === 401
@@ -363,19 +403,58 @@ watch(
 
     <section class="border-t p-4 space-y-3">
       <div class="space-y-2">
-        <button class="button button-secondary" :disabled="availabilityBusy" @click="checkAvailability">{{ availabilityBusy ? 'Checking…' : 'Check posting link' }}</button>
-        <p v-if="availability" class="text-sm" role="status">Link: {{ availability.status }}<span v-if="availability.checked_at"> · {{ new Date(availability.checked_at).toLocaleString() }}</span></p>
+        <button
+          class="button button-secondary"
+          :disabled="availabilityBusy"
+          @click="checkAvailability"
+        >
+          {{ availabilityBusy ? 'Checking…' : 'Check posting link' }}
+        </button>
+        <p v-if="availability" class="text-sm" role="status">
+          Link: {{ availability.status
+          }}<span v-if="availability.checked_at">
+            · {{ new Date(availability.checked_at).toLocaleString() }}</span
+          >
+        </p>
         <p v-if="availabilityError" class="text-sm" role="alert">{{ availabilityError }}</p>
-        <p class="text-xs text-gray-500">Checks are cached for 24 hours. Reachable does not prove applications are open; blocked requests and timeouts remain unknown. A 404 or 410 excludes the posting from new digests without deleting it.</p>
+        <p class="text-xs text-gray-500">
+          Checks are cached for 24 hours. Reachable does not prove applications are open; blocked
+          requests and timeouts remain unknown. A 404 or 410 excludes the posting from new digests
+          without deleting it.
+        </p>
       </div>
       <div v-if="auth.user" class="space-y-2">
         <p class="text-sm font-medium">Does this job suit you?</p>
         <div class="flex flex-wrap gap-2">
-          <button class="button button-secondary" :aria-pressed="feedback === 1" :disabled="feedbackBusy" @click="vote(1)">Good match</button>
-          <button class="button button-secondary" :aria-pressed="feedback === -1" :disabled="feedbackBusy" @click="vote(-1)">Not relevant</button>
-          <button v-if="feedback" class="button button-secondary" :disabled="feedbackBusy" @click="vote(0)">Clear feedback</button>
+          <button
+            class="button button-secondary"
+            :aria-pressed="feedback === 1"
+            :disabled="feedbackBusy"
+            @click="vote(1)"
+          >
+            Good match
+          </button>
+          <button
+            class="button button-secondary"
+            :aria-pressed="feedback === -1"
+            :disabled="feedbackBusy"
+            @click="vote(-1)"
+          >
+            Not relevant
+          </button>
+          <button
+            v-if="feedback"
+            class="button button-secondary"
+            :disabled="feedbackBusy"
+            @click="vote(0)"
+          >
+            Clear feedback
+          </button>
         </div>
-        <p class="text-xs text-gray-500">Your choices gently adjust rankings for similar jobs. Not relevant also excludes this job from future digests. Clearing restores its ranking.</p>
+        <p class="text-xs text-gray-500">
+          Your choices gently adjust rankings for similar jobs. Not relevant also excludes this job
+          from future digests. Clearing restores its ranking.
+        </p>
         <p v-if="feedbackMessage" role="status" class="text-sm">{{ feedbackMessage }}</p>
       </div>
       <p v-if="job.preference_eligible === false" class="text-sm text-amber-800">
@@ -384,8 +463,14 @@ watch(
       <ul v-if="job.preference_notes?.length" class="text-xs text-gray-600">
         <li v-for="note in job.preference_notes" :key="note">{{ note }}</li>
       </ul>
-      <label class="block text-sm">Preparation mode
-        <select v-model="aiMode" :disabled="aiBusy" class="block border p-2 mt-1" @change="aiText = ''; aiError = ''">
+      <label class="block text-sm"
+        >Preparation mode
+        <select
+          v-model="aiMode"
+          :disabled="aiBusy"
+          class="block border p-2 mt-1"
+          @change="resetAIContext"
+        >
           <option value="">Complete application preparation</option>
           <option value="evaluate">Evaluate fit and gaps</option>
           <option value="resume">Tailored resume</option>
