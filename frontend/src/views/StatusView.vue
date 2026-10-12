@@ -15,7 +15,8 @@ interface Source {
   history?: Day[]
 }
 interface SystemStatus {
-  deployment?: { revision: string; started_at: string }
+  deployment?: { revision: string; started_at: string; update?: { status: string; target_revision: string; checked_at: string }; backup?: { completed_at: string } }
+  alerts?: { code: string; detail: string }[]
   history_available?: boolean
   database: boolean
   redis: boolean
@@ -41,6 +42,7 @@ const banner = computed(() => {
   if (!status.value) return { text: 'Waiting for a health check', tone: 'unknown' }
   if (error.value || stale.value) return { text: 'Status may be out of date', tone: 'unknown' }
   if (
+    status.value.alerts?.some(alert => alert.code !== 'publication_pending') ||
     !status.value.database ||
     !status.value.redis ||
     status.value.sources.some((source) => sourceState(source) === 'failure')
@@ -175,7 +177,17 @@ onUnmounted(() => {
             <h2 class="font-semibold">Running deployment</h2>
             <p class="text-sm break-all">Version: <code>{{ status.deployment.revision }}</code></p>
             <p class="text-sm text-gray-500">Application started: {{ time(status.deployment.started_at) }}</p>
+            <template v-if="status.deployment.update?.status">
+              <p class="text-sm">Latest update check: {{ status.deployment.update.status.replace(/_/g, ' ') }} · {{ time(status.deployment.update.checked_at) }}</p>
+              <p class="text-xs break-all">Selected release: <code>{{ status.deployment.update.target_revision }}</code></p>
+            </template>
+            <p class="text-sm">Last server backup: {{ time(status.deployment.backup?.completed_at) }}</p>
             <p class="text-xs text-gray-500">This version comes from the running application. A successful health check alone does not prove the latest release is running.</p>
+          </section>
+          <section v-if="status.alerts?.length" class="border border-amber-200 bg-amber-50 p-5 space-y-2" aria-label="Operational alerts">
+            <h2 class="font-semibold">Needs attention</h2>
+            <ul class="space-y-2 text-sm"><li v-for="alert in status.alerts" :key="alert.code">{{ alert.detail }}</li></ul>
+            <p class="text-xs text-gray-500">The server monitor can email these alerts when configured. An outage of the whole server or its email provider needs an independent monitor.</p>
           </section>
           <section
             class="border border-gray-200 divide-y divide-gray-200"

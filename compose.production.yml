@@ -11,6 +11,8 @@ services:
       DB_URL: postgres://${DB_USER:-sam}:${DB_PASSWORD}@db:5432/${DB_NAME:-jobradar}?sslmode=disable
       REDIS_ADDR: redis:6379
       PORT: 8080
+    volumes:
+      - ./deploy-state:/app/deploy-state
     ports:
       - "127.0.0.1:${JOBRADAR_PORT:-8080}:8080"
     depends_on:

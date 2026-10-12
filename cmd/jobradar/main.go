@@ -48,6 +48,7 @@ type apiConfig struct {
 }
 
 func main() {
+	opsCheck := flag.Bool("ops-check", false, "check operational failures and send configured owner alerts")
 	passwordSetup := flag.String("password-setup", "", "issue a private 15-minute password setup/reset link for an email (server owner only)")
 	preview := flag.Bool("digest-preview", false, "render a digest preview without sending")
 	sendOnce := flag.Bool("digest-once", false, "send today's personal digest once")
@@ -60,6 +61,12 @@ func main() {
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+	if *opsCheck {
+		if err := runOperationsCheck(ctx); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 	dbURL := os.Getenv("DB_URL")
 	dbClient, err := database.NewClient(dbURL)
 	if err != nil {

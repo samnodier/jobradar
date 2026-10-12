@@ -54,7 +54,30 @@ Persistent=true
 WantedBy=timers.target
 EOF
 
+mkdir -p "$repo/deploy-state"
+cat > "$units/jobradar-monitor.service" <<EOF
+[Unit]
+Description=Jobradar: check operations and notify owner
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=$repo
+ExecStart=$repo/deploy/monitor.sh
+EOF
+cat > "$units/jobradar-monitor.timer" <<EOF
+[Unit]
+Description=Jobradar: operational check every 15 minutes
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=15min
+
+[Install]
+WantedBy=timers.target
+EOF
 systemctl --user daemon-reload
-systemctl --user enable --now jobradar-update.timer jobradar-backup.timer
+systemctl --user enable --now jobradar-update.timer jobradar-backup.timer jobradar-monitor.timer
 systemctl --user list-timers 'jobradar-*'
 loginctl show-user "$USER" -p Linger

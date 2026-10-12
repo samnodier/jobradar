@@ -104,7 +104,7 @@ func (cfg *apiConfig) handlerSystemStatus(w http.ResponseWriter, r *http.Request
 		}
 		sources = append(sources, sourceStatus{row.ServiceName, row.ServiceStatus, row.LastSuccessAt, row.LastRunAt.Time, days})
 	}
-	httpx.RespondJSON(w, 200, map[string]any{"deployment": map[string]any{"revision": buildRevision, "started_at": processStartedAt}, "database": dbOK, "redis": redisOK, "pending_matches": pending, "sources": sources, "history_available": historyErr == nil})
+	httpx.RespondJSON(w, 200, map[string]any{"deployment": map[string]any{"revision": buildRevision, "started_at": processStartedAt, "update": readOperationState("update.json"), "backup": readOperationState("backup.json")}, "alerts": collectOperationAlerts(ctx, cfg.pool, cfg.rdb, time.Now()), "database": dbOK, "redis": redisOK, "pending_matches": pending, "sources": sources, "history_available": historyErr == nil})
 }
 func spaHandler(directory string) http.HandlerFunc {
 	if directory == "" {

@@ -6,6 +6,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 dir="${BACKUP_DIR:-$HOME/jobradar-backups}"
 keep="${BACKUP_KEEP:-14}"
+[[ "$keep" =~ ^[1-9][0-9]*$ ]] || { echo "BACKUP_KEEP must be a positive integer" >&2; exit 2; }
 mkdir -p "$dir"
 chmod 700 "$dir"
 
@@ -19,6 +20,9 @@ if [ ! -s "$file.partial" ]; then
 fi
 mv "$file.partial" "$file"
 chmod 600 "$file"
+mkdir -p deploy-state
+printf '{"completed_at":"%s"}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > deploy-state/backup.json.tmp
+mv deploy-state/backup.json.tmp deploy-state/backup.json
 echo "[backup] wrote $file ($(du -h "$file" | cut -f1))"
 
 ls -1t "$dir"/jobradar-*.dump | tail -n +"$((keep + 1))" | xargs -r rm -f

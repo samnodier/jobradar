@@ -123,3 +123,19 @@ Only one machine may run the digest scheduler: production sets `DIGEST_ENABLED=t
 See [PERSONAL_WORKFLOW.md](PERSONAL_WORKFLOW.md) for the two user scenarios, profile settings, matching limitations, sender identity, free-plan limits and self-hosted/private HTTPS deployment. The current version adds new migrations through 20260920000500; run all pending migrations before starting the new binary.
 
 System health shows the revision embedded in the running binary and its process start time. The updater requires `/api/health` to report the selected release, rather than accepting any HTTP 200. Older images without a revision are not compatible with this verification; release a newly built image before using the updated updater.
+
+## Operational checks and recovery copies
+
+After deploying the updated image, rerun `./deploy/install-systemd.sh` once to install the independent 15-minute monitor timer. Set `OPS_EMAIL_ENABLED=true` only in the production `.env` to authorize owner alerts through the configured email provider. It uses `DIGEST_RECIPIENT` and checks `PERSONAL_EMAIL`; development copies keep this flag false. No alert email is sent by a normal System health page read.
+
+System health shows the embedded running revision, latest sanitized update outcome, last successful local backup, source failures/staleness and overdue digests. Digest checks allow two hours and do not expect email when there are no qualifying undelivered jobs. Publication waiting during CI appears in the UI but does not email. The separate monitor checks the app's internal health even if the app is stopped, using the existing deployed image. It conservatively attempts each incident email at most once per UTC day; ambiguous delivery is not automatically repeated. Inspect `journalctl --user -u jobradar-monitor` for unconfirmed alert delivery. Provider acceptance is not inbox confirmation. If the host, Docker, networking, or the provider itself is down, an outside monitor is still needed.
+
+A server backup is on the same physical disk as the application. An off-server backup is simply a recovery copy on another device. It preserves profiles, saves, applications, account password hashes and encrypted provider keys as well as the remaining jobs. Age-based job cleanup does not replace disaster recovery.
+
+On the Mac, while the server is reachable over SSH:
+
+```sh
+./deploy/copy-backup.sh YOUR_SSH_HOST "$HOME/jobradar-backups"
+```
+
+This copies the latest completed dump from the default server backup directory; it does not overwrite development data or delete remote backups. Keep the stable encryption key and production configuration in a separate private recovery record. Duplicating a dump alone cannot recover encrypted provider keys without that key. Keep a small rotating set on the Mac; do not commit dumps. Periodically rehearse restore into an empty isolated database before calling a backup reliable. A sleeping Mac is suitable for manual copies but cannot guarantee an unattended backup schedule.

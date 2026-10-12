@@ -32,6 +32,14 @@ if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
   JOBRADAR_UPDATE_REASON="main moved to $(git rev-parse --short HEAD)" exec "$0" "$@"
 fi
 
+mkdir -p deploy-state
+write_state() {
+  printf '{"status":"%s","target_revision":"%s","checked_at":"%s"}\n' "$1" "${release:-unknown}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > deploy-state/update.json.tmp
+  mv deploy-state/update.json.tmp deploy-state/update.json
+}
+# Persist a sanitized outcome for System health, never command output or secrets.
+trap 'write_state failed' ERR
+
 # Pin BOTH artifacts to the selected release. If CI has not published either image,
 # leave the running app untouched; the next timer tick retries this same release.
 release=$(git rev-parse HEAD)
@@ -40,8 +48,11 @@ if [ -n "$pinned" ] && [ "$pinned" != main ]; then
   release="$pinned"
 fi
 export JOBRADAR_TAG="$release"
-compose pull --quiet app
-compose --profile tools pull --quiet migrate
+if ! compose pull --quiet app || ! compose --profile tools pull --quiet migrate; then
+  write_state waiting_for_images
+  log "release artifacts unavailable; keeping the current application running"
+  exit 1
+fi
 app_image=$(compose config --images app | grep -v -e '^postgres' -e '^redis')
 wanted=$(docker image inspect --format '{{.Id}}' "$app_image")
 running=$(docker inspect --format '{{.Image}}' "$(compose ps -q app 2>/dev/null)" 2>/dev/null || true)
@@ -50,8 +61,10 @@ if [ "$wanted" != "$running" ]; then
 fi
 
 if [ -z "$reason" ]; then
+  write_state healthy
   exit 0
 fi
+write_state deploying
 log "deploying: $reason"
 
 # 3. Back up, migrate, restart, verify.
@@ -69,12 +82,14 @@ compose up -d app
 for _ in $(seq 1 30); do
   health=$(curl --max-time 5 -fsS "http://127.0.0.1:${port}/api/health" || true)
   if printf '%s' "$health" | grep -Eq '"revision"[[:space:]]*:[[:space:]]*"'"$release"'"'; then
+    write_state healthy
     log "healthy on running release $release"
     docker image prune -f >/dev/null
     exit 0
   fi
   sleep 2
 done
+write_state failed
 log "app did not become healthy; recent logs:"
 compose logs --tail 50 app
 exit 1

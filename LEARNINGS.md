@@ -1110,3 +1110,15 @@ Current-stage counts are not a funnel history: a rejected application may previo
 Review questions: Why can't current status reconstruct historical conversion? Why must score-at-decision time be captured for calibration? Why should accepted/rejected applications stop generating reminders?
 
 Code: `sql/queries/applications.sql`, `frontend/src/views/ApplicationsView.vue`.
+
+## Monitor from outside the process being monitored
+
+The server timer runs a one-off `--ops-check` process every fifteen minutes, reusing the deployed image rather than a mutable registry tag. It checks application availability, DB/Redis, source health, update/backup timestamps and overdue digests. Sanitized update/backup files are mounted into the app so System health reports real host events. Reading System health never sends mail. Owner email alerts use explicit `OPS_EMAIL_ENABLED` configuration and the existing provider; day-keyed claim files limit attempts and avoid repeated ambiguous sends. This conservative policy can delay another email until the next UTC day after a failed attempt.
+
+A separate process can detect an app crash but not a dead host. Using the same mail provider to report its own outage is also a dependency cycle. Keep the UI/log record and plan an independent external heartbeat monitor for those failures. Absence checks must account for intentional no-op behavior: no qualifying jobs means no digest, and CI publication waiting is expected rather than an email incident.
+
+Backups and retention solve different problems: retention deletes stale listings from the live dataset, while backups preserve the remaining user data for recovery. `deploy/copy-backup.sh` streams a completed server dump over authenticated SSH to a private local directory. It does not sync source code or rewrite the development database. The stable encryption key must be recoverable separately.
+
+Review questions: What failure can an in-process monitor never observe? Why is an alert sent through the failed email provider unreliable? Why claim a non-idempotent send before making it? Why must you rehearse a database restore? What data survives a Git clone and what does not?
+
+Code: `cmd/jobradar/operations.go`, `deploy/monitor.sh`, `deploy/update.sh`, `deploy/backup.sh`, `deploy/copy-backup.sh`.
