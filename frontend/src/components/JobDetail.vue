@@ -13,7 +13,7 @@ import {
   Sparkles,
   X,
 } from '@lucide/vue'
-import { ref, watch } from 'vue'
+import { onUnmounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 const auth = useAuthStore()
 import DOMPurify from 'dompurify'
@@ -31,10 +31,28 @@ function toggleAnalysis() {
   if (!analysisSeen.value) analysisSeen.value = true
 }
 
+const availability = ref<{ status: string; checked_at?: string; response_code?: number } | null>(null)
+const availabilityBusy = ref(false)
+const availabilityError = ref('')
+async function checkAvailability() {
+  if (availabilityBusy.value) return
+  const jobID = props.job.id
+  availabilityBusy.value = true
+  availabilityError.value = ''
+  try {
+    const response = await fetch(`/api/jobs/${jobID}/availability`, { method: 'POST', credentials: 'include' })
+    if (!response.ok) throw new Error(response.status === 401 ? 'Sign in to check this posting' : 'Could not check the posting')
+    const result = await response.json()
+    if (props.job.id === jobID) availability.value = result
+  } catch (error) { if (props.job.id === jobID) availabilityError.value = error instanceof Error ? error.message : 'Could not check' }
+  finally { availabilityBusy.value = false }
+}
+watch(() => props.job.id, () => { availability.value = null; availabilityError.value = '' })
 const feedback = ref(0)
 const feedbackBusy = ref(false)
 const feedbackMessage = ref('')
 let feedbackRead: AbortController | undefined
+onUnmounted(() => feedbackRead?.abort())
 watch(() => [props.job.id, auth.user?.id], async () => {
   feedbackRead?.abort()
   feedback.value = 0
@@ -52,6 +70,7 @@ watch(() => [props.job.id, auth.user?.id], async () => {
 async function vote(sentiment: number) {
   if (feedbackBusy.value) return
   const jobID = props.job.id
+  feedbackRead?.abort()
   feedbackBusy.value = true
   feedbackMessage.value = ''
   try {
@@ -72,17 +91,20 @@ const aiText = ref('')
 const aiError = ref('')
 const aiBusy = ref(false)
 async function copyForAI() {
+  const jobID = props.job.id
   aiBusy.value = true
   aiError.value = ''
   try {
-    const response = await fetch(`/api/jobs/${props.job.id}/ai-context?mode=${encodeURIComponent(aiMode.value)}`, { credentials: 'include' })
+    const response = await fetch(`/api/jobs/${jobID}/ai-context?mode=${encodeURIComponent(aiMode.value)}`, { credentials: 'include' })
     if (!response.ok)
       throw new Error(
         response.status === 401
           ? 'Sign in to include your profile'
           : 'Could not prepare AI context',
       )
-    aiText.value = await response.text()
+    const markdown = await response.text()
+    if (props.job.id !== jobID) return
+    aiText.value = markdown
     try {
       await navigator.clipboard.writeText(aiText.value)
       aiError.value = 'Copied. Paste into your AI chat and review the result.'
@@ -340,6 +362,12 @@ watch(
     </div>
 
     <section class="border-t p-4 space-y-3">
+      <div class="space-y-2">
+        <button class="button button-secondary" :disabled="availabilityBusy" @click="checkAvailability">{{ availabilityBusy ? 'Checking…' : 'Check posting link' }}</button>
+        <p v-if="availability" class="text-sm" role="status">Link: {{ availability.status }}<span v-if="availability.checked_at"> · {{ new Date(availability.checked_at).toLocaleString() }}</span></p>
+        <p v-if="availabilityError" class="text-sm" role="alert">{{ availabilityError }}</p>
+        <p class="text-xs text-gray-500">Checks are cached for 24 hours. Reachable does not prove applications are open; blocked requests and timeouts remain unknown. A 404 or 410 excludes the posting from new digests without deleting it.</p>
+      </div>
       <div v-if="auth.user" class="space-y-2">
         <p class="text-sm font-medium">Does this job suit you?</p>
         <div class="flex flex-wrap gap-2">

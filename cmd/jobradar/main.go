@@ -105,6 +105,8 @@ func main() {
 		log.Fatal(err)
 	}
 	digestService := &digest.Service{Pool: dbClient.Pool, Config: digestConfig, Sender: emailSender}
+	availabilityConfig := &apiConfig{db: dbClient.Queries}
+	digestService.CandidateFilter = availabilityConfig.filterDigestAvailability
 	if *preview {
 		html, err := digestService.Preview(ctx)
 		if err != nil {
@@ -188,6 +190,7 @@ func main() {
 		jobRetention:        jobRetention,
 	}
 
+	digestService.CandidateFilter = cfg.filterDigestAvailability
 	wp := queue.NewWorkerPool(q, 2)
 	wp.RegisterHandler(queue.JobMatchJob, cfg.handleDurableMatch)
 	enrichPool := queue.NewWorkerPool(enrichQueue, 1)
@@ -287,6 +290,8 @@ func main() {
 			r.Use(authHandler.RequireAuth)
 
 			r.Get("/jobs/{jobID}/ai-context", cfg.handlerAIContext)
+			r.Get("/jobs/{jobID}/availability", cfg.handlerJobAvailability)
+			r.Post("/jobs/{jobID}/availability", cfg.handlerJobAvailability)
 			r.Get("/jobs/{jobID}/feedback", cfg.handlerJobFeedback)
 			r.Put("/jobs/{jobID}/feedback", cfg.handlerJobFeedback)
 			r.Delete("/jobs/{jobID}/feedback", cfg.handlerJobFeedback)

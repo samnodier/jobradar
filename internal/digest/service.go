@@ -16,16 +16,17 @@ import (
 )
 
 type Service struct {
-	Pool   *pgxpool.Pool
-	Config Config
-	Sender mailer.Sender
+	Pool            *pgxpool.Pool
+	Config          Config
+	Sender          mailer.Sender
+	CandidateFilter func(context.Context, []database.GetDigestCandidatesRow) ([]database.GetDigestCandidatesRow, error)
 }
 
 func (s *Service) Run(ctx context.Context) {
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 	for {
-		callCtx, cancel := context.WithTimeout(ctx, 45*time.Second)
+		callCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
 		if err := s.Tick(callCtx, time.Now(), false); err != nil && ctx.Err() == nil {
 			log.Printf("digest: %v", err)
 		}
@@ -121,6 +122,12 @@ func (s *Service) Tick(ctx context.Context, now time.Time, force bool) error {
 				jobs, e := tq.GetDigestCandidates(ctx, database.GetDigestCandidatesParams{UserID: userID, MatchScore: &score, Limit: settings.DigestMaxJobs})
 				if e != nil {
 					return e
+				}
+				if s.CandidateFilter != nil {
+					jobs, e = s.CandidateFilter(ctx, jobs)
+					if e != nil {
+						return e
+					}
 				}
 				if len(jobs) == 0 {
 					return nil

@@ -55,3 +55,5 @@ The public homepage requests the newest public jobs (order=newest) and omits ses
 - GET/PUT/DELETE `/api/jobs/{jobID}/feedback`: authenticated own vote for a public-or-owned job; PUT accepts sentiment -1 or 1; DELETE clears and schedules rematching.
 - AI-context routes accept optional `mode=evaluate|resume|cover-letter|interview|outreach`; omitted mode retains combined preparation. Invalid modes return 400.
 - System status includes the running binary revision and process start time; public health includes revision for deployment verification.
+
+- GET/POST `/api/jobs/{jobID}/availability`: authenticated public-or-owned cached availability; POST performs a SSRF-protected link check at most once daily. Reachable does not mean confirmed open; 404/410 is unavailable; network/access failures are unknown.

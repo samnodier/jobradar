@@ -134,6 +134,7 @@ SELECT j.id, j.title, j.company_name, j.source_url, j.job_source, j.job_location
 FROM jobs j JOIN user_job_matches m ON m.job_id=j.id AND m.user_id=$1
 WHERE (j.created_by_user_id IS NULL OR j.created_by_user_id=$1)
  AND NOT EXISTS (SELECT 1 FROM job_feedback f WHERE f.user_id=$1 AND f.job_id=j.id AND f.sentiment=-1)
+ AND NOT EXISTS (SELECT 1 FROM job_availability a WHERE a.job_id=j.id AND a.status='unavailable' AND a.checked_at>now()-interval '48 hours')
  AND m.match_score >= $2
  AND COALESCE(j.posted_at,j.created_at) >= now() - interval '30 days'
  AND (j.expires_at IS NULL OR j.expires_at > now())

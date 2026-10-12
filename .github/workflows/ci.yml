@@ -46,6 +46,10 @@ jobs:
           goose -dir sql/schema postgres "$TEST_DATABASE_URL" up
       - name: Vet
         run: go vet ./cmd/... ./internal/...
+      - name: Deployment ordering checks
+        run: |
+          bash -n deploy/*.sh
+          python3 deploy/update_test.py
       - name: Unit and integration tests
         # Packages share the integration database; serialize packages so fixture
         # cleanup and public-job triggers cannot interfere across suites.

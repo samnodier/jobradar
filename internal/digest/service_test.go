@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/samnodier/jobradar/internal/database"
 	"github.com/samnodier/jobradar/internal/mailer"
 	"github.com/samnodier/jobradar/internal/testutil"
 )
@@ -253,5 +254,49 @@ func TestScoreOnlyDigestCapsAtTwenty(t *testing.T) {
 	}
 	if count != 20 || minimum != 65 {
 		t.Fatalf("count %d minimum %d", count, minimum)
+	}
+}
+
+func TestAvailabilityFilterRunsBeforeEmailPreparation(t *testing.T) {
+	s, f, _, _ := setup(t)
+	called := false
+	s.CandidateFilter = func(_ context.Context, rows []database.GetDigestCandidatesRow) ([]database.GetDigestCandidatesRow, error) {
+		called = true
+		if len(rows) != 1 {
+			t.Fatalf("unexpected candidates %d", len(rows))
+		}
+		return nil, nil
+	}
+	if err := s.Tick(context.Background(), time.Now(), true); err != nil {
+		t.Fatal(err)
+	}
+	if !called || f.calls != 0 {
+		t.Fatal("unavailable posting was emailed")
+	}
+}
+func TestRecentUnavailablePostingExcludedFromCandidates(t *testing.T) {
+	s, _, user, p := setup(t)
+	ctx := context.Background()
+	q := database.New(p)
+	var jobID uuid.UUID
+	if err := p.QueryRow(ctx, "SELECT job_id FROM user_job_matches WHERE user_id=$1", user).Scan(&jobID); err != nil {
+		t.Fatal(err)
+	}
+	if err := q.RecordJobAvailability(ctx, database.RecordJobAvailabilityParams{JobID: jobID, Status: "unavailable", ResponseCode: 404}); err != nil {
+		t.Fatal(err)
+	}
+	html, err := s.Preview(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(html, "Engineer") {
+		t.Fatal("recent unavailable job remained in digest")
+	}
+	if err := q.RecordJobAvailability(ctx, database.RecordJobAvailabilityParams{JobID: jobID, Status: "unknown", ResponseCode: 403}); err != nil {
+		t.Fatal(err)
+	}
+	html, err = s.Preview(ctx)
+	if err != nil || !strings.Contains(html, "Engineer") {
+		t.Fatal("unknown must not be treated as closed", err)
 	}
 }

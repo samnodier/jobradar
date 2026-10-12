@@ -86,6 +86,13 @@ type Job struct {
 	CompanyStage    *string            `json:"company_stage"`
 }
 
+type JobAvailability struct {
+	JobID        uuid.UUID          `json:"job_id"`
+	Status       string             `json:"status"`
+	ResponseCode int32              `json:"response_code"`
+	CheckedAt    pgtype.Timestamptz `json:"checked_at"`
+}
+
 type JobFeedback struct {
 	UserID    uuid.UUID          `json:"user_id"`
 	JobID     uuid.UUID          `json:"job_id"`

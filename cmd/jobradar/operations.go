@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html"
 	"io"
@@ -14,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"github.com/samnodier/jobradar/internal/database"
@@ -118,6 +120,9 @@ func collectOperationAlerts(ctx context.Context, pool *pgxpool.Pool, rdb *redis.
 	}
 	var status string
 	err = pool.QueryRow(ctx, "SELECT status FROM email_digests WHERE user_id=$1 AND digest_date=$2::date AND digest_slot=$3", userID, local.Format("2006-01-02"), slot).Scan(&status)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return append(alerts, operationAlert{"digest_status_unknown", "Could not read the latest scheduled digest state."})
+	}
 	if err == nil && status == "sent" {
 		return alerts
 	}
@@ -130,6 +135,7 @@ func collectOperationAlerts(ctx context.Context, pool *pgxpool.Pool, rdb *redis.
 	err = pool.QueryRow(ctx, `SELECT count(*) FROM jobs j JOIN user_job_matches m ON m.job_id=j.id AND m.user_id=$1
  WHERE m.match_score >= $2 AND COALESCE(j.posted_at,j.created_at)>=now()-interval '30 days'
  AND (j.expires_at IS NULL OR j.expires_at>now())
+ AND NOT EXISTS(SELECT 1 FROM job_availability a WHERE a.job_id=j.id AND a.status='unavailable' AND a.checked_at>now()-interval '48 hours')
  AND NOT EXISTS(SELECT 1 FROM email_digest_jobs d WHERE d.user_id=$1 AND d.job_id=j.id)
  AND NOT EXISTS(SELECT 1 FROM job_feedback f WHERE f.user_id=$1 AND f.job_id=j.id AND f.sentiment=-1)`, userID, settings.MinScore).Scan(&candidates)
 	if err == nil && candidates > 0 {

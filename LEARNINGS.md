@@ -1130,3 +1130,13 @@ Adzuna was using the first desired location (for example a residence) as `where`
 Review questions: Why does HTTP 200 with zero results not prove a useful query? Why separate retrieval breadth from eligibility filters? Why treat cursors as opaque values and bound traversal?
 
 Code: `cmd/jobradar/config_sources.go`, `sql/queries/match_settings.sql`, `internal/sources/jobicy.go`, `internal/sources/myjobmag.go`.
+
+## A live page is not an open vacancy
+
+Posting checks reuse import's connection-level SSRF defenses, including redirect targets. HTTP 404/410 records unavailable; 2xx records reachable; access blocks, timeouts and provider failures remain unknown. A daily cache bounds employer requests. Availability never deletes a saved job or application. Authenticated users can check a posting from its detail panel. Scheduled/one-off digest preparation checks the selected candidates and removes unavailable links before preparing the immutable email; preview is read-only and uses cached evidence. The digest worker budget is now 90 seconds for bounded checks plus provider delivery.
+
+The filter runs during the digest preparation transaction for consistency and simplicity in this single-account release, holding a database connection while bounded network checks complete. At larger scale, move checks to a separate worker and require sufficiently recent observations before selection. Unknown jobs remain eligible: failing closed would hide legitimate postings behind anti-bot protections. HTTP 200 may be a generic expired page, so this is conservative link availability, not full expired-job or ghost-job detection.
+
+Review questions: Why does a 403 not establish closure? Why must redirect targets be checked for private addresses? Why cache a liveness result? What is the cost of network I/O inside a transaction? What stronger source evidence could establish a job has closed?
+
+Code: `internal/fetcher/availability.go`, `cmd/jobradar/handler_availability.go`, `internal/digest/service.go`, `sql/queries/availability.sql`.

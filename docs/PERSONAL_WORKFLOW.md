@@ -78,3 +78,13 @@ The sender must match the exact verified domain: `jobs@mail.example.com`. Set th
 `bin/jobradar --digest-preview` writes HTML without sending. `bin/jobradar --digest-test` sends a real preview to the configured personal recipient without reserving jobs or consuming the morning slot. Repeating the same preview on the same UTC date uses the same provider idempotency key. `--digest-once` runs the real delivery cycle, which does reserve jobs.
 
 This worker uses local infrastructure: the computer must stay awake and online, and PostgreSQL must be running. Keep the main Jobradar server running for new source collection and matching. Existing matches can be emailed by the independent worker. App links currently use APP_BASE_URL (localhost for development); original job links work directly from the email.
+
+## Feedback and posting checks
+
+In a job's detail panel, Good match / Not relevant records explicit account-specific feedback. Similar postings receive a bounded adjustment of up to ten ranking points. Not relevant excludes that job from new digest selection; Clear feedback queues restoration of its score. Existing prepared emails remain immutable.
+
+Check posting link records reachable / unavailable / unknown, cached for 24 hours. Reachable is not confirmation applications are still open. A 404 or 410 excludes a posting from new digest preparation; 403, timeouts and other uncertain results do not. Nothing deletes your application history. Scheduled digests also check selected links before preparing mail. The email can contain fewer jobs when links are unavailable.
+
+Copy for AI offers combined preparation or focused evaluation, resume, cover-letter, interview and outreach modes. All use your saved facts and explicit instructions not to invent credentials; you choose where to paste the text. No model API key is needed.
+
+Applications displays due follow-ups for active stages and a table of current outcomes by source and score. After following up, clear or reschedule its date. Current stages/scores are not historical conversion rates.
