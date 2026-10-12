@@ -4,7 +4,7 @@ Read this file, `.context/PLAN.md`'s current snapshot, and `docs/RELEASE_REVIEW.
 
 ## Delivery state
 
-Work is committed on `feature/release-reconciliation`, created from `dev`. Verified feature work is integrated into `dev`; `main` stays at the current personal release until Sam's manual review. Check `git status`, branch tips and remote CI before assuming any release is deployed.
+Work is committed on `feature/release-reconciliation`, created from `dev`. Verified feature work is integrated into `dev`; `main` was promoted to `f6de189` with Sam's explicit one-time approval after automated testing. Future releases still wait for manual review/confirmation. Production now reports the exact embedded revision `f6de189`; its three migrations and pre-deploy backup completed successfully. Source collection and the independent monitor are verified. Check branch tips and runtime version before assuming subsequent work is deployed.
 
 Implemented: bounded explicit-feedback learning; focused AI preparation exports; application follow-ups/current outcomes; SHA-pinned app/migration artifacts and actual running revision; host monitoring plus safe owner-email retries and visible unconfirmed delivery; backup copy to another device; safe cached posting availability checks in digest preparation; separate Adzuna market location; Jobicy cursor traversal; Kenya/South Africa MyJobMag adapters. Existing login recovery and resume data work are preserved.
 
@@ -15,8 +15,8 @@ The live screenshot's Adzuna failure was provider HTTP 503, confirmed read-only.
 ## Next actions
 
 1. Follow `docs/RELEASE_REVIEW.md` for local manual checks on the existing Mac checkout; do not delete the folder or restore over an existing populated database.
-2. After review, promote tested `dev` to `main`; CI publishes both SHA-tagged images, then the server updater deploys them together. Confirm the running revision, not merely HTTP 200.
-3. Set production source flags and operational-email opt-in privately, recreate the exact reviewed app image and rerun `deploy/install-systemd.sh` to install the monitor timer. These are not activated by editing `.env.example`.
+2. This release was explicitly authorized and pushed to main; confirm production reports `f6de189` and complete the remaining manual checks. Future releases must still wait for Sam's manual review/confirmation.
+3. Production source flags and operational-email opt-in are now enabled, with the new monitor timer installed. All five sources are healthy; assess the collected jobs for relevance. Development must keep digest/operational email disabled.
 4. Copy a completed backup to another device with `deploy/copy-backup.sh`, preserve private configuration/encryption key separately, and rehearse restore into an isolated empty database.
 5. Configure public GitHub OAuth if wanted (existing implementation, account credentials required); verify actual scheduled mail, source relevance, PDF printing and unattended operation.
 

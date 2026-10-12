@@ -1,6 +1,6 @@
 # Reconciliation release review
 
-This release is implemented on `feature/release-reconciliation` and has not been deployed. Review it locally before promoting to `main`, which triggers production deployment. Keep the existing Mac checkout and its private configuration; no folder deletion or history reset is needed.
+This release was implemented and tested on `feature/release-reconciliation`. Sam explicitly authorized promotion of `f6de189` to `main` after automated verification. Production reports the exact revision `f6de189`, with successful migration/backup, healthy source collection and an active monitor timer; the manual checks below remain useful acceptance work. This approval applies only to this release; future releases still wait for manual review/confirmation. Keep the existing Mac checkout and its private configuration; no folder deletion or history reset is needed.
 
 ## Local review
 

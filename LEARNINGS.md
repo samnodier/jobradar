@@ -1156,3 +1156,12 @@ A matching image ID is not enough to clear a failed deployment: the updater now 
 Review questions: Why must an idempotency key refer to the same payload? Why is a definite rejection different from a lost response? Why must an absence check account for a stopped monitor? Why can build context exclusions matter even when a Dockerfile never copies a private file into the final image?
 
 Code: `deploy/update_test.py`, `cmd/jobradar/operations_test.go`, `.dockerignore`.
+
+
+## Authorized production promotion and verification
+
+Sam explicitly authorized this tested release to go to main without waiting for the remaining manual review. This exception is limited to this release; future promotions still require review/confirmation. Promotion alone is not proof of deployment: CI passed and published both artifacts, then the production app reported the exact embedded commit SHA. The updater's backup and all three migrations completed before the new app started. Source flags were prepared privately before startup, avoiding a second restart just to load them. The independent monitor timer was installed and its first check completed successfully. All five sources collected successfully, including Adzuna after the separate market-location fix; processed counts include updates, so they are not unique-new-job totals.
+
+Review questions: What evidence distinguishes a pushed commit from a running release? Why prepare environment changes before restarting? Why does a successful monitor run not prove inbox delivery? Why should a one-time approval not become a standing bypass of manual review?
+
+Code/config: `deploy/update.sh`, `deploy/install-systemd.sh`, `.context/PLAN.md`.
