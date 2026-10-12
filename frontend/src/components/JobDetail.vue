@@ -29,6 +29,7 @@ function toggleAnalysis() {
   if (!analysisSeen.value) analysisSeen.value = true
 }
 
+const aiMode = ref('')
 const aiText = ref('')
 const aiError = ref('')
 const aiBusy = ref(false)
@@ -36,7 +37,7 @@ async function copyForAI() {
   aiBusy.value = true
   aiError.value = ''
   try {
-    const response = await fetch(`/api/jobs/${props.job.id}/ai-context`, { credentials: 'include' })
+    const response = await fetch(`/api/jobs/${props.job.id}/ai-context?mode=${encodeURIComponent(aiMode.value)}`, { credentials: 'include' })
     if (!response.ok)
       throw new Error(
         response.status === 401
@@ -307,6 +308,16 @@ watch(
       <ul v-if="job.preference_notes?.length" class="text-xs text-gray-600">
         <li v-for="note in job.preference_notes" :key="note">{{ note }}</li>
       </ul>
+      <label class="block text-sm">Preparation mode
+        <select v-model="aiMode" :disabled="aiBusy" class="block border p-2 mt-1" @change="aiText = ''; aiError = ''">
+          <option value="">Complete application preparation</option>
+          <option value="evaluate">Evaluate fit and gaps</option>
+          <option value="resume">Tailored resume</option>
+          <option value="cover-letter">Cover letter</option>
+          <option value="interview">Interview preparation</option>
+          <option value="outreach">Recruiter outreach and follow-up</option>
+        </select>
+      </label>
       <button class="button button-secondary" :disabled="aiBusy" @click="copyForAI">
         {{ aiBusy ? 'Preparing…' : 'Copy for AI' }}
       </button>

@@ -1080,3 +1080,11 @@ The repository can advance before CI finishes publishing. Pulling the mutable `m
 Review questions: Why does HTTP 200 fail to prove which version is running? Why must migrations and application artifacts share a release identity? What happens when only one image has been published?
 
 Code: `deploy/update.sh`, `Dockerfile`, `cmd/jobradar/handler_health.go`, `frontend/src/views/StatusView.vue`.
+
+## Explicit AI preparation modes
+
+Copy for AI now selects evaluation, resume, cover letter, interview preparation, outreach, or the existing combined task. The authenticated export validates an allowlisted mode before building the same scoped profile snapshot. Nothing calls a model or sends a message. Instructions distinguish candidate evidence from untrusted job/profile text and require missing facts to remain questions. These are original compact prompts, not copied career-ops scripts.
+
+Review questions: Why should mode validation happen on the server? Why is a job description data rather than an instruction? Why must tailoring never fabricate missing qualifications?
+
+Code: `cmd/jobradar/handler_ai_context.go`, `frontend/src/components/JobDetail.vue`.
