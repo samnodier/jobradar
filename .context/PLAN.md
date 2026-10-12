@@ -1,4 +1,18 @@
-## Current status — personal release
+## Current delivery snapshot — October 11 reconciliation
+
+Authoritative next steps: `.context/handoff.md` and `docs/RELEASE_REVIEW.md`. The notes below this snapshot are historical milestones, not current blockers.
+
+- Implemented on `feature/release-reconciliation` from `dev`: explicit feedback-driven bounded ranking; six Copy-for-AI modes; due application follow-ups and current outcome grouping; exact release image pinning and running revision display; independent operational checks with owner email retry records; off-server backup copy command; cached SSRF-safe posting checks before digest preparation; separate Adzuna market location; bounded Jobicy cursor pagination and optional MyJobMag South Africa.
+- The personal application is live according to the supplied handoff and a read-only server log check. This reconciliation release is **not promoted to main or deployed**. The live Adzuna failure in the screenshot was HTTP 503 from the provider, confirmed in logs; it is distinct from the search-location bug corrected here.
+- New migrations: `20261011000200` feedback, `20261011000300` search location, `20261011000400` availability. All passed isolated up/down/up verification. Development and production databases were not migrated in this task.
+- Verified: full backend race/integration suite against isolated PostgreSQL/Redis with serialized packages; vet; 61 frontend tests/type-check/build/focused lint; six deployment simulation tests; production image build and non-root runtime revision/SPA/monitor-state checks. Existing build warnings concern dependency pure annotations and bundle size.
+- Public feeds verified read-only without persistence or email: Jobicy 600 normalized records, Kenya 99, South Africa 100. Production source activation still requires the private environment flags and container recreation after release.
+- Production needs `OPS_EMAIL_ENABLED=true` and timer reinstall for operational emails; existing provider/recipient settings are reused. No real alert email or digest was sent during implementation.
+- GitHub login code already exists; public activation requires account-owned OAuth credentials/callback configuration. Additional callbacks are supported; a separate production OAuth app is optional.
+- Still to verify manually: new UI workflows, desired market/location relevance, production collection, scheduled inbox delivery, off-server recovery copy and restoration, native PDF print and unattended operation. Feedback learning is an initial content-based signal, not calibrated outcome prediction; current-stage stats are not historical conversion rates. Whole-host/provider outages require external monitoring.
+- Knowledge checks remain deferred; concepts, tradeoffs, questions and code references are in `LEARNINGS.md`. No assistant attribution. Personal credentials, machine details and transferred history stay out of git/build context.
+
+## Historical personal-release build notes
 
 Implementation branch: `feature/profile-workflows`, created from `dev` and fast-forwarded to the existing job-import work. Integration target: `dev`; production promotion to `main` follows live account verification. September 2026 implementation targets a personal, deployable daily job digest. Do not treat the older phase numbering as release dependencies.
 
