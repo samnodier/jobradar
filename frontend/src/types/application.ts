@@ -9,6 +9,8 @@ export interface Application {
   notes: string | null
   created_at: string
   updated_at: string
+  job_source?: string
+  match_score?: number | null
   job_title: string
   company_name: string
   job_location: string | null

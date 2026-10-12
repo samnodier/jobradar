@@ -1100,3 +1100,13 @@ Review questions: Why shrink one vote toward zero? How can recommendations creat
 Code: `internal/matcher/feedback.go`, `cmd/jobradar/worker_match.go`, `sql/queries/feedback.sql`, `frontend/src/components/JobDetail.vue`.
 
 Integration tests share one database. Parallel Go packages insert public jobs whose triggers schedule work for every account; another package can delete its account or clear its pending queue at the same time. This caused foreign-key failures and intermittent missing digest sends. CI and `make integration-test` now serialize packages (`-p 1`), while retaining the race detector inside each package. Tests should ultimately use separate per-package databases if parallel runtime is needed.
+
+## Follow-up reminders and honest outcome statistics
+
+The application board derives due reminders from saved follow-up dates and excludes terminal stages. Its minute clock makes a reminder appear without reloading as the due time passes. Clearing or rescheduling the date acknowledges the task; no recruiter message is sent automatically. The same owner-scoped application query now includes source and current match score, allowing a source/score table of current stages.
+
+Current-stage counts are not a funnel history: a rejected application may previously have reached interview, but no stage-event ledger exists. Current scores are also not scores at application time. The UI states these limitations rather than inventing conversion rates. A future calibration study should snapshot the score at application time and record stage transitions.
+
+Review questions: Why can't current status reconstruct historical conversion? Why must score-at-decision time be captured for calibration? Why should accepted/rejected applications stop generating reminders?
+
+Code: `sql/queries/applications.sql`, `frontend/src/views/ApplicationsView.vue`.

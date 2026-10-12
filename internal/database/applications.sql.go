@@ -191,9 +191,12 @@ SELECT
     j.job_location,
     j.source_url,
     j.is_remote AS job_is_remote,
-    j.logo_url AS job_logo_url
+    j.logo_url AS job_logo_url,
+    j.job_source,
+    m.match_score
 FROM applications AS a
 INNER JOIN jobs AS j ON a.job_id = j.id
+LEFT JOIN user_job_matches m ON m.user_id=a.user_id AND m.job_id=a.job_id
 WHERE a.user_id = $1 AND (j.created_by_user_id IS NULL OR j.created_by_user_id = $1)
 ORDER BY a.updated_at DESC
 `
@@ -215,6 +218,8 @@ type GetApplicationsByUserIDRow struct {
 	SourceUrl           string             `json:"source_url"`
 	JobIsRemote         *bool              `json:"job_is_remote"`
 	JobLogoUrl          *string            `json:"job_logo_url"`
+	JobSource           string             `json:"job_source"`
+	MatchScore          *int32             `json:"match_score"`
 }
 
 func (q *Queries) GetApplicationsByUserID(ctx context.Context, userID uuid.UUID) ([]GetApplicationsByUserIDRow, error) {
@@ -243,6 +248,8 @@ func (q *Queries) GetApplicationsByUserID(ctx context.Context, userID uuid.UUID)
 			&i.SourceUrl,
 			&i.JobIsRemote,
 			&i.JobLogoUrl,
+			&i.JobSource,
+			&i.MatchScore,
 		); err != nil {
 			return nil, err
 		}
