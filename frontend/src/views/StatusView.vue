@@ -15,6 +15,7 @@ interface Source {
   history?: Day[]
 }
 interface SystemStatus {
+  deployment?: { revision: string; started_at: string }
   history_available?: boolean
   database: boolean
   redis: boolean
@@ -170,6 +171,12 @@ onUnmounted(() => {
           </p>
         </section>
         <template v-if="status">
+          <section v-if="status.deployment" class="border border-gray-200 p-5 space-y-2" aria-label="Deployment">
+            <h2 class="font-semibold">Running deployment</h2>
+            <p class="text-sm break-all">Version: <code>{{ status.deployment.revision }}</code></p>
+            <p class="text-sm text-gray-500">Application started: {{ time(status.deployment.started_at) }}</p>
+            <p class="text-xs text-gray-500">This version comes from the running application. A successful health check alone does not prove the latest release is running.</p>
+          </section>
           <section
             class="border border-gray-200 divide-y divide-gray-200"
             aria-label="Core services"

@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+var processStartedAt = time.Now().UTC()
+
 func (cfg *apiConfig) handlerDigestStatus(w http.ResponseWriter, r *http.Request) {
 	id, ok := getUserIDFromRequest(w, r)
 	if !ok {
@@ -102,7 +104,7 @@ func (cfg *apiConfig) handlerSystemStatus(w http.ResponseWriter, r *http.Request
 		}
 		sources = append(sources, sourceStatus{row.ServiceName, row.ServiceStatus, row.LastSuccessAt, row.LastRunAt.Time, days})
 	}
-	httpx.RespondJSON(w, 200, map[string]any{"database": dbOK, "redis": redisOK, "pending_matches": pending, "sources": sources, "history_available": historyErr == nil})
+	httpx.RespondJSON(w, 200, map[string]any{"deployment": map[string]any{"revision": buildRevision, "started_at": processStartedAt}, "database": dbOK, "redis": redisOK, "pending_matches": pending, "sources": sources, "history_available": historyErr == nil})
 }
 func spaHandler(directory string) http.HandlerFunc {
 	if directory == "" {

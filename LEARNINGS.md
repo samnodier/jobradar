@@ -1072,3 +1072,11 @@ The remaining lesson: word-overlap ratios are weak signals, so scores cluster in
 Questions: Why does a ratio with a growing denominator punish richer input? Why is "max over items" robust to irrelevant items while "union" is not? Why replay a scoring change on real data before deploying it? What does a compressed score distribution do to a fixed threshold?
 
 Code: `internal/matcher/experience_match.go`, `internal/matcher/matcher.go`, `internal/matcher/experience_match_test.go`.
+
+## Release identity and deployment races
+
+The repository can advance before CI finishes publishing. Pulling the mutable `main` tag can then pair new migrations with an old application. The updater now selects both images by the same commit SHA and pulls both before stopping production. A missing image leaves the existing application running and is retried on the next timer tick. The binary embeds its build revision; `/api/health` verifies that revision and System health shows the running revision and process start time. Process start time is not a historical deployment ledger.
+
+Review questions: Why does HTTP 200 fail to prove which version is running? Why must migrations and application artifacts share a release identity? What happens when only one image has been published?
+
+Code: `deploy/update.sh`, `Dockerfile`, `cmd/jobradar/handler_health.go`, `frontend/src/views/StatusView.vue`.

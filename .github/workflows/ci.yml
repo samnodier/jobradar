@@ -91,6 +91,7 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/jobradar:main
             ghcr.io/${{ github.repository_owner }}/jobradar:${{ github.sha }}
+          build-args: REVISION=${{ github.sha }}
           cache-from: type=gha,scope=app
           cache-to: type=gha,mode=max,scope=app
       - name: Migration image

@@ -83,7 +83,7 @@ Pushing to `main` deploys without logging in to the server:
 
 1. GitHub Actions (`.github/workflows/ci.yml`) runs the backend integration tests, vet, frontend tests and the production build on every push and pull request.
 2. Only for `main`, and only after every test passes, it publishes `ghcr.io/<owner>/jobradar` and `ghcr.io/<owner>/jobradar-migrate`, tagged `main` and the commit SHA.
-3. On the server, a user systemd timer runs `deploy/update.sh` every five minutes. It fast-forwards the checkout to `origin/main` (Compose file and scripts), pulls the images, and when something changed: backs up the database, stops the old app, runs migrations, starts the new app and waits for `/api/health`. Stopping first means old code never runs against a newer schema or processes work a migration queued; it costs a few seconds of downtime per deploy. Otherwise it does nothing.
+3. On the server, a user systemd timer runs `deploy/update.sh` every five minutes. It fast-forwards the checkout to `origin/main` (Compose file and scripts), pulls both images tagged with that exact commit SHA (waiting for publication before stopping the running app), and when something changed: backs up the database, stops the old app, runs migrations, starts the new app and waits for `/api/health`. Stopping first means old code never runs against a newer schema or processes work a migration queued; it costs a few seconds of downtime per deploy. Otherwise it does nothing.
 
 The server needs no inbound port and no GitHub credentials while the repository and its packages are public. A self-hosted Actions runner is deliberately not used: on a public repository, pull requests could run code on the host.
 
@@ -121,3 +121,5 @@ Only one machine may run the digest scheduler: production sets `DIGEST_ENABLED=t
 ## Personal home-server workflow
 
 See [PERSONAL_WORKFLOW.md](PERSONAL_WORKFLOW.md) for the two user scenarios, profile settings, matching limitations, sender identity, free-plan limits and self-hosted/private HTTPS deployment. The current version adds new migrations through 20260920000500; run all pending migrations before starting the new binary.
+
+System health shows the revision embedded in the running binary and its process start time. The updater requires `/api/health` to report the selected release, rather than accepting any HTTP 200. Older images without a revision are not compatible with this verification; release a newly built image before using the updated updater.

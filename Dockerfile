@@ -11,7 +11,8 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY cmd/ ./cmd/
 COPY internal/ ./internal/
-RUN CGO_ENABLED=0 go build -trimpath -o /jobradar ./cmd/jobradar
+ARG REVISION=development
+RUN CGO_ENABLED=0 go build -trimpath -ldflags "-X main.buildRevision=${REVISION}" -o /jobradar ./cmd/jobradar
 
 FROM alpine:3.23
 RUN apk add --no-cache ca-certificates tzdata && adduser -D -u 10001 jobradar

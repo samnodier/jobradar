@@ -32,7 +32,14 @@ if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
   JOBRADAR_UPDATE_REASON="main moved to $(git rev-parse --short HEAD)" exec "$0" "$@"
 fi
 
-# 2. Images come from the registry (published by CI after tests pass).
+# Pin BOTH artifacts to the selected release. If CI has not published either image,
+# leave the running app untouched; the next timer tick retries this same release.
+release=$(git rev-parse HEAD)
+pinned=$(sed -n 's/^JOBRADAR_TAG=//p' .env | tail -1)
+if [ -n "$pinned" ] && [ "$pinned" != main ]; then
+  release="$pinned"
+fi
+export JOBRADAR_TAG="$release"
 compose pull --quiet app
 compose --profile tools pull --quiet migrate
 app_image=$(compose config --images app | grep -v -e '^postgres' -e '^redis')
@@ -60,8 +67,9 @@ compose --profile tools run --rm migrate up
 compose up -d app
 
 for _ in $(seq 1 30); do
-  if curl -fsS http://127.0.0.1:${port}/api/health >/dev/null; then
-    log "healthy on $(git rev-parse --short HEAD)"
+  health=$(curl --max-time 5 -fsS "http://127.0.0.1:${port}/api/health" || true)
+  if printf '%s' "$health" | grep -Eq '"revision"[[:space:]]*:[[:space:]]*"'"$release"'"'; then
+    log "healthy on running release $release"
     docker image prune -f >/dev/null
     exit 0
   fi

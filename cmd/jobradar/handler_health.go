@@ -5,10 +5,13 @@ import (
 	"net/http"
 )
 
+var buildRevision = "development"
+
 func (cfg *apiConfig) handlerHealth(w http.ResponseWriter, r *http.Request) {
 	response := map[string]string{
-		"status":  "online",
-		"message": "JobRadar API is pulsing",
+		"status":   "online",
+		"revision": buildRevision,
+		"message":  "JobRadar API is pulsing",
 	}
 
 	w.Header().Set("Content-Type", "application/json")
