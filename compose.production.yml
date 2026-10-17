@@ -5,6 +5,11 @@ services:
     image: ${JOBRADAR_IMAGE:-ghcr.io/samnodier/jobradar}:${JOBRADAR_TAG:-main}
     build: .
     restart: unless-stopped
+    # Explicit upstreams keep outbound lookups working when host/VPN DNS cannot
+    # be inherited by Docker. Embedded DNS still resolves db/redis locally.
+    dns:
+      - ${JOBRADAR_DNS_PRIMARY:-1.1.1.1}
+      - ${JOBRADAR_DNS_SECONDARY:-8.8.8.8}
     env_file: .env
     environment:
       APP_ENV: production

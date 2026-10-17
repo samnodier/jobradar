@@ -139,3 +139,14 @@ On the Mac, while the server is reachable over SSH:
 ```
 
 This copies the latest completed dump from the default server backup directory; it does not overwrite development data or delete remote backups. Keep the stable encryption key and production configuration in a separate private recovery record. Duplicating a dump alone cannot recover encrypted provider keys without that key. Keep a small rotating set on the Mac; do not commit dumps. Periodically rehearse restore into an empty isolated database before calling a backup reliable. A sleeping Mac is suitable for manual copies but cannot guarantee an unattended backup schedule.
+
+
+## All sources fail while the host can reach the internet
+
+Compare host and app-container DNS before blaming several providers. A container can retain an embedded resolver with no external upstreams after host/VPN DNS or boot changes. Database/Redis names may still work because those are local Docker service records. This also differs from a provider returning HTTP 503.
+
+Production Compose now gives only Jobradar's app service explicit external DNS upstreams (`JOBRADAR_DNS_PRIMARY`, default `1.1.1.1`; `JOBRADAR_DNS_SECONDARY`, default `8.8.8.8`). Docker's embedded resolver continues resolving `db` and `redis`. Host DNS, VPN configuration, and other services are unaffected. Choose reachable upstreams for the deployment network; do not use the container's own loopback as an external resolver.
+
+The October 17 incident was verified by a successful host request, app `wget: bad address`, and container resolver output reporting no external nameservers. An isolated container on the same network succeeded with explicit upstream DNS. Recreate the app through the approved deployment workflow to apply DNS changes; editing a file or refreshing System health does not modify a running container's resolver configuration. Verify feed collection, pending/failed digest state and provider delivery afterward. Do not clear digest history or resend uncertain messages blindly.
+
+Reference: [Docker container DNS](https://docs.docker.com/engine/network/#dns-services), [Compose DNS configuration](https://docs.docker.com/reference/compose-file/services/#dns).

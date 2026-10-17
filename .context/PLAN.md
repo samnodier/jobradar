@@ -1,3 +1,7 @@
+## October 17 incident — external DNS failure
+
+All five source adapters fail in the running production app, whose Docker resolver reports no external nameservers. Host HTTPS works. A temporary container with explicit DNS successfully fetched 600 Jobicy, 94 Kenya and 100 South Africa records read-only. Production Compose validates with the prepared fix. Prepared fix: app-scoped configurable upstream DNS in production Compose. Branch `feature/container-dns-recovery`; not yet promoted/deployed. The standing rule still requires Sam's confirmation before production promotion. Verify source recovery and failed digest/provider state after deployment; do not erase delivery ledgers.
+
 ## Current delivery snapshot — October 11 reconciliation
 
 Authoritative next steps: `.context/handoff.md` and `docs/RELEASE_REVIEW.md`. The notes below this snapshot are historical milestones, not current blockers.

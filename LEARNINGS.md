@@ -1165,3 +1165,14 @@ Sam explicitly authorized this tested release to go to main without waiting for 
 Review questions: What evidence distinguishes a pushed commit from a running release? Why prepare environment changes before restarting? Why does a successful monitor run not prove inbox delivery? Why should a one-time approval not become a standing bypass of manual review?
 
 Code/config: `deploy/update.sh`, `deploy/install-systemd.sh`, `.context/PLAN.md`.
+
+
+## An application can be up while external DNS is broken — October 17
+
+All five sources failed together, but the host could fetch a public feed. Inside the running app, domain lookup failed and Docker reported no external nameservers. Internal database/Redis connectivity still worked: Docker's local service discovery is distinct from forwarding external DNS queries. A container may retain unusable upstream settings even while host/VPN DNS works.
+
+The prepared fix scopes explicit, configurable upstream DNS to the production app service. An isolated container on the same Docker network successfully read all three public feeds and validates recovery without altering the running app, collecting jobs or sending email. Docker still resolves internal service names. Other host services and VPN DNS are not changed. A health message combining network/timeout errors does not prove that a request actually timed out; lookup failure can occur immediately. Operational mail runs in a separate short-lived container, so its accepted notifications do not establish that the long-running scraper has working DNS.
+
+Review questions: Why can database connectivity succeed while every public API fails? Why compare host and container requests? Why does recreating a container differ from merely editing Compose? Why should an explicit DNS override be scoped to one application rather than all services?
+
+Code/config: `compose.production.yml`, `.env.example`, `docs/DEPLOYMENT.md`.

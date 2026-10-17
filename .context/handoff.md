@@ -1,3 +1,9 @@
+# October 17 incident — current follow-up
+
+Production's long-running app has no external DNS upstreams; all five sources are degraded. Host HTTPS works; the app cannot resolve provider names. A read-only temporary container using explicit DNS on the same Docker network fetched all three public feeds successfully. Prepared fix: app-scoped upstream DNS in `compose.production.yml`, configurable via `JOBRADAR_DNS_PRIMARY`/`JOBRADAR_DNS_SECONDARY`. Branch `feature/container-dns-recovery`; Compose validation passed. No production configuration/container has been changed for this fix. Await Sam's confirmation before any new main promotion/deployment, per the standing review rule. The latest monitor snapshot records a failed digest and provider-accepted operational alerts; inbox delivery is not independently confirmed. Verify source recovery and digest failure state after approved deployment without clearing delivery history.
+
+The prior deployment record below describes the earlier successful rollout, not current source health.
+
 # Session handoff — reconciliation release
 
 Read this file, `.context/PLAN.md`'s current snapshot, and `docs/RELEASE_REVIEW.md` before continuing. The pasted conversation is no longer needed; it cannot be deleted by the assistant from the chat.
